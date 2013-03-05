@@ -1,0 +1,77 @@
+*--------------------*
+*  iSpectraSampler   *
+*--------------------*
+Zhi Qiu & Chun Shen  --- 04/2012
+
+------------------------------
+02-22-2013, Ver 2.3.0.2
+------------------------------
+.: Bug fix: When particles in the chosen_particle.dat are not in the pdg partilce list, it will be throw away. The array size of chosen_particles_sampling_table is rescaled to the number of particles that found in the pdg particle list. Modifications are made at line 100-106 in emissionfunction.cpp
+
+------------------------------
+10-01-2012, Ver 2.3.0.1 
+------------------------------
+.: Bug fix: When MC_Sampling is set to 3 and USE_OSCAR_FORMAT is set to 0, the previous version does not combine the generated sample data files into OSCAR format.
+
+------------------------------
+10-01-2012, Ver 2.3.0.0 
+------------------------------
+.: In sample_using_dN_ptdptdphidy, when pT and phi are fixed and y-eta_s and freeze-out index are sampled, freeze-out index is first sampled using direct pdf sampling using emission function at the minimum y-eta_s value in the table, then y-eta_s is sampled using the relative rate.
+.: Files readindata.cpp and readindata.h updated (Chun).
+
+------------------------------
+07-27-2012, Ver 2.2.0.0 
+------------------------------
+.: A new sampling method that first samples pT distribution added: sample_using_dN_ptdptdphidy. The (Table*) variable dN_ptdptdphidy changed to (double**) accordingly; so does the functions that use it previously.
+.: The number_of_repeated_sampling, pT_up_to, and zero parameters are read from parameter file by individual sampling subroutines instead of by shell functions.
+
+------------------------------
+05-30-2012, Ver 2.1.1.0 
+------------------------------
+.: Bug fix: In EmissionFunctionArray::calculate_dN_ptdptdphidy_and_flows_4all_old_output, the file that is used to output particle name is flow_differential_filename_old, not flow_differential_filename.
+
+------------------------------
+05-07-2012, Ver 2.1.0.0 
+------------------------------
+.: In emissionfunction.cpp, the macro DEBUG_OUTPUT is changed to AMOUNT_OF_OUTPUT and the progress bar is now used only when this parameter is bigger than 0.
+
+------------------------------
+05-02-2012, Ver 2.0.1.0 
+------------------------------
+.: Bug fix: The quantity trace_Pi2 should be taken the square root in the calculation of guess_viscous variable. Also the sqrt(3) in the same line is removed due to a better estimate.
+
+------------------------------
+04-25-2012, Ver 2.0.0.0 
+------------------------------
+.: File: readindata.cpp updated to Ver 1.1.
+.: File: RandomVariable2DArray updated to Ver 1.1.2.
+.: File: RandomVariable1DArray updated to Ver 1.0.1.
+.: File: RandomVariableNDArray updated to Ver 1.1.1.
+.: Bug fixes: Two particles are not the same even if they have the same mass and chemical potential: they have to be both baryon or mesons. Such checks are added to function particles_have_same_mass_and_chemical_potentials and it is renamed to particles_are_the_same. Further checks using gspin are added too.
+.: Bug fixes: The check for whether the emission function is bigger than 1 should be placed before the line for accepting/rejecting samples since after the "break" command the check for emission function is skipped.
+.: The sampling algorithm has been changed to, that if maximum_impatience is reached for some fluid cell, then re-choose another freeze-out cell instead of choosing the last-used momentum from the current cell.
+.: The finer tables p/m_integral_table_0.005.dat are not included in the package due to their storage size; they should be substituted into the tables folder when high accuracy is desired.
+
+
+------------------------------
+04-09-2012, Ver 1.2.1 
+------------------------------
+.: Bug fixes: several unused variables are deleted. A few mis-placed parenthesis following "formatedPrint" functions are corrected.
+
+
+------------------------------
+03-30-2012, Ver 1.2.0 
+------------------------------
+.: Support for determining the number of particles to sample using NBD added. Note that the model dN_dy_sampling_model = 20 does not work yet because the gamma function returns a value that exceeds the "long double" limit.
+
+
+------------------------------
+03-30-2012, Ver 1.1.0 
+------------------------------
+.: Particles are grouped together during spectra and flow calculations.
+
+
+------------------------------
+03-29-2012, Ver 1.0.0 
+------------------------------
+.: The first clean version.

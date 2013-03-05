@@ -1,0 +1,22 @@
+IEOS      = 7                !IEOS   type for EOS
+Tau0      = 0.60             !tau0   initial time(unit: fm/c)
+Edec      = 0.180            !Edec   Decoupling energy density (unit: GeV/fm^3)
+Tdec      = 0.120            !T_fo   freeze out temperature
+*
+IInit     = 2                !Initialization method
+Norm      = 0.1000000E+01    !normalization factor for initial profile
+*
+ViscousC  = 0.000            !ViscousC  eta/s(const.)
+VisBeta   = 0.500            !relaxation constant for shear viscosity
+IVisflag  = 0                !flag for temperature dependent eta/s(T) (=0 for const.)
+VisBulk   = 0.000            !Bulk viscosity zeta/s(const.)
+IRelaxBul = 2                !relaxtion constant for bulk viscosity
+*
+DT        = 0.02             !dT   time step
+DX        = 0.10             !DX   lattice spacial spacing
+DY        = 0.10             !DY   lattice spacial spacing
+ILS       = 130              !lattice size (in positive direction)
+NDX       = 2                !NXD   freeze out skip step in x direction
+NDY       = 2                !NYD   freeze out skip step in y direction
+NDT       = 5                !NTD   freeze out skip step in tau
+R0Bdry    = 12.5             !boundary R0
