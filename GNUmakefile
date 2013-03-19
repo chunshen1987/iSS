@@ -85,3 +85,14 @@ install:	$(TARGET)
 
 # --------------- Dependencies -------------------
 
+./NBD.cpp:  arsenal.h RandomVariable.h
+./ParameterReader.cpp:  arsenal.h
+./RandomVariable.cpp:  arsenal.h TableFunction.h
+./RandomVariable1DArray.cpp:  arsenal.h
+./RandomVariable2DArray.cpp:  arsenal.h
+./RandomVariableNDArray.cpp:  arsenal.h
+./Table.cpp:  arsenal.h
+./TableFunction.cpp:  arsenal.h
+./emissionfunction.cpp: main.h readindata.h RandomVariable1DArray.h RandomVariable2DArray.h RandomVariableNDArray.h NBD.h ParameterReader.h arsenal.h Stopwatch.h Table.h
+./main.cpp: ParameterReader.h Table.h readindata.h emissionfunction.h arsenal.h
+./readindata.cpp: main.h arsenal.h Table.h
