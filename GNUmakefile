@@ -5,7 +5,7 @@
 ##  Environments :	MAIN	= 	main sourcefile	
 ##
 ##  Usage : 	(g)make	[all]		compile the whole project		
-##			install		make all and copy binary to $INSTPATH
+##			install	make all and copy binary to $INSTPATH
 ##			clean		remove objectfiles in obj_$TYPE 
 ##			distclean	remove all objectsfiles and binaries
 ##  
