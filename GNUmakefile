@@ -10,18 +10,12 @@
 ##			distclean	remove all objectsfiles and binaries
 ##  
 
-CC := $(shell which icpc)
-LD := $(shell which icpc)
-CFLAGS= -O3 -fast -Wall
-ifeq "$(CC)" ""
-  CC := $(shell which g++)
-  LD := $(shell which g++)
-  CFLAGS= -O3 -Wall
-endif
+CC := $(shell ../crank/configure_compiler_C++.sh)
+CFLAGS= $(shell ../crank/configure_compiler_C++_Flags.sh)
 
 RM		=	rm -f
 O               =       .o
-LDFLAGS         =       -O3 -Wall
+LDFLAGS         =       $(CFLAGS)
 SYSTEMFILES     =       $(SRCGNU)
 
 # --------------- Files involved ------------------
@@ -70,7 +64,7 @@ mkobjdir:
 		-@mkdir -p $(OBJDIR)
 
 $(TARGET):	$(OBJECTS)	
-		$(LD) $(LDFLAGS) $(OBJECTS) -o $(TARGET)
+		$(CC) $(LDFLAGS) $(OBJECTS) -o $(TARGET)
 #		strip $(TARGET)
 
 clean:		
