@@ -364,7 +364,11 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
                   double Wfactor = pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 + pz*pz*pi33;
                   double deltaf = (1 - F0_IS_NOT_SMALL*sign*f0)*Wfactor*deltaf_prefactor;
 
-                  double result = prefactor*degen*f0*(1+deltaf)*pdsigma*tau;
+                  double result;
+                  if(1.+deltaf < 0.0) //reject points that f_0 + delta f < 0
+                      result = 0.0;
+                  else
+                      result = prefactor*degen*f0*(1+deltaf)*pdsigma*tau;
 
                   if (use_pos_dN_only && result<0) continue;
                   dN_dxtdetady_tmp += result*pT_phi_inte_weight;
@@ -497,7 +501,12 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
                   double Wfactor = pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 + pz*pz*pi33;
                   double deltaf = (1 - F0_IS_NOT_SMALL*sign*f0)*Wfactor*deltaf_prefactor;
 
-                  double result = prefactor*degen*f0*(1+deltaf)*pdsigma*tau;
+                  double result;
+                  if(1.+deltaf < 0.0) // reject points that f_0 + delta f < 0
+                     result = 0.0; 
+                  else
+                     result = prefactor*degen*f0*(1+deltaf)*pdsigma*tau;
+
                   if (use_pos_dN_only && result<0) continue;
                   dN_pTdpTdphidy_tmp += result*delta_eta;
                   if (dN_pTdpTdphidy_max_tmp<result) dN_pTdpTdphidy_max_tmp=result;
