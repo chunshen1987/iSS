@@ -2703,7 +2703,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
 
                     // next viscous part
                     // p*dsigma pT f < dsgima_all*tmp_factor*sqrt(3)*E^3*f0*trace_Pi2/(2*T^2*(e+p))
-                    double trace_Pi2 = pi00*pi00 + pi11*pi11 + pi22*pi22 + pi33*pi33*tau*tau*tau*tau - 2*pi01*pi01 - 2*pi02*pi02 + 2*pi12*pi12;
+                    double trace_Pi2 = pi00*pi00 + pi11*pi11 + pi22*pi22 + pi33*pi33 - 2*pi01*pi01 - 2*pi02*pi02 + 2*pi12*pi12;
                     double tmp_factor = 1;
                     if (F0_IS_NOT_SMALL && sign==-1)
                     {
