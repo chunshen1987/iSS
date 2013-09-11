@@ -2328,12 +2328,6 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
     Stopwatch sw;
     sw.tic();
 
-/*    // load integral table
-    Table p_integral_table("tables/p_integral_table_0.02.dat"); // table used for integration
-    Table m_integral_table("tables/m_integral_table_0.02.dat"); // in calculate_dN_dxtdy_4all_particles
-    double integral_table_m0 = 0.1, integral_table_dm = 0.02; // m0 and step
-    double integral_table_m_minus_mu0 = 0.0, integral_table_dm_minus_mu = 0.02; // ()m-mu)0 and step
-*/
     // sort freeze-out temperature for furture use
     for (long l=0; l<FO_length; l++) sorted_FZ[l] = l; // natural order
     // now bubble sort temperature; smaller temperature goes first

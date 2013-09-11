@@ -53,6 +53,6 @@ calculate_dN_dphi = 0                  # Output dN_dphi table. Only applicable i
 calculate_dN_deta = 0                  # Output dN_deta table. Only applicable if MC_sampling parameter is set to 1.
 calculate_dN_dxt = 0                   # Output dN_dxt table. Only applicable if MC_sampling parameter is set to 1.
 
-output_dN_dxtdy_4all = 0               # Output dN_dxtdy table. Only applicable if MC_sampling parameter is set to 2.
+output_dN_dxtdy_4all = 1               # Output dN_dxtdy table. Only applicable if MC_sampling parameter is set to 2.
 
 randomSeed = -1                        # If <0, use system clock.
