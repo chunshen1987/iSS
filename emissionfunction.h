@@ -83,6 +83,7 @@ public:
   string dN_dxt_filename;
 
   // Second sampling method
+  double calculate_dN_analytic(particle_info* particle, double mu, double Temperature);
   void calculate_dN_dxtdy_4all_particles(); // the following variables need to be set first in order to call this function
   double calculate_total_FZ_energy_flux();
   void sample_using_dN_dxtdy_4all_particles_conventional(); // to be used after calculate_dN_dxtdy_4all_particles

@@ -13,6 +13,8 @@
 #include<stdlib.h>
 #include<string.h>
 
+#include<gsl/gsl_sf_bessel.h>
+
 #include "main.h"
 #include "readindata.h"
 #include "emissionfunction.h"
@@ -2326,12 +2328,12 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
     Stopwatch sw;
     sw.tic();
 
-    // load integral table
+/*    // load integral table
     Table p_integral_table("tables/p_integral_table_0.02.dat"); // table used for integration
     Table m_integral_table("tables/m_integral_table_0.02.dat"); // in calculate_dN_dxtdy_4all_particles
     double integral_table_m0 = 0.1, integral_table_dm = 0.02; // m0 and step
     double integral_table_m_minus_mu0 = 0.0, integral_table_dm_minus_mu = 0.02; // ()m-mu)0 and step
-
+*/
     // sort freeze-out temperature for furture use
     for (long l=0; l<FO_length; l++) sorted_FZ[l] = l; // natural order
     // now bubble sort temperature; smaller temperature goes first
@@ -2358,7 +2360,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
 
     // now loop over all freeze-out cells and particles
     FO_surf *surf; particle_info* particle;
-    double prefactor = 1.0/pow(2*M_PI,3)/pow(hbarC,3);
+    double prefactor = 1.0/pow(hbarC,3);  // unit: convert to unitless for Delta N
     double integral_laststep[number_of_chosen_particles]; // store results from last step
     double last_temp = -1;
     if (AMOUNT_OF_OUTPUT>0) print_progressbar(-1);
@@ -2375,7 +2377,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
         double da2 = surf->da2;
 
         double gammaT = 1.0/sqrt(1.0-vx*vx-vy*vy+1e-30);
-        double another_factor = tau*gammaT*(da0+vx*da1+vy*da2)*temp*temp*temp*4*M_PI;
+        double dsigma_dot_u = tau*gammaT*(da0+vx*da1+vy*da2);
 
         if (l>0 && (temp-last_temp)/(last_temp+1e-30)<1e-30)
         {
@@ -2413,29 +2415,15 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
                     last_particle_degen = degen;
                     last_particle_mass = mass;
                     last_particle_mu = mu;
-                    double m_tilde = mass/(temp+1e-30);
-                    double mu_tilde = mu/(temp+1e-30);
 
-                    if (sign==1)
-                    {
-                        integral_single_laststep = degen*p_integral_table.interp2( (m_tilde-mu_tilde-integral_table_m_minus_mu0)/integral_table_dm_minus_mu + 1, (m_tilde-integral_table_m0)/integral_table_dm + 1 );
-                    }
-                    else if (sign==-1)
-                    {
-                        integral_single_laststep = degen*m_integral_table.interp2( (m_tilde-mu_tilde-integral_table_m_minus_mu0)/integral_table_dm_minus_mu + 1, (m_tilde-integral_table_m0)/integral_table_dm + 1 );
-                    }
-                    else
-                    {
-                        cout << "EmissionFunctionArray::calculate_dN_dxtdy_4all_particles error: the particle sign " << sign << " is not +1 or -1." << endl;
-                        exit(-1);
-                    }
+                    integral_single_laststep = calculate_dN_analytic(particle, mu, temp);
                     integral_laststep[n] = integral_single_laststep;
                 }
                 dN_dxtdy_4all[l][n] = integral_laststep[n];
             }
         }
 
-        for (long n=0; n<number_of_chosen_particles; n++) dN_dxtdy_4all[l][n] *= prefactor*another_factor;
+        for (long n=0; n<number_of_chosen_particles; n++) dN_dxtdy_4all[l][n] *= prefactor*dsigma_dot_u;
 
         if (AMOUNT_OF_OUTPUT>0) print_progressbar((double)(l)/FO_length);
     }
@@ -2457,6 +2445,27 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
 }
 
 
+//***************************************************************************
+double EmissionFunctionArray::calculate_dN_analytic(particle_info* particle, double mu, double Temperature)
+/*
+  calculate particle yield using analytic formula as a series sum of Bessel functions. The particle yield emitted from a given fluid cell is \dsigma_mu u^\mu times the return value from this function
+*/
+{
+   double results = 0.0;
+   int truncate_order = 10;
+   int sign = particle->sign;
+   double mass = particle->mass;
+   double beta = 1./Temperature;
+   double prefactor = particle->gspin/(2*M_PI*M_PI)*mass*mass*Temperature;
+   double lambda = exp(beta*mu);
+   for(int i=0; i < truncate_order; i++)
+   {
+      double arg = (i+1)*mass*beta;
+      results += pow((-1.0)*sign, i)/(i+1)*pow(lambda, i+1)*gsl_sf_bessel_Kn(2, arg);
+   }
+   results = results*prefactor;
+   return(results);
+}
 
 
 
