@@ -90,7 +90,7 @@ int main(int argc, char** argv)
       cout << " -- EOS is chemical equilibrium. " << endl;
       for(int i=0; i<Nparticle; i++)
         for(int j=0; j<FO_length; j++)
-           FOsurf_ptr[i].particle_mu[j] = 0.0e0;
+           FOsurf_ptr[j].particle_mu[i] = 0.0e0;
    }
    cout << endl << " -- Read in data finished!" << endl << endl;
 
