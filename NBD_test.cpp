@@ -21,8 +21,8 @@ using namespace std;
 
 int main()
 {
-    double r = 0.16;
-    double p = 1.0/(1.0+0.16);
+    double r = 10;
+    double p = 0.5;
     NBD nbd(p,r);
     Stopwatch sw;
     long sum;
@@ -45,13 +45,15 @@ int main()
 
     // for (long i=0; i<10; i++) cout << i << "  " << nbd.pdf(i) << endl;
     // for (double i=0; i<10; i+=0.25) cout << setw(10) << i << "  " << nbd.envelopPdfTab->map(i) << endl;
-    for (double i=0; i<0.1; i+=0.003641) cout << setw(10) << i << "  " << nbd.envelopInvCDFTab->map(i) << endl;
+    //for (double i=0; i<0.1; i+=0.003641) cout << setw(10) << i << "  " << nbd.envelopInvCDFTab->map(i) << endl;
     // nbd.envelopPdfTab->printFunction();
+    
+    ofstream check("check_NBD.dat");
+    for (long i=1; i<=1000000; i++)
+    {
+        check << nbd.rand() << endl;
+    }
 
-    // for (long i=1; i<=10000000; i++)
-    // {
-    //     cout << nbd.rand() << endl;
-    // }
 }
 
 

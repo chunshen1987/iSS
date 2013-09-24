@@ -10,6 +10,7 @@
 
 #include "Table.h"
 #include "NBD.h"
+#include "Poisson.h"
 #include "ParameterReader.h"
 #include "main.h"
 
@@ -44,6 +45,7 @@ private:
   double **trig_phi_table, **hypertrig_y_minus_eta_table;
   inline long determine_number_to_sample(double dN, int model=1, double para1=0, double para2=0, double para3=0, double para4=0, double para5=0);
   NBD nbd; // NBD random sample generator
+  Poisson poissonDistribution;
   bool particles_are_the_same(int, int);
   long *sorted_FZ;
 public:

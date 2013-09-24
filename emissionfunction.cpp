@@ -22,6 +22,7 @@
 #include "RandomVariable2DArray.h"
 #include "RandomVariableNDArray.h"
 #include "NBD.h"
+#include "Poisson.h"
 #include "ParameterReader.h"
 #include "arsenal.h"
 #include "Stopwatch.h"
@@ -1924,6 +1925,10 @@ inline long EmissionFunctionArray::determine_number_to_sample(double dN_dy_in, i
             p = 1.0/(1.0+para1);
             if (k<1e-15) number_to_sample = dN_dy_int;
             else number_to_sample = nbd.rand(p,k);
+            break;
+        case 30:  // use Poisson distribution
+            if (dN_dy < 1e-15) number_to_sample = 0;
+            number_to_sample = poissonDistribution.rand(dN_dy);
             break;
         default:
             cout << "EmissionFunctionArray::determine_number_to_sample error: the model specified (" << model << ") to determine the number of particles is not found" << endl;

@@ -27,12 +27,13 @@ endif
 SRC		=	main.cpp arsenal.cpp ParameterReader.cpp \
 			RandomVariable1DArray.cpp RandomVariable2DArray.cpp \
 			RandomVariable.cpp NBD.cpp TableFunction.cpp Table.cpp \
-			emissionfunction.cpp readindata.cpp
+			emissionfunction.cpp readindata.cpp Poisson.cpp
 
 INC		= 	main.h arsenal.h ParameterReader.h \
 			RandomVariable1DArray.h RandomVariable2DArray.h \
 			RandomVariable.h NBD.h TableFunction.h Table.h \
-			emissionfunction.h readindata.h Stopwatch.h
+			emissionfunction.h readindata.h Stopwatch.h \
+                  Poisson.h
 
 # -------------------------------------------------
 
@@ -79,7 +80,8 @@ install:	$(TARGET)
 
 # --------------- Dependencies -------------------
 
-./NBD.cpp:  arsenal.h RandomVariable.h
+./NBD.cpp:  arsenal.h RandomVariable.h Table.h TableFunction.h
+./Poisson.cpp:  arsenal.h RandomVariable.h Table.h TableFunction.h
 ./ParameterReader.cpp:  arsenal.h
 ./RandomVariable.cpp:  arsenal.h TableFunction.h
 ./RandomVariable1DArray.cpp:  arsenal.h
@@ -87,6 +89,6 @@ install:	$(TARGET)
 ./RandomVariableNDArray.cpp:  arsenal.h
 ./Table.cpp:  arsenal.h
 ./TableFunction.cpp:  arsenal.h
-./emissionfunction.cpp: main.h readindata.h RandomVariable1DArray.h RandomVariable2DArray.h RandomVariableNDArray.h NBD.h ParameterReader.h arsenal.h Stopwatch.h Table.h
+./emissionfunction.cpp: main.h readindata.h RandomVariable1DArray.h RandomVariable2DArray.h RandomVariableNDArray.h NBD.h ParameterReader.h arsenal.h Stopwatch.h Table.h Poisson.h 
 ./main.cpp: ParameterReader.h Table.h readindata.h emissionfunction.h arsenal.h
 ./readindata.cpp: main.h arsenal.h Table.h

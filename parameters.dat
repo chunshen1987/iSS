@@ -7,6 +7,7 @@ dN_dy_sampling_model = 1               # Controls how an non-integer dN_dy is sa
                                        # -- 1: The fractional part of dN_dy is used as a probability to determine whether there is 1 more particle
                                        # -- 10: Use NBD to sample the fractional part of dN_dy. The probability is calculated so that p=nb/(nb+k) and k is assumed to be proportional to n, and the proportionality constant is given by the parameter dN_dy_sampling_para1.
                                        # -- 20: Use NBD to sample the whole dN_dy. k is assumed to be proportional to n, with coefficient dN_dy_sampling_para1.
+                                       # -- 30: Use Poisson distribution to sample the whole dN_dy. The mean value is set to be dN_dy
                                        # -- 110: Total energy flux from freeze-out surface is used to constrain dN_dy. Whenever the total energy carried away from all the sampled particles exceed the total energy flux, the sampling procedure stops.
 
 
