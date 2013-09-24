@@ -28,7 +28,7 @@ double Poisson::pdf(double k)
 {
   if (k<0) return 0;
   int kint = (floor)(k);
-  double result = pow(lambda, kint)*exp(-lambda)/tgamma(kint+1);
+  double result = exp(kint*log(lambda) - lambda - lgamma(kint+1));
   return(result);
 }
 
