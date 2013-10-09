@@ -31,6 +31,7 @@
 #define F0_IS_NOT_SMALL 0 // set to 0 to agree with Azspectra; set to 1 for reality
 #define NUMBER_OF_LINES_TO_WRITE   100000 // string buffer for sample files
 #define USE_OSCAR_FORMAT 1 // 1: output is tuned to reproduce OSCAR format file
+#define INCLUDE_DELTAF 1 // include delta f correction to particle distribution function in Cooper-Frye Formula
 
 using namespace std;
 
@@ -311,7 +312,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
       double Tdec = surf->Tdec;
       double Pdec = surf->Pdec;
       double Edec = surf->Edec;
-      double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
+      double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
       double tau = surf->tau;
       double vx = surf->vx;
@@ -465,7 +466,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
               double Tdec = surf->Tdec;
               double Pdec = surf->Pdec;
               double Edec = surf->Edec;
-              double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
+              double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
               double tau = surf->tau;
               double vx = surf->vx;
@@ -1025,7 +1026,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             double inv_Tdec = 1.0/Tdec;
             double Pdec = surf->Pdec;
             double Edec = surf->Edec;
-            double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
+            double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
             double tau = surf->tau;
             double vx = surf->vx;
@@ -1334,7 +1335,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
 //                 double inv_Tdec = 1.0/Tdec;
 //                 double Pdec = surf->Pdec;
 //                 double Edec = surf->Edec;
-//                 double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
+//                 double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 // 
 //                 double tau = surf->tau;
 //                 double vx = surf->vx;
@@ -1648,7 +1649,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                 double inv_Tdec = 1.0/Tdec;
                 double Pdec = surf->Pdec;
                 double Edec = surf->Edec;
-                double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
+                double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
                 double tau = surf->tau;
                 double vx = surf->vx;
@@ -2651,7 +2652,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     double inv_Tdec = 1.0/Tdec;
                     double Pdec = surf->Pdec;
                     double Edec = surf->Edec;
-                    double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
+                    double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
                     double tau = surf->tau;
                     double vx = surf->vx;
