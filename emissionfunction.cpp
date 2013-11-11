@@ -2242,8 +2242,8 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
     header.close();
 
     // open control and sample files
-    ifstream controls[number_of_chosen_particles]; // control files
-    ifstream samples[number_of_chosen_particles]; // sample files
+    vector<ifstream> controls(number_of_chosen_particles); // control files
+    vector<ifstream> samples(number_of_chosen_particles); // sample files
     for (int m=0; m<number_of_chosen_particles; m++)
     {
         char filename_buffer[300];
