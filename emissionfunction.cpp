@@ -2242,23 +2242,23 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
     header.close();
 
     // open control and sample files
-    vector<ifstream> controls(number_of_chosen_particles); // control files
-    vector<ifstream> samples(number_of_chosen_particles); // sample files
+    vector<ifstream*> controls(number_of_chosen_particles); // control files
+    vector<ifstream*> samples(number_of_chosen_particles); // sample files
     for (int m=0; m<number_of_chosen_particles; m++)
     {
         char filename_buffer[300];
         int monval = particles[chosen_particles_sampling_table[m]].monval;
         // control files first
         sprintf(filename_buffer, samples_control_filename.c_str(), monval);
-        controls[m].open(filename_buffer);
-        if (!controls[m].is_open())
+        controls[m]->open(filename_buffer);
+        if (!controls[m]->is_open())
         {
             cout << endl << "combine_samples_to_OSCAR error: control file " << filename_buffer << " not found." << endl;
             exit(-1);
         }
         sprintf(filename_buffer, samples_filename.c_str(), monval);
-        samples[m].open(filename_buffer);
-        if (!samples[m].is_open())
+        samples[m]->open(filename_buffer);
+        if (!samples[m]->is_open())
         {
             cout << endl << "combine_samples_to_OSCAR error: sample file " << filename_buffer << " not found." << endl;
             exit(-1);
@@ -2275,7 +2275,7 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
         long total_number_of_particles = 0;
         for (int m=0; m<number_of_chosen_particles; m++)
         {
-            controls[m] >> number_of_particles[m];
+            (*controls[m]) >> number_of_particles[m];
             total_number_of_particles += number_of_particles[m];
         }
         // sub-header for each event
@@ -2289,7 +2289,7 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
             for (long ii=1; ii<=number_of_particles[m]; ii++)
             {
                 oscar << setw(10) << ipart << "  " << setw(10) << monval << "  ";
-                samples[m].getline(line_buffer, 500);
+                samples[m]->getline(line_buffer, 500);
                 oscar << line_buffer << endl;
                 ipart ++;
             }
