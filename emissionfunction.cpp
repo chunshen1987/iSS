@@ -2250,6 +2250,7 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
         int monval = particles[chosen_particles_sampling_table[m]].monval;
         // control files first
         sprintf(filename_buffer, samples_control_filename.c_str(), monval);
+        controls[m] = new ifstream ;
         controls[m]->open(filename_buffer);
         if (!controls[m]->is_open())
         {
@@ -2257,6 +2258,7 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
             exit(-1);
         }
         sprintf(filename_buffer, samples_filename.c_str(), monval);
+        samples[m] = new ifstream ;
         samples[m]->open(filename_buffer);
         if (!samples[m]->is_open())
         {
