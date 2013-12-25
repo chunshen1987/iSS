@@ -86,18 +86,25 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   }
   // next, for sampling processes
   chosen_particles_sampling_table = new int[number_of_chosen_particles];
+  unidentifiedPid_table = new int [number_of_chosen_particles];
   // first copy the chosen_particles table, but now using indecies instead of monval
   int current_idx = 0;
+  int temp_idx = 0;
   for (int m=0; m<number_of_chosen_particles; m++)
   {
     int monval = chosen_particles_in->get(1,m+1);
-    for (int n=0; n<Nparticles; n++)
+    for(int n=0; n<Nparticles; n++)
     {
       if (particles[n].monval==monval)
       {
         chosen_particles_sampling_table[current_idx] = n;
         current_idx ++;
         break;
+      }
+      else if (n == Nparticles - 1)
+      {
+        unidentifiedPid_table[temp_idx] = monval;
+        temp_idx++;
       }
     }
   }
@@ -106,6 +113,9 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   {
      cout << "Warning: not all chosen particles are in the pdg particle list!" << endl;
      cout << "There are " << number_of_chosen_particles - current_idx << " particles can not be found in the pdg particle list!" << endl;
+     cout << "Their monte carlo numbers are:" << endl;
+     for(int i = 0; i < number_of_chosen_particles - current_idx ; i++)
+        cout << unidentifiedPid_table[i] << endl;
      number_of_chosen_particles = current_idx;
   }
   // next re-order them so that particles with similar mass are adjacent
@@ -230,6 +240,7 @@ EmissionFunctionArray::~EmissionFunctionArray()
 
   delete[] chosen_particles_01_table;
   delete[] chosen_particles_sampling_table;
+  delete[] unidentifiedPid_table;
 
   for (int j=0; j<phi_tab_length; j++) delete[] trig_phi_table[j];
   delete[] trig_phi_table;

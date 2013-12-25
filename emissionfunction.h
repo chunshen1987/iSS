@@ -35,6 +35,7 @@ private:
   int grouping_particles; // 0/1: Particles with similar mass and chemical potentials will be sampled using the same dN/(dxt deta dy) matrix
   double mc_grouping_tolerance; // Usable only when grouping_particles is 1. If two particles have mass and chemical potentials close within this relative tolerance, they are considered to be identical and will be sampled successively without regenerating the dN / (dxt deta dy) matrix for efficiency.
   int *chosen_particles_sampling_table; // store particle index; the sampling process follows the order specified by this table
+  int *unidentifiedPid_table; // store chosen particle monte carlo number that are not found in pdg.dat;
   // list for information for all particles
   int Nparticles;
   particle_info* particles;
