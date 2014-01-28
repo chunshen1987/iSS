@@ -11,11 +11,11 @@
 ##  
 
 CC := $(shell ../crank/configure_compiler_C++.sh)
-CFLAGS= $(shell ../crank/configure_compiler_C++_Flags.sh)
+CFLAGS= $(shell ../crank/configure_compiler_C++_Flags.sh) $(shell gsl-config --cflags)
 
 RM		=	rm -f
 O               =       .o
-LDFLAGS         =       $(CFLAGS)
+LDFLAGS         =       $(CFLAGS) $(shell gsl-config --libs)
 SYSTEMFILES     =       $(SRCGNU)
 
 # --------------- Files involved ------------------
@@ -65,7 +65,7 @@ mkobjdir:
 		-@mkdir -p $(OBJDIR)
 
 $(TARGET):	$(OBJECTS)	
-		$(CC) $(LDFLAGS) $(OBJECTS) -o $(TARGET)
+		$(CC) $(OBJECTS) -o $(TARGET) $(LDFLAGS) 
 #		strip $(TARGET)
 
 clean:		
