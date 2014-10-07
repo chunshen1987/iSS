@@ -200,12 +200,12 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   for (int i=0; i<pT_tab4Sampling_length; i++)
   {
       double pT = pT_tab4Sampling.get(1, i+1);
-      pT_tab4Sampling.set(3, i+1, pT_tab->interp(1,3,pT,6,true));
+      pT_tab4Sampling.set(3, i+1, pT_tab->interp(1,3,pT,2,true));
   }
   for (int j=0; j<phi_tab4Sampling_length; j++)
   {
       double phi = phi_tab4Sampling.get(1, j+1);
-      phi_tab4Sampling.set(3, j+1, phi_tab->interp(1,3,phi,6,true));
+      phi_tab4Sampling.set(3, j+1, phi_tab->interp(1,3,phi,2,true));
   }
   // create trig caches
   trig_phi_tab4Sampling = new double*[phi_tab4Sampling_length];
@@ -1553,8 +1553,8 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
         double pT_index = pT_tab4Sampling.get(3, i+1); // get pT index
         double phi_weight = phi_tab4Sampling.get(2, j+1); // get phi weight
         double phi_index = phi_tab4Sampling.get(3, j+1); // get phi index
-        dN_pTdpTdphidy_with_weight_4Sampling[i][j] = dN_pTdpTdphidy->interp2(pT_index, phi_index, 3)*pT*pT_weight*phi_weight; // interp2: parameter 2 -> allow extrapolation
-        dN_pTdpTdphidy_max_4Sampling[i][j] = dN_pTdpTdphidy_max->interp2(pT_index, phi_index, 3);
+        dN_pTdpTdphidy_with_weight_4Sampling[i][j] = dN_pTdpTdphidy->interp2(pT_index, phi_index, 4)*pT*pT_weight*phi_weight; // interp2: parameter 2 -> allow extrapolation
+        dN_pTdpTdphidy_max_4Sampling[i][j] = dN_pTdpTdphidy_max->interp2(pT_index, phi_index, 4);
     }
         
     // create random variable using inverse CDF

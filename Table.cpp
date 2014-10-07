@@ -289,6 +289,8 @@ double Table::interp2(double col_idx, double row_idx, int mode)
 //          3: bi-cubic interpolation + extrapolation (closest 4*4 points used)
 //             Note that for this method to work the lattice should be at least
 //             4x4 large, which is not checked.
+//          4: logarithmic bilinear interpolation + extrapolation (closest 4 points used)
+//             requires all values are positive
 {
     // boundary safty control
     if (col_idx<=1) col_idx += 1e-10;
@@ -320,6 +322,12 @@ double Table::interp2(double col_idx, double row_idx, int mode)
             if (row_idx_int<1) row_idx_int=1;
             if (row_idx_int>=numberOfRows-3) row_idx_int=numberOfRows-3; // need 4 points
             break;
+        case 4:
+            if (col_idx_int<1) col_idx_int=1;
+            if (col_idx_int>=numberOfCols) col_idx_int=numberOfCols-1;
+            if (row_idx_int<1) row_idx_int=1;
+            if (row_idx_int>=numberOfRows) row_idx_int=numberOfRows-1;
+            break;
         default:
             cout << "Table::interp2 error: desired mode=" << mode << " is not supported." << endl;
             exit(-1);
@@ -349,5 +357,18 @@ double Table::interp2(double col_idx, double row_idx, int mode)
         double A3 = interpCubic4Points(get(col_idx_int+3,row_idx_int), get(col_idx_int+3,row_idx_int+1), get(col_idx_int+3,row_idx_int+2), get(col_idx_int+3,row_idx_int+3), 1, row_idx_fraction);
         return interpCubic4Points(A0,A1,A2,A3,1, col_idx_fraction);
     }
-    return 0; // shouldn't get here though
+    if (mode == 4)
+    {
+        double f00,f01,f10,f11;
+        double eps = 1e-15;
+        f00 = log(max(eps, get(col_idx_int, row_idx_int)));
+        f01 = log(max(eps, get(col_idx_int, row_idx_int+1)));
+        f10 = log(max(eps, get(col_idx_int+1, row_idx_int)));
+        f11 = log(max(eps, get(col_idx_int+1, row_idx_int+1)));
+        return exp(f00*(1-col_idx_fraction)*(1-row_idx_fraction)
+                   + f01*(1-col_idx_fraction)*row_idx_fraction
+                   + f10*col_idx_fraction*(1-row_idx_fraction)
+                   + f11*col_idx_fraction*row_idx_fraction);
+    }
+    exit(-1); // shouldn't get here though
 }
