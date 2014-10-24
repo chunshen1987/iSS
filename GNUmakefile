@@ -10,8 +10,8 @@
 ##			distclean	remove all objectsfiles and binaries
 ##  
 
-CC := $(shell ../crank/configure_compiler_C++.sh)
-CFLAGS= $(shell ../crank/configure_compiler_C++_Flags.sh) $(shell gsl-config --cflags)
+CC := g++
+CFLAGS= -O3 $(shell gsl-config --cflags)
 
 RM		=	rm -f
 O               =       .o

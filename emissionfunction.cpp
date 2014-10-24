@@ -28,10 +28,7 @@
 #include "Stopwatch.h"
 
 #define AMOUNT_OF_OUTPUT 0 // smaller value means less outputs
-#define F0_IS_NOT_SMALL 0 // set to 0 to agree with Azspectra; set to 1 for reality
 #define NUMBER_OF_LINES_TO_WRITE   100000 // string buffer for sample files
-#define USE_OSCAR_FORMAT 1 // 1: output is tuned to reproduce OSCAR format file
-#define INCLUDE_DELTAF 1 // include delta f correction to particle distribution function in Cooper-Frye Formula
 
 using namespace std;
 
@@ -54,6 +51,10 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   FO_length = FO_length_in;
 
   paraRdr = paraRdr_in;
+  F0_IS_NOT_SMALL = paraRdr->getVal("f0_is_not_small");
+  USE_OSCAR_FORMAT = paraRdr->getVal("use_OSCAR_format");
+  INCLUDE_DELTAF = paraRdr->getVal("turn_on_shear");
+  INCLUDE_BULK_DELTAF = paraRdr->getVal("turn_on_bulk");
 
   // allocate internal buffer
   dN_pTdpTdphidy = new Table(pT_tab_length, phi_tab_length);
@@ -326,8 +327,9 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
       double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
       double tau = surf->tau;
-      double vx = surf->vx;
-      double vy = surf->vy;
+
+      double vx = surf->u1/surf->u0;
+      double vy = surf->u2/surf->u0;
 
       double mu =  surf->particle_mu[particle_idx];
 
@@ -480,8 +482,8 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
               double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
               double tau = surf->tau;
-              double vx = surf->vx;
-              double vy = surf->vy;
+              double vx = surf->u1/surf->u0;
+              double vy = surf->u2/surf->u0;
 
               double mu = surf->particle_mu[particle_idx];
 
@@ -1040,8 +1042,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
             double tau = surf->tau;
-            double vx = surf->vx;
-            double vy = surf->vy;
+            double vx = surf->u1/surf->u0;
+            double vy = surf->u2/surf->u0;
 
             double mu = surf->particle_mu[last_particle_idx];
 
@@ -1110,7 +1112,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             // write to sample file
             if (!USE_OSCAR_FORMAT)
             {
-                sprintf(line_buffer, "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, pT, phi, surf->da0, surf->da1, surf->da2, surf->vx, surf->vy, y, eta_s, E, p_z, t, z);
+                sprintf(line_buffer, "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, pT, phi, surf->da0, surf->da1, surf->da2, vx, vy, y, eta_s, E, p_z, t, z);
             }
             // To be combined to OSCAR
             if (USE_OSCAR_FORMAT)
@@ -1663,8 +1665,8 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                 double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
                 double tau = surf->tau;
-                double vx = surf->vx;
-                double vy = surf->vy;
+                double vx = surf->u1/surf->u0;
+                double vy = surf->u2/surf->u0;
 
                 double mu = surf->particle_mu[last_particle_idx];
 
@@ -1798,7 +1800,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
             // write to sample file
             if (!USE_OSCAR_FORMAT)
             {
-                sprintf(line_buffer, "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, pT, phi, surf->da0, surf->da1, surf->da2, surf->vx, surf->vy, y, eta_s, E, p_z, t, z);
+                sprintf(line_buffer, "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, pT, phi, surf->da0, surf->da1, surf->da2, surf->u1/surf->u0, surf->u2/surf->u0, y, eta_s, E, p_z, t, z);
             }
             // To be combined to OSCAR
             if (USE_OSCAR_FORMAT)
@@ -2382,8 +2384,8 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
         surf = &FOsurf_ptr[sorted_FZ[l]];
         double temp = surf->Tdec;
         double tau = surf->tau;
-        double vx = surf->vx;
-        double vy = surf->vy;
+        double vx = surf->u1/surf->u0;
+        double vy = surf->u2/surf->u0;
 
         double da0 = surf->da0;
         double da1 = surf->da1;
@@ -2501,8 +2503,8 @@ double EmissionFunctionArray::calculate_total_FZ_energy_flux()
         double p = surf->Pdec;
         double e = surf->Edec;
 
-        double vx = surf->vx;
-        double vy = surf->vy;
+        double vx = surf->u1/surf->u0;
+        double vy = surf->u2/surf->u0;
 
         double da0 = surf->da0;
         double da1 = surf->da1;
@@ -2668,8 +2670,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
                     double tau = surf->tau;
-                    double vx = surf->vx;
-                    double vy = surf->vy;
+                    double vx = surf->u1/surf->u0;
+                    double vy = surf->u2/surf->u0;
 
                     double mu = surf->particle_mu[real_particle_idx];
 
@@ -2842,7 +2844,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     // write to sample file
                     if (!USE_OSCAR_FORMAT)
                     {
-                        sprintf(line_buffer, "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, pT, phi, surf->da0, surf->da1, surf->da2, surf->vx, surf->vy, y, eta_s, E, p_z, t, z);
+                        sprintf(line_buffer, "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, pT, phi, surf->da0, surf->da1, surf->da2, surf->u1/surf->u0, surf->u2/surf->u0, y, eta_s, E, p_z, t, z);
                     }
                     // To be combined to OSCAR
                     if (USE_OSCAR_FORMAT)

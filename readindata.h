@@ -3,26 +3,70 @@
 #define READINDATA_H
 
 #include "main.h"
+#include "ParameterReader.h"
 #include<fstream>
+
 using namespace std;
 
 typedef struct
 {
-   double tau, xpt, ypt;
-   double da0, da1, da2;
-   double vx, vy;
+  int monval;			// Monte Carlo number according PDG
+  string name;
+  double mass;
+  double width;
+  int gspin;			// spin degeneracy
+  int baryon;
+  int strange;
+  int charm;
+  int bottom;
+  int gisospin;			// isospin degeneracy
+  int charge;
+  int decays;			// amount of decays listed for this resonance
+  int stable;			// defines whether this particle is considered as stable
+  int decays_Npart[Maxdecaychannel];
+  double decays_branchratio[Maxdecaychannel];
+  int decays_part[Maxdecaychannel][Maxdecaypart];
+  int sign;       //Bose-Einstein or Dirac-Fermi statistics
+}particle_info;
+
+typedef struct
+{
+   double tau, xpt, ypt, eta;
+   double da0, da1, da2, da3;
+   double u0, u1, u2, u3;
    double Edec, Tdec, Pdec;
    double Bn, muB, muS;
-   double pi00, pi01, pi02, pi11, pi12, pi22, pi33;
+   double pi00, pi01, pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33;
+   double bulkPi;
    double particle_mu[Maxparticle];
 }FO_surf;
 
-int get_filelength(string filepath);
-void read_decdat(string path, int length, FO_surf* surf_ptr);
-void read_surfdat(string path, int length, FO_surf* surf_ptr);
-void read_decdat_mu(string path, int FO_length, int N_stable, double** particle_mu);
-int read_resonance(particle_info* particle);
-void calculate_particle_mu(int Nparticle, FO_surf* FOsurf_ptr, int FO_length, particle_info* particle, double** particle_mu);
+class read_FOdata
+{
+    private:
+        ParameterReader* paraRdr;
+        string path;
+        int mode;
+        int turn_on_bulk;
+        int n_eta_skip;
+
+    public:
+        read_FOdata(ParameterReader* paraRdr_in, string path);
+        ~read_FOdata();
+        
+        int get_number_of_freezeout_cells();
+        void read_in_freeze_out_data(int length, FO_surf* surf_ptr);
+        int read_in_chemical_potentials(string path, int FO_length, FO_surf* surf_ptr, particle_info* particle_ptr);
+        void read_decdat(int length, FO_surf* surf_ptr);
+        void read_surfdat(int length, FO_surf* surf_ptr);
+        void read_FOsurfdat_VISH2p1(int length, FO_surf* surf_ptr);
+        void read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr);
+        void read_FOsurfdat_MUSIC_boost_invariant(int length, FO_surf* surf_ptr);
+        void read_decdat_mu(int FO_length, int N_stable, double** particle_mu);
+        int read_resonances_list(particle_info* particle);
+        void calculate_particle_mu(int Nparticle, FO_surf* FOsurf_ptr, int FO_length, particle_info* particle, double** particle_mu);
+
+};
 
 #endif
 

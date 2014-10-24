@@ -22,7 +22,11 @@ private:
   Table *pT_tab, *phi_tab, *y_minus_eta_tab;
   int pT_tab_length, phi_tab_length, y_minus_eta_tab_length, y_minus_eta_min_index; // the y_minus_eta_min_index holds the index to the smallest positive y-eta_s value
   bool positive_y_minus_eta_table_only; // true if y_minus_eta_tab has only positive part
+
   ParameterReader *paraRdr; // used to pass-in parameters
+  int F0_IS_NOT_SMALL;
+  int USE_OSCAR_FORMAT;
+  int INCLUDE_DELTAF, INCLUDE_BULK_DELTAF;
   
   Table *dN_pTdpTdphidy; // dN / (pt dpt dphi dy)
   Table *dN_pTdpTdphidy_max; // store the largest element when summing over xt and eta to get dN / (pt dpt dphi dy); used during sampling.
