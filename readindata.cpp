@@ -92,7 +92,7 @@ int read_FOdata::read_in_chemical_potentials(string path, int FO_length, FO_surf
 
    if(N_stableparticle > 0)
    {
-       cout << " -- EOS is partically chemical equilibrium " << endl;
+       cout << " -- EOS is partially chemical equilibrium " << endl;
        double** particle_mu = new double* [N_stableparticle];
        for(int i = 0; i < N_stableparticle; i++)
            particle_mu[i] = new double [FO_length];
@@ -246,18 +246,31 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length, FO_surf* surf
          surf_ptr[idx].muS = 0.0;
 
          // dissipative quantities at freeze out
-         surfdat >> surf_ptr[idx].pi00;
-         surfdat >> surf_ptr[idx].pi01;
-         surfdat >> surf_ptr[idx].pi02;
-         surfdat >> surf_ptr[idx].pi03;
-         surfdat >> surf_ptr[idx].pi11;
-         surfdat >> surf_ptr[idx].pi12;
-         surfdat >> surf_ptr[idx].pi13;
-         surfdat >> surf_ptr[idx].pi22;
-         surfdat >> surf_ptr[idx].pi23;
-         surfdat >> surf_ptr[idx].pi33;
+         surfdat >> dummy;
+         surf_ptr[i].pi00 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].pi01 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].pi02 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].pi03 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].pi11 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].pi12 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].pi13 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].pi22 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].pi23 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].pi33 = dummy*hbarC;
          if(turn_on_bulk == 1)
-             surfdat >> surf_ptr[idx].bulkPi;
+         {
+             surfdat >> dummy;
+             surf_ptr[idx].bulkPi = dummy*hbarC;
+         }
          else
              surf_ptr[idx].bulkPi = 0.0;
          surfdat.getline(rest_dummy, 512);
@@ -314,18 +327,31 @@ void read_FOdata::read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr)
      surf_ptr[i].muS = 0.0;
 
      // dissipative quantities at freeze out
-     surfdat >> surf_ptr[i].pi00;
-     surfdat >> surf_ptr[i].pi01;
-     surfdat >> surf_ptr[i].pi02;
-     surfdat >> surf_ptr[i].pi03;
-     surfdat >> surf_ptr[i].pi11;
-     surfdat >> surf_ptr[i].pi12;
-     surfdat >> surf_ptr[i].pi13;
-     surfdat >> surf_ptr[i].pi22;
-     surfdat >> surf_ptr[i].pi23;
-     surfdat >> surf_ptr[i].pi33;
+     surfdat >> dummy;
+     surf_ptr[i].pi00 = dummy*hbarC;
+     surfdat >> dummy;
+     surf_ptr[i].pi01 = dummy*hbarC;
+     surfdat >> dummy;
+     surf_ptr[i].pi02 = dummy*hbarC;
+     surfdat >> dummy;
+     surf_ptr[i].pi03 = dummy*hbarC;
+     surfdat >> dummy;
+     surf_ptr[i].pi11 = dummy*hbarC;
+     surfdat >> dummy;
+     surf_ptr[i].pi12 = dummy*hbarC;
+     surfdat >> dummy;
+     surf_ptr[i].pi13 = dummy*hbarC;
+     surfdat >> dummy;
+     surf_ptr[i].pi22 = dummy*hbarC;
+     surfdat >> dummy;
+     surf_ptr[i].pi23 = dummy*hbarC;
+     surfdat >> dummy;
+     surf_ptr[i].pi33 = dummy*hbarC;
      if(turn_on_bulk == 1)
-         surfdat >> surf_ptr[i].bulkPi;
+     {
+         surfdat >> dummy;
+         surf_ptr[i].bulkPi = dummy*hbarC;
+     }
      else
          surf_ptr[i].bulkPi = 0.0;
   }
