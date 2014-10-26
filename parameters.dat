@@ -1,4 +1,4 @@
-mode = 0                          # mode for reading in freeze out information 
+mode = 1                          # mode for reading in freeze out information 
                                   # 0: reads outputs from VISH2+1
                                   # 1: reads outputs from MUSIC assuming boost-invariant
                                   # 2: reads outputs from MUSIC full (3+1)-d
@@ -9,7 +9,7 @@ f0_is_not_small = 1               # include (1 \pm f_0) factor in delta f
 
 use_OSCAR_format = 1              # output results in OSCAR format
 
-calculate_vn = 0                       # 1/0: whether to calculate the dN/(pt dpt dphi dy) and v_n flows (they not required for MC-sampling)
+calculate_vn = 1                       # 1/0: whether to calculate the dN/(pt dpt dphi dy) and v_n flows (they not required for MC-sampling)
 
 MC_sampling = 2                        # 0/1/2/3: whether to perform Monte-Carlo sampling (not required for spectra calculation). 0: No sampling. 1: use dN_dxtdetady to sample. 2: use dN_dxtdy to sample. 3: use dN_pTdpTdphidy to sample (overwrites calculate_vn to be 1). Since this parameter controls whether to calculate certain arrays, it controls whether to perform other related calculations (see below).
 
