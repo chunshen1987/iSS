@@ -68,10 +68,12 @@ int read_FOdata::get_number_of_freezeout_cells()
 
 void read_FOdata::read_in_freeze_out_data(int length, FO_surf* surf_ptr)
 {
-   if(mode == 0)
+   if(mode == 0)     // VISH2+1 outputs
       read_FOsurfdat_VISH2p1(length, surf_ptr);
-   else if (mode == 1)
+   else if (mode == 1)   // MUSIC boost invariant outputs
       read_FOsurfdat_MUSIC_boost_invariant(length, surf_ptr);
+   else if (mode == 2)   // MUSIC full (3+1)-d outputs
+      read_FOsurfdat_MUSIC(length, surf_ptr);
 
    return;
 }
@@ -246,26 +248,26 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length, FO_surf* surf
          surf_ptr[idx].muS = 0.0;
 
          // dissipative quantities at freeze out
+         surfdat >> dummy;                  // 1/fm^4
+         surf_ptr[idx].pi00 = dummy*hbarC;  // GeV/fm^3
          surfdat >> dummy;
-         surf_ptr[i].pi00 = dummy*hbarC;
+         surf_ptr[idx].pi01 = dummy*hbarC;
          surfdat >> dummy;
-         surf_ptr[i].pi01 = dummy*hbarC;
+         surf_ptr[idx].pi02 = dummy*hbarC;
          surfdat >> dummy;
-         surf_ptr[i].pi02 = dummy*hbarC;
+         surf_ptr[idx].pi03 = dummy*hbarC;
          surfdat >> dummy;
-         surf_ptr[i].pi03 = dummy*hbarC;
+         surf_ptr[idx].pi11 = dummy*hbarC;
          surfdat >> dummy;
-         surf_ptr[i].pi11 = dummy*hbarC;
+         surf_ptr[idx].pi12 = dummy*hbarC;
          surfdat >> dummy;
-         surf_ptr[i].pi12 = dummy*hbarC;
+         surf_ptr[idx].pi13 = dummy*hbarC;
          surfdat >> dummy;
-         surf_ptr[i].pi13 = dummy*hbarC;
+         surf_ptr[idx].pi22 = dummy*hbarC;
          surfdat >> dummy;
-         surf_ptr[i].pi22 = dummy*hbarC;
+         surf_ptr[idx].pi23 = dummy*hbarC;
          surfdat >> dummy;
-         surf_ptr[i].pi23 = dummy*hbarC;
-         surfdat >> dummy;
-         surf_ptr[i].pi33 = dummy*hbarC;
+         surf_ptr[idx].pi33 = dummy*hbarC;
          if(turn_on_bulk == 1)
          {
              surfdat >> dummy;
