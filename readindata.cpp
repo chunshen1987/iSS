@@ -46,14 +46,16 @@ int read_FOdata::get_number_of_freezeout_cells()
       Table block_file(surface_file.str().c_str());
 
       // determine number of the eta slides that are output
-      double eta = block_file.get(4, 1);
-      int n_eta = 1;
-      while(block_file.get(4, n_eta+1) != eta)
+      double eta_target = block_file.get(4, 1);
+      int i_eta = 1;
+      int num_temp = 0;
+      for(int i = 0; i < block_file.getNumberOfRows(); i++)
       {
-          n_eta++;
+         if(block_file.get(4, i+1) == eta_target)
+            num_temp++;
       }
-      n_eta_skip = n_eta;
-      number_of_cells = block_file.getNumberOfRows()/n_eta;
+      number_of_cells = num_temp;
+      n_eta_skip = block_file.getNumberOfRows()/number_of_cells;
    }
    else if (mode == 2)  // outputs from MUSIC full (3+1)-d
    {
@@ -209,78 +211,81 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length, FO_surf* surf
   ostringstream surfdat_stream;
   double dummy;
   double temp;
+  string input;
+  double temp_tau, temp_xpt, temp_ypt, temp_eta;
+  double eta_target;
   int idx = 0;
   char rest_dummy[512];
   surfdat_stream << path << "/surface.dat";
   ifstream surfdat(surfdat_stream.str().c_str());
   for(int i = 0; i < length*n_eta_skip; i++)
   {
-     if( i%n_eta_skip == 0)
+     getline(surfdat, input, '\n' );
+     stringstream ss(input);
+     ss >> temp_tau >> temp_xpt >> temp_ypt >> temp_eta;
+     if(i == 0) 
+         eta_target = temp_eta;
+     if(fabs(temp_eta - eta_target) < 1e-15)
      {
          // freeze out position
-         surfdat >> surf_ptr[idx].tau;
-         surfdat >> surf_ptr[idx].xpt;
-         surfdat >> surf_ptr[idx].ypt;
-         surfdat >> surf_ptr[idx].eta;
+         surf_ptr[idx].tau = temp_tau;
+         surf_ptr[idx].xpt = temp_xpt;
+         surf_ptr[idx].ypt = temp_ypt;
+         surf_ptr[idx].eta = temp_eta;
 
          // freeze out normal vectors
-         surfdat >> surf_ptr[idx].da0;
-         surfdat >> surf_ptr[idx].da1;
-         surfdat >> surf_ptr[idx].da2;
-         surfdat >> surf_ptr[idx].da3;
+         ss >> surf_ptr[idx].da0;
+         ss >> surf_ptr[idx].da1;
+         ss >> surf_ptr[idx].da2;
+         ss >> surf_ptr[idx].da3;
 
          // flow velocity
-         surfdat >> surf_ptr[idx].u0;
-         surfdat >> surf_ptr[idx].u1;
-         surfdat >> surf_ptr[idx].u2;
-         surfdat >> surf_ptr[idx].u3;
+         ss >> surf_ptr[idx].u0;
+         ss >> surf_ptr[idx].u1;
+         ss >> surf_ptr[idx].u2;
+         ss >> surf_ptr[idx].u3;
 
          // thermodynamic quantities at freeze out
-         surfdat >> dummy;
+         ss >> dummy;
          surf_ptr[idx].Edec = dummy*hbarC;   
-         surfdat >> dummy;
+         ss >> dummy;
          surf_ptr[idx].Tdec = dummy*hbarC;
-         surfdat >> dummy;
+         ss >> dummy;
          surf_ptr[idx].muB = dummy*hbarC;
-         surfdat >> dummy;              // (e+P)/T
+         ss >> dummy;              // (e+P)/T
          surf_ptr[idx].Pdec = dummy*surf_ptr[idx].Tdec - surf_ptr[idx].Edec;
          surf_ptr[idx].Bn = 0.0;
          surf_ptr[idx].muS = 0.0;
 
          // dissipative quantities at freeze out
-         surfdat >> dummy;                  // 1/fm^4
+         ss >> dummy;                  // 1/fm^4
          surf_ptr[idx].pi00 = dummy*hbarC;  // GeV/fm^3
-         surfdat >> dummy;
+         ss >> dummy;
          surf_ptr[idx].pi01 = dummy*hbarC;
-         surfdat >> dummy;
+         ss >> dummy;
          surf_ptr[idx].pi02 = dummy*hbarC;
-         surfdat >> dummy;
+         ss >> dummy;
          surf_ptr[idx].pi03 = dummy*hbarC;
-         surfdat >> dummy;
+         ss >> dummy;
          surf_ptr[idx].pi11 = dummy*hbarC;
-         surfdat >> dummy;
+         ss >> dummy;
          surf_ptr[idx].pi12 = dummy*hbarC;
-         surfdat >> dummy;
+         ss >> dummy;
          surf_ptr[idx].pi13 = dummy*hbarC;
-         surfdat >> dummy;
+         ss >> dummy;
          surf_ptr[idx].pi22 = dummy*hbarC;
-         surfdat >> dummy;
+         ss >> dummy;
          surf_ptr[idx].pi23 = dummy*hbarC;
-         surfdat >> dummy;
+         ss >> dummy;
          surf_ptr[idx].pi33 = dummy*hbarC;
          if(turn_on_bulk == 1)
          {
-             surfdat >> dummy;
+             ss >> dummy;
              surf_ptr[idx].bulkPi = dummy*hbarC;
          }
          else
              surf_ptr[idx].bulkPi = 0.0;
-         surfdat.getline(rest_dummy, 512);
          idx++;
-     }
-     else
-     {
-         surfdat.getline(rest_dummy, 512);
      }
   }
   surfdat.close();
