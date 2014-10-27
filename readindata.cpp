@@ -214,6 +214,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length, FO_surf* surf
   string input;
   double temp_tau, temp_xpt, temp_ypt, temp_eta;
   double eta_target;
+  double deta = 100.0;
   int idx = 0;
   char rest_dummy[512];
   surfdat_stream << path << "/surface.dat";
@@ -225,7 +226,8 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length, FO_surf* surf
      ss >> temp_tau >> temp_xpt >> temp_ypt >> temp_eta;
      if(i == 0) 
          eta_target = temp_eta;
-     if(fabs(temp_eta - eta_target) < 1e-15)
+     double eta_diff = fabs(temp_eta - eta_target);
+     if(eta_diff < 1e-15)
      {
          // freeze out position
          surf_ptr[idx].tau = temp_tau;
@@ -287,8 +289,19 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length, FO_surf* surf
              surf_ptr[idx].bulkPi = 0.0;
          idx++;
      }
+     else
+     {
+         if(eta_diff < deta) deta = eta_diff;
+     }
   }
   surfdat.close();
+  for(int i = 0; i < length; i++)
+  {
+         surf_ptr[i].da0 = surf_ptr[i].da0/deta;
+         surf_ptr[i].da1 = surf_ptr[i].da1/deta;
+         surf_ptr[i].da2 = surf_ptr[i].da2/deta;
+         surf_ptr[i].da3 = surf_ptr[i].da3/deta;
+  }
   cout << "done" << endl;
   return;
 }
