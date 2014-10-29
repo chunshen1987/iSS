@@ -328,8 +328,9 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
 
       double tau = surf->tau;
 
-      double vx = surf->u1/surf->u0;
-      double vy = surf->u2/surf->u0;
+      double gammaT = surf->u0;
+      double ux = surf->u1;
+      double uy = surf->u2;
 
       double mu =  surf->particle_mu[particle_idx];
 
@@ -343,9 +344,6 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
       double pi12 = surf->pi12;
       double pi22 = surf->pi22;
       double pi33 = surf->pi33;
-
-      double v2 = vx*vx + vy*vy;
-      double gammaT = 1.0/sqrt(1.0 - v2);
 
       for (int k=0; k<y_minus_eta_tab_length; k++)
       {
@@ -372,7 +370,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
                   double pT_phi_inte_weight = pT*pT_weight*phi_weight;
 
 
-                  double expon = (gammaT*(pt*1 - px*vx - py*vy) - mu) / Tdec;
+                  double expon = ((pt*gammaT - px*ux - py*uy) - mu) / Tdec;
                   double f0 = 1./(exp(expon)+sign);       //thermal equilibrium distributions
 
                   double pdsigma = pt*da0 + px*da1 + py*da2;
@@ -482,8 +480,9 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
               double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
               double tau = surf->tau;
-              double vx = surf->u1/surf->u0;
-              double vy = surf->u2/surf->u0;
+              double gammaT = surf->u0;
+              double ux = surf->u1;
+              double uy = surf->u2;
 
               double mu = surf->particle_mu[particle_idx];
 
@@ -498,10 +497,6 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
               double pi22 = surf->pi22;
               double pi33 = surf->pi33;
 
-              double v2 = vx*vx + vy*vy;
-              double gammaT = 1.0/sqrt(1.0 - v2);
-
-
               for (int k=0; k<y_minus_eta_tab_length; k++)
               {
                   double delta_eta = delta_y_minus_eta_tab[k];
@@ -509,7 +504,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
                   double pt = mT*hypertrig_y_minus_eta_table[k][0];
                   double pz = mT*hypertrig_y_minus_eta_table[k][1];
 
-                  double expon = (gammaT*(pt*1 - px*vx - py*vy) - mu) / Tdec;
+                  double expon = ((pt*gammaT - px*ux - py*uy) - mu) / Tdec;
                   double f0 = 1./(exp(expon)+sign);       //thermal equilibrium distributions
 
                   double pdsigma = pt*da0 + px*da1 + py*da2;
@@ -519,9 +514,9 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
                   double deltaf = (1 - F0_IS_NOT_SMALL*sign*f0)*Wfactor*deltaf_prefactor;
 
                   double result;
-                  if(1.+deltaf < 0.0) // reject points that f_0 + delta f < 0
-                     result = 0.0; 
-                  else
+                  //if(1.+deltaf < 0.0) // reject points that f_0 + delta f < 0
+                  //   result = 0.0; 
+                  //else
                      result = prefactor*degen*f0*(1+deltaf)*pdsigma*tau;
 
                   if (use_pos_dN_only && result<0) continue;
@@ -1042,8 +1037,10 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
             double tau = surf->tau;
-            double vx = surf->u1/surf->u0;
-            double vy = surf->u2/surf->u0;
+
+            double gammaT = surf->u0;
+            double ux = surf->u1;
+            double uy = surf->u2;
 
             double mu = surf->particle_mu[last_particle_idx];
 
@@ -1057,10 +1054,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             double pi12 = surf->pi12;
             double pi22 = surf->pi22;
             double pi33 = surf->pi33;
-
-            double v2 = vx*vx + vy*vy;
-            double gammaT = 1.0/sqrt(1.0 - v2);
-
 
             // next sample pt and phi
             double pT, mT, phi, px, py;// will-be sampled values
@@ -1080,7 +1073,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
                 px = pT*cos(phi);
                 py = pT*sin(phi);
 
-                double expon = (gammaT*(pt*1 - px*vx - py*vy) - mu) * inv_Tdec;
+                double expon = ((pt*gammaT - px*ux - py*uy) - mu) * inv_Tdec;
                 double f0 = 1./(exp(expon)+sign);
 
                 double pdsigma = pt*da0 + px*da1 + py*da2;
@@ -1108,6 +1101,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             double E = mT*cosh(y);
             double z = surf->tau*sinh(eta_s);
             double t = surf->tau*cosh(eta_s);
+            double vx = ux/gammaT;
+            double vy = uy/gammaT;
 
             // write to sample file
             if (!USE_OSCAR_FORMAT)
@@ -1665,8 +1660,10 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                 double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
                 double tau = surf->tau;
-                double vx = surf->u1/surf->u0;
-                double vy = surf->u2/surf->u0;
+
+                double gammaT = surf->u0;
+                double ux = surf->u1;
+                double uy = surf->u2;
 
                 double mu = surf->particle_mu[last_particle_idx];
 
@@ -1681,15 +1678,11 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                 double pi22 = surf->pi22;
                 double pi33 = surf->pi33;
 
-                double v2 = vx*vx + vy*vy;
-                double gammaT = 1.0/sqrt(1.0 - v2);
-
-                
                 y_minus_eta_s_idx = y_minus_eta_min_index;
                 double pt_max = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][0];
                 double pz_max = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][1];
 
-                double expon_max = (gammaT*(pt_max*1 - px*vx - py*vy) - mu) * inv_Tdec;
+                double expon_max = ((pt_max*gammaT - px*ux - py*uy) - mu) * inv_Tdec;
                 double f0_max = 1./(exp(expon_max)+sign);
 
                 double pdsigma_max = pt_max*da0 + px*da1 + py*da2;
@@ -1739,7 +1732,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                     double pt = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][0];
                     double pz = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][1];
 
-                    double expon = (gammaT*(pt*1 - px*vx - py*vy) - mu) * inv_Tdec;
+                    double expon = ((pt*gammaT - px*ux - py*uy) - mu) * inv_Tdec;
                     double f0 = 1./(exp(expon)+sign);
 
                     double pdsigma = pt*da0 + px*da1 + py*da2;
@@ -2384,15 +2377,16 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
         surf = &FOsurf_ptr[sorted_FZ[l]];
         double temp = surf->Tdec;
         double tau = surf->tau;
-        double vx = surf->u1/surf->u0;
-        double vy = surf->u2/surf->u0;
+
+        double gammaT = surf->u0;
+        double ux = surf->u1;
+        double uy = surf->u2;
 
         double da0 = surf->da0;
         double da1 = surf->da1;
         double da2 = surf->da2;
 
-        double gammaT = 1.0/sqrt(1.0-vx*vx-vy*vy+1e-30);
-        double dsigma_dot_u = tau*gammaT*(da0+vx*da1+vy*da2);
+        double dsigma_dot_u = tau*(da0*gammaT + ux*da1 + uy*da2);
 
         if (l>0 && (temp-last_temp)/(last_temp+1e-30)<1e-30)
         {
@@ -2503,8 +2497,9 @@ double EmissionFunctionArray::calculate_total_FZ_energy_flux()
         double p = surf->Pdec;
         double e = surf->Edec;
 
-        double vx = surf->u1/surf->u0;
-        double vy = surf->u2/surf->u0;
+        double u0 = surf->u0;
+        double u1 = surf->u1;
+        double u2 = surf->u2;
 
         double da0 = surf->da0;
         double da1 = surf->da1;
@@ -2513,13 +2508,6 @@ double EmissionFunctionArray::calculate_total_FZ_energy_flux()
         double pi00 = surf->pi00;
         double pi01 = surf->pi01;
         double pi02 = surf->pi02;
-
-        double v2 = vx*vx + vy*vy;
-        double gammaT = 1.0/sqrt(1.0 - v2);
-
-        double u0 = gammaT;
-        double u1 = gammaT*vx;
-        double u2 = gammaT*vy;
 
         total_energy += (e*u0*u0 + pi00)*da0 + ((e+p)*u0*u1 + pi01)*da1 + ((e+p)*u0*u2 + pi02)*da2;
     }
@@ -2670,8 +2658,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
 
                     double tau = surf->tau;
-                    double vx = surf->u1/surf->u0;
-                    double vy = surf->u2/surf->u0;
+                    double u0 = surf->u0;
+                    double u1 = surf->u1;
+                    double u2 = surf->u2;
 
                     double mu = surf->particle_mu[real_particle_idx];
 
@@ -2686,11 +2675,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     double pi22 = surf->pi22;
                     double pi33 = surf->pi33;
 
-                    double v2 = vx*vx + vy*vy;
-                    double gammaT = 1.0/sqrt(1.0 - v2);
-
                     // calculate maximum value for p*dsigma f, used in PDF accept/reject sampling
-                    double u0=gammaT, u1=gammaT*vx, u2=gammaT*vy;
                     double dsigmaT = sqrt(da0*da0*(u1*u1+u2*u2) + da1*da1*(1+u1*u1) + da2*da2*(1+u2*u2) + 2*da0*da1*u0*u1 + 2*da0*da2*u0*u2 + 2*da1*da2*u1*u2);
                     double dsigma_all = abs(da0*u0+da1*u1+da2*u2) + abs(dsigmaT);
 
@@ -2804,7 +2789,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                         double pt = mT*cosh(y_minus_eta_s);
                         double pz = mT*sinh(y_minus_eta_s);
 
-                        double expon = (gammaT*(pt*1 - px*vx - py*vy) - mu) * inv_Tdec;
+                        double expon = ((pt*u0 - px*u1 - py*u2) - mu) * inv_Tdec;
                         double f0 = 1./(exp(expon)+sign);
 
                         double pdsigma = pt*da0 + px*da1 + py*da2;

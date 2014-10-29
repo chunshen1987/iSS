@@ -42,7 +42,7 @@ SRCFILES 	= 	$(SRC) $(INC) GNUmakefile
 OBJECTS		=	$(addprefix $(OBJDIR)/, $(addsuffix $O, \
 			$(basename $(SRC))))
 TARGET		=	$(MAIN)
-INSTPATH	=	$(HOME)/local/bin
+INSTPATH	=	../
 
 # --------------- Pattern rules -------------------
 
