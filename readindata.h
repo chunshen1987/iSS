@@ -49,6 +49,7 @@ class read_FOdata
         int mode;
         int turn_on_bulk;
         int n_eta_skip;
+        int IEOS_music;
 
     public:
         read_FOdata(ParameterReader* paraRdr_in, string path);
@@ -63,6 +64,7 @@ class read_FOdata
         void read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr);
         void read_FOsurfdat_MUSIC_boost_invariant(int length, FO_surf* surf_ptr);
         void read_decdat_mu(int FO_length, int N_stable, double** particle_mu);
+        void read_chemical_potentials_music(int FO_length, FO_surf* FOsurf_ptr, int N_stable, double** particle_mu);
         int read_resonances_list(particle_info* particle);
         void calculate_particle_mu(int Nparticle, FO_surf* FOsurf_ptr, int FO_length, particle_info* particle, double** particle_mu);
 
