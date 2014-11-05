@@ -2193,7 +2193,8 @@ void EmissionFunctionArray::calculate_dN_deta_using_dN_dxtdetady()
     char dN_deta_filename_buffer[300];
     sprintf(dN_deta_filename_buffer, dN_deta_filename.c_str(), particle->monval);
     ofstream of(dN_deta_filename_buffer);
-    for (int k=0; k<y_minus_eta_tab_length; k++) formatedPrint(of, 3, y_minus_eta_tab->get(1,k+1), dN_deta[k], y_minus_eta_tab->get(2,k+1));
+    for (int k=0; k<y_minus_eta_tab_length; k++) 
+        formatedPrint(of, 3, y_minus_eta_tab->get(1,k+1), dN_deta[k]/y_minus_eta_tab->get(2,k+1), dN_deta[k]);
     of.close();
 
 }
