@@ -180,6 +180,7 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   dN_dphi_filename = "results/dN_dphi_%d.dat";
   dN_deta_filename = "results/dN_deta_%d.dat";
   dN_dxt_filename = "results/dN_dxt_%d.dat";
+  dN_dx_filename = "results/dN_dx_%d.dat";
 
   OSCAR_header_filename = "OSCAR_header.txt";
   OSCAR_output_filename = "OSCAR.DAT";
@@ -1967,6 +1968,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady_and_sample_4all()
     int calculate_dN_dtau = paraRdr->getVal("calculate_dN_dtau");
     int calculate_dN_deta = paraRdr->getVal("calculate_dN_deta");
     int calculate_dN_dxt = paraRdr->getVal("calculate_dN_dxt");
+    int calculate_dN_dx = paraRdr->getVal("calculate_dN_dx");
 
     // loop over chosen particles
     particle_info* particle = NULL;
@@ -1993,6 +1995,14 @@ void EmissionFunctionArray::calculate_dN_dxtdetady_and_sample_4all()
             double dtau = paraRdr->getVal("bin_dtau");
             double tau_max = paraRdr->getVal("bin_tau_max");
             calculate_dN_dtau_using_dN_dxtdetady(tau0, dtau, tau_max);
+        }
+        
+        if (calculate_dN_dx)
+        {
+            double x_min = paraRdr->getVal("bin_x_min");
+            double dx = paraRdr->getVal("bin_dx");
+            double x_max = paraRdr->getVal("bin_x_max");
+            calculate_dN_dx_using_dN_dxtdetady(x_min, x_max, dx);
         }
 
         if (calculate_dN_deta)
@@ -2061,13 +2071,76 @@ void EmissionFunctionArray::calculate_dN_dtau_using_dN_dxtdetady(double tau0, do
     char dN_dtau_filename_buffer[300];
     sprintf(dN_dtau_filename_buffer, dN_dtau_filename.c_str(), particle->monval);
     ofstream of(dN_dtau_filename_buffer);
-    for (long idx=0; idx<number_of_bins; idx++) formatedPrint(of, 4, tau0+(idx+0.5)*dtau, sum_tau[idx]/(count[idx]+1e-30), sum_dN[idx], count[idx]);
+    for (long idx=0; idx<number_of_bins; idx++) formatedPrint(of, 4, tau0+(idx+0.5)*dtau, sum_tau[idx]/(count[idx]+1e-30), sum_dN[idx]/dtau, count[idx]);
     of.close();
 
 }
 //***************************************************************************
 
 
+
+//***************************************************************************
+void EmissionFunctionArray::calculate_dN_dx_using_dN_dxtdetady(double x_min, double x_max, double dx)
+// Calculate dN/dx. Should be called after calculate_dN_dxtdetady. The emission
+// function will be binned into bins x_min:x_max:dx. The result will be written
+// directly to file.
+// Each line of the output file has the format:
+// x-at-the-center-of-the-bin mean-x dN_dx count
+{
+    // create local cache
+    double delta_y_minus_eta_tab[y_minus_eta_tab_length];
+    for (int k=0; k<y_minus_eta_tab_length; k++) delta_y_minus_eta_tab[k] = y_minus_eta_tab->get(2,k+1);
+
+    // use a buffer to store summed data
+    long number_of_bins = (x_max - x_min)/dx;
+    vector<double> sum_dN1(number_of_bins, 0);   // dN/dydx1 @ |x2| < 0.5 fm
+    vector<double> sum_dN2(number_of_bins, 0);   // dN/dydx2 @ |x1| < 0.5 fm
+    vector<double> sum_x1(number_of_bins, 0);
+    vector<double> sum_x2(number_of_bins, 0);
+    vector<double> count1(number_of_bins,0);
+    vector<double> count2(number_of_bins,0);
+
+    // construct bins
+    vector<double> bins;
+    for (double x = x_min; x < x_max; x+=dx) bins.push_back(x);
+
+    // summing to bins
+    for (int k=0; k<y_minus_eta_tab_length; k++)
+    for (long l=0; l<FO_length; l++)
+    {
+        double x_local = FOsurf_ptr[l].xpt;
+        double y_local = FOsurf_ptr[l].ypt;
+        if(fabs(y_local) < 0.5)
+        {
+            long idx = binarySearch(&bins, x_local, true);
+            if (idx==-1) continue; // skip those not falling in any bins
+            sum_dN1[idx] += dN_dxtdetady[k][l]*delta_y_minus_eta_tab[k];
+            sum_x1[idx] += x_local;
+            count1[idx] ++;
+        }
+        if(fabs(x_local) < 0.5)
+        {
+            long idx = binarySearch(&bins, y_local, true);
+            if (idx==-1) continue; // skip those not falling in any bins
+            sum_dN2[idx] += dN_dxtdetady[k][l]*delta_y_minus_eta_tab[k];
+            sum_x2[idx] += y_local;
+            count2[idx] ++;
+        }
+    }
+
+    // average them and output
+    particle_info* particle = &particles[last_particle_idx];
+    char dN_dx_filename_buffer[300];
+    sprintf(dN_dx_filename_buffer, dN_dx_filename.c_str(), particle->monval);
+    ofstream of(dN_dx_filename_buffer);
+    for (long idx=0; idx<number_of_bins; idx++) 
+        formatedPrint(of, 7, x_min+(idx+0.5)*dx, 
+                      sum_x1[idx]/(count1[idx]+1e-30), sum_dN1[idx]/dx, count1[idx],
+                      sum_x2[idx]/(count2[idx]+1e-30), sum_dN2[idx]/dx, count2[idx]);
+    of.close();
+
+}
+//***************************************************************************
 
 
 //***************************************************************************

@@ -88,6 +88,8 @@ public:
   string dN_deta_filename;
   void calculate_dN_dxt_using_dN_dxtdetady();
   string dN_dxt_filename;
+  void calculate_dN_dx_using_dN_dxtdetady(double x_min, double x_max, double dx);
+  string dN_dx_filename;
 
   // Second sampling method
   double calculate_dN_analytic(particle_info* particle, double mu, double Temperature);
