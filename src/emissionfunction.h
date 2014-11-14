@@ -27,6 +27,7 @@ private:
   int F0_IS_NOT_SMALL;
   int USE_OSCAR_FORMAT;
   int INCLUDE_DELTAF, INCLUDE_BULK_DELTAF;
+  int bulk_deltaf_kind;
   
   Table *dN_pTdpTdphidy; // dN / (pt dpt dphi dy)
   Table *dN_pTdpTdphidy_max; // store the largest element when summing over xt and eta to get dN / (pt dpt dphi dy); used during sampling.
@@ -53,6 +54,10 @@ private:
   Poisson poissonDistribution;
   bool particles_are_the_same(int, int);
   long *sorted_FZ;
+  
+  //array for bulk delta f coefficients
+  Table *bulkdf_coeff;
+
 public:
   EmissionFunctionArray(Table* chosen_particle, Table* pt_tab_in, Table* phi_tab_in, Table* eta_tab_in, particle_info* particles_in, int Nparticles, FO_surf* FOsurf_ptr_in, long FO_length_in, ParameterReader* paraRdr_in);
   ~EmissionFunctionArray();
@@ -102,6 +107,8 @@ public:
   Table pT_tab4Sampling, phi_tab4Sampling;
   int pT_tab4Sampling_length, phi_tab4Sampling_length;
   double** trig_phi_tab4Sampling;
+
+  void getbulkvisCoefficients(double Tdec, double* bulkvisCoefficients);
 };
 
 #endif

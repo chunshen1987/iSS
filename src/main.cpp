@@ -82,7 +82,8 @@ int main(int argc, char** argv)
    Table chosen_particles("EOS/chosen_particles.dat"); // skip others except for these particle
    Table pT_tab("tables/pT_gauss_table.dat"); // pt position and weight table
    Table phi_tab("tables/phi_gauss_table.dat"); // phi position and weight table
-   Table eta_tab("tables/eta_gauss_table_30_full.dat"); // eta uniform dist table
+   //Table eta_tab("tables/eta_gauss_table_30_full.dat"); // eta uniform dist table
+   Table eta_tab("tables/eta_uni_table.dat"); // eta uniform dist table
    EmissionFunctionArray efa(&chosen_particles, &pT_tab, &phi_tab, &eta_tab, particle, Nparticle, FOsurf_ptr, FO_length, paraRdr);
 
    efa.shell();
