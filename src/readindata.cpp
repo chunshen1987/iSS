@@ -337,12 +337,15 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length, FO_surf* surf
   surfdat.close();
 
   // take out deta weight
-  for(int i = 0; i < length; i++)
+  if(n_eta_skip > 1)
   {
-         surf_ptr[i].da0 = surf_ptr[i].da0/deta;
-         surf_ptr[i].da1 = surf_ptr[i].da1/deta;
-         surf_ptr[i].da2 = surf_ptr[i].da2/deta;
-         surf_ptr[i].da3 = surf_ptr[i].da3/deta;
+     for(int i = 0; i < length; i++)
+     {
+        surf_ptr[i].da0 = surf_ptr[i].da0/deta;
+        surf_ptr[i].da1 = surf_ptr[i].da1/deta;
+        surf_ptr[i].da2 = surf_ptr[i].da2/deta;
+        surf_ptr[i].da3 = surf_ptr[i].da3/deta;
+     }
   }
   cout << "done" << endl;
   return;
