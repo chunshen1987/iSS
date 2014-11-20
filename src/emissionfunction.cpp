@@ -362,7 +362,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
       {
           if(bulk_deltaf_kind == 0)
               bulkPi = surf->bulkPi;
-          else if(bulk_deltaf_kind == 1)
+          else
               bulkPi = surf->bulkPi/hbarC;   // need unit in fm^-4 for the parameterization
           getbulkvisCoefficients(Tdec, bulkvisCoefficients);
       }
@@ -566,7 +566,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
               {
                   if(bulk_deltaf_kind == 0)
                       bulkPi = surf->bulkPi;
-                  else if(bulk_deltaf_kind == 1)
+                  else 
                       bulkPi = surf->bulkPi/hbarC;   // need unit in fm^-4 for the parameterization
                   getbulkvisCoefficients(Tdec, bulkvisCoefficients);
               }
@@ -1177,7 +1177,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             {
                 if(bulk_deltaf_kind == 0)
                     bulkPi = surf->bulkPi;
-                else if(bulk_deltaf_kind == 1)
+                else
                     bulkPi = surf->bulkPi/hbarC;   // need unit in fm^-4 for the parameterization
                 getbulkvisCoefficients(Tdec, bulkvisCoefficients);
             }
@@ -1856,7 +1856,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                 {
                     if(bulk_deltaf_kind == 0)
                         bulkPi = surf->bulkPi;
-                    else if(bulk_deltaf_kind == 1)
+                    else 
                         bulkPi = surf->bulkPi/hbarC;   // need unit in fm^-4 for the parameterization
                     getbulkvisCoefficients(Tdec, bulkvisCoefficients);
                 }
@@ -3015,7 +3015,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     {
                         if(bulk_deltaf_kind == 0)
                             bulkPi = surf->bulkPi;
-                        else if(bulk_deltaf_kind == 1)
+                        else
                             bulkPi = surf->bulkPi/hbarC;   // need unit in fm^-4 for the parameterization
                         getbulkvisCoefficients(Tdec, bulkvisCoefficients);
                     }
