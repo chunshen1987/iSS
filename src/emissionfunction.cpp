@@ -3386,7 +3386,7 @@ void EmissionFunctionArray::getbulkvisCoefficients(double Tdec, double* bulkvisC
              + 450509014334.964*Tdec_fm_power[2] - 1673143669281.46*Tdec_fm_power[3] 
              + 4062340452589.89*Tdec_fm_power[4] - 6737468792456.4*Tdec_fm_power[5] 
              + 7730102407679.65*Tdec_fm_power[6] - 6058276038129.83*Tdec_fm_power[7] 
-             + 3103990764357.81*Tdec_fm_power[8] - 938850005883.612*Tdec_fm_power[8] 
+             + 3103990764357.81*Tdec_fm_power[8] - 938850005883.612*Tdec_fm_power[9] 
              + 127305171097.249*Tdec_fm_power[10]);
    }
    return;
