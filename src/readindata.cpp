@@ -111,7 +111,9 @@ int read_FOdata::read_in_chemical_potentials(string path, int FO_length, FO_surf
            }
        }
        ifstream particletable;
-       if(IEOS_music == 3)         // s95p-v1-PCE150
+       if(IEOS_music == 2)
+           N_stableparticle = 0;
+       else if(IEOS_music == 3)         // s95p-v1-PCE150
            particletable.open("EOS/EOS_tables/s95p-v1-PCE150/EOS_particletable.dat");
        else if(IEOS_music == 4)   // s95p-v1-PCE155
            particletable.open("EOS/EOS_tables/s95p-v1-PCE155/EOS_particletable.dat");
