@@ -21,6 +21,9 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in)
    path = path_in;
    mode = paraRdr->getVal("hydro_mode");
    turn_on_bulk = paraRdr->getVal("turn_on_bulk");
+   turn_on_rhob = paraRdr->getVal("turn_on_rhob");
+   turn_on_diff = paraRdr->getVal("turn_on_diff");
+
    n_eta_skip = 0;
 }
 
@@ -80,7 +83,8 @@ void read_FOdata::read_in_freeze_out_data(int length, FO_surf* surf_ptr)
    return;
 }
 
-int read_FOdata::read_in_chemical_potentials(string path, int FO_length, FO_surf* surf_ptr, particle_info* particle_ptr)
+int read_FOdata::read_in_chemical_potentials(
+    string path, int FO_length, FO_surf* surf_ptr, particle_info* particle_ptr)
 {
    int Nparticle = 0;
    int N_stableparticle;
@@ -114,13 +118,17 @@ int read_FOdata::read_in_chemical_potentials(string path, int FO_length, FO_surf
        if(IEOS_music == 2)
            N_stableparticle = 0;
        else if(IEOS_music == 3)         // s95p-v1-PCE150
-           particletable.open("EOS/EOS_tables/s95p-v1-PCE150/EOS_particletable.dat");
+           particletable.open(
+                        "EOS/EOS_tables/s95p-v1-PCE150/EOS_particletable.dat");
        else if(IEOS_music == 4)   // s95p-v1-PCE155
-           particletable.open("EOS/EOS_tables/s95p-v1-PCE155/EOS_particletable.dat");
+           particletable.open(
+                        "EOS/EOS_tables/s95p-v1-PCE155/EOS_particletable.dat");
        else if(IEOS_music == 5)   // s95p-v1-PCE160
-           particletable.open("EOS/EOS_tables/s95p-v1-PCE160/EOS_particletable.dat");
+           particletable.open(
+                        "EOS/EOS_tables/s95p-v1-PCE160/EOS_particletable.dat");
        else if(IEOS_music == 6)   // s95p-v0-PCE165
-           particletable.open("EOS/EOS_tables/s95p-v0-PCE165/EOS_particletable.dat");
+           particletable.open(
+                        "EOS/EOS_tables/s95p-v0-PCE165/EOS_particletable.dat");
        else
        {
            cout << "invalid IEOS_music: " << IEOS_music << endl;
@@ -146,9 +154,11 @@ int read_FOdata::read_in_chemical_potentials(string path, int FO_length, FO_surf
        if(mode == 0)
            read_decdat_mu(FO_length, N_stableparticle, particle_mu);
        else if (mode == 1 || mode == 2)
-           read_chemical_potentials_music(FO_length, surf_ptr, N_stableparticle, particle_mu);
+           read_chemical_potentials_music(FO_length, surf_ptr, 
+                                          N_stableparticle, particle_mu);
 
-       calculate_particle_mu(Nparticle, surf_ptr, FO_length, particle_ptr, particle_mu);
+       calculate_particle_mu(Nparticle, surf_ptr, FO_length, 
+                             particle_ptr, particle_mu);
        for(int i = 0; i < N_stableparticle; i++)
            delete [] particle_mu[i];
        delete [] particle_mu;
@@ -247,9 +257,11 @@ void read_FOdata::read_FOsurfdat_VISH2p1(int length, FO_surf* surf_ptr)
   return;
 }
 
-void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length, FO_surf* surf_ptr)
+void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length, 
+                                                       FO_surf* surf_ptr)
 {
-  cout<<" -- Read spatial positions of freeze out surface from MUSIC (boost-invariant) ...";
+  cout << " -- Read spatial positions of freeze out surface from MUSIC "
+       << "(boost-invariant) ...";
   ostringstream surfdat_stream;
   double dummy;
   double temp;
@@ -471,7 +483,8 @@ void read_FOdata::read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr)
   return;
 }
 
-void read_FOdata::read_decdat_mu(int FO_length, int N_stable, double** particle_mu)
+void read_FOdata::read_decdat_mu(int FO_length, int N_stable, 
+                                 double** particle_mu)
 {
   cout<<" -- Read chemical potential for stable particles...";
   ostringstream decdat_mu_stream;
@@ -502,9 +515,11 @@ void read_FOdata::read_decdat_mu(int FO_length, int N_stable, double** particle_
   return;
 }
 
-void read_FOdata::read_chemical_potentials_music(int FO_length, FO_surf* FOsurf_ptr, int N_stable, double** particle_mu)
+void read_FOdata::read_chemical_potentials_music(
+    int FO_length, FO_surf* FOsurf_ptr, int N_stable, double** particle_mu)
 {
-  cout << " -- Interpolating chemical potentials for stable particles (MUSIC IEOS = " << IEOS_music << ") ...";
+  cout << " -- Interpolating chemical potentials for stable particles "
+       << "(MUSIC IEOS = " << IEOS_music << ") ...";
 
   Table mu_table;
   if(IEOS_music == 3)
@@ -598,28 +613,39 @@ int read_FOdata::read_resonances_list(particle_info* particle)
          particle[local_i].stable = particle[local_i-1].stable;
          for (int j = 0; j < particle[local_i].decays; j++)
          {
-            particle[local_i].decays_Npart[j]=particle[local_i-1].decays_Npart[j];
-            particle[local_i].decays_branchratio[j]=particle[local_i-1].decays_branchratio[j];
+            particle[local_i].decays_Npart[j] = 
+                                           particle[local_i-1].decays_Npart[j];
+            particle[local_i].decays_branchratio[j] = 
+                                     particle[local_i-1].decays_branchratio[j];
             for (int k=0; k< Maxdecaypart; k++)
             {
                if(particle[local_i-1].decays_part[j][k] == 0)
-                  particle[local_i].decays_part[j][k]= particle[local_i-1].decays_part[j][k];
+                  particle[local_i].decays_part[j][k] = 
+                                         particle[local_i-1].decays_part[j][k];
                else
                {
                   int idx; 
-                  for(idx = 0; idx < local_i; idx++) // find the index for decay particle
-                     if(particle[idx].monval == particle[local_i-1].decays_part[j][k])
+                  // find the index for decay particle
+                  for(idx = 0; idx < local_i; idx++) 
+                     if ( particle[idx].monval == 
+                                     particle[local_i-1].decays_part[j][k])
                         break;
-                  if(idx == local_i && particle[local_i-1].stable == 0 && particle[local_i-1].decays_branchratio[j] > eps)  // check
+                  if(idx == local_i && particle[local_i-1].stable == 0 
+                     && particle[local_i-1].decays_branchratio[j] > eps)
                   {
-                     cout << "Error: can not find decay particle index for anti-baryon!" << endl;
-                     cout << "particle monval : " << particle[local_i-1].decays_part[j][k] << endl;
+                     cout << "Error: can not find decay particle index "
+                          << "for anti-baryon!" << endl;
+                     cout << "particle monval : " 
+                          << particle[local_i-1].decays_part[j][k] << endl;
                      exit(1);
                   }
-                  if(particle[idx].baryon == 0 && particle[idx].charge == 0 && particle[idx].strange == 0)
-                     particle[local_i].decays_part[j][k]= particle[local_i-1].decays_part[j][k];
+                  if (particle[idx].baryon == 0 && particle[idx].charge == 0 
+                      && particle[idx].strange == 0)
+                     particle[local_i].decays_part[j][k] = 
+                                         particle[local_i-1].decays_part[j][k];
                   else
-                     particle[local_i].decays_part[j][k]= -particle[local_i-1].decays_part[j][k];
+                     particle[local_i].decays_part[j][k] =
+                                        -particle[local_i-1].decays_part[j][k];
                }
             }
          }
@@ -638,12 +664,15 @@ int read_FOdata::read_resonances_list(particle_info* particle)
    return(Nparticle);
 }
 
-void read_FOdata::calculate_particle_mu(int Nparticle, FO_surf* FOsurf_ptr, int FO_length, particle_info* particle, double** particle_mu)
+void read_FOdata::calculate_particle_mu(
+    int Nparticle, FO_surf* FOsurf_ptr, int FO_length, 
+    particle_info* particle, double** particle_mu)
 {
    int Nstable_particle;
    int Idummy;
    char cdummy[256];
-   cout << " -- Read particle table and calculating chemical potential for particles..." << endl;
+   cout << " -- Read particle table and calculating chemical potential "
+        << "for particles..." << endl;
    ifstream particletable;
    if(mode == 0)
    {
@@ -652,13 +681,17 @@ void read_FOdata::calculate_particle_mu(int Nparticle, FO_surf* FOsurf_ptr, int 
    else if (mode == 1 || mode == 2)
    {
       if(IEOS_music == 3)
-         particletable.open("EOS/EOS_tables/s95p-v1-PCE150/EOS_particletable.dat");
+         particletable.open(
+                        "EOS/EOS_tables/s95p-v1-PCE150/EOS_particletable.dat");
       else if(IEOS_music == 4)
-         particletable.open("EOS/EOS_tables/s95p-v1-PCE155/EOS_particletable.dat");
+         particletable.open(
+                        "EOS/EOS_tables/s95p-v1-PCE155/EOS_particletable.dat");
       else if(IEOS_music == 5)
-         particletable.open("EOS/EOS_tables/s95p-v1-PCE160/EOS_particletable.dat");
+         particletable.open(
+                        "EOS/EOS_tables/s95p-v1-PCE160/EOS_particletable.dat");
       else if(IEOS_music == 6)
-         particletable.open("EOS/EOS_tables/s95p-v1-PCE165/EOS_particletable.dat");
+         particletable.open(
+                        "EOS/EOS_tables/s95p-v1-PCE165/EOS_particletable.dat");
       else
       {
          cout << "invalid EOS option for MUSIC: " << IEOS_music << endl;
@@ -706,11 +739,14 @@ void read_FOdata::calculate_particle_mu(int Nparticle, FO_surf* FOsurf_ptr, int 
                   if(particle[i].decays_part[j][k] == particle[l].monval)
                   {
                      for(int m=0; m<FO_length; m++)
-                       FOsurf_ptr[m].particle_mu[i] += particle[i].decays_branchratio[j]*FOsurf_ptr[m].particle_mu[l];
+                       FOsurf_ptr[m].particle_mu[i] += (
+                           particle[i].decays_branchratio[j]
+                           *FOsurf_ptr[m].particle_mu[l]);
                      break;
                   }
                   if(l==Nparticle-1)
-                     cout<<"warning: can not find particle" <<  particle[i].name << endl;
+                     cout << "warning: can not find particle" 
+                          <<  particle[i].name << endl;
                }
             }
          }

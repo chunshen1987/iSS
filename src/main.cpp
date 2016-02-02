@@ -1,6 +1,6 @@
-//===============================================================================
+//=====================================================================
 //  iSpectraSampler
-//===============================================================================
+//=====================================================================
 //
 //  Zhi Qiu & Chun Shen
 //    qiu.24@asc.ohio-state.edu
@@ -8,8 +8,7 @@
 //
 //        Date: 03/2012
 // Version info written in the main function.
-
-
+//=====================================================================
 
 #include <iostream>
 #include <iomanip>
@@ -38,9 +37,11 @@ int main(int argc, char** argv)
         << "                  iSpectraSampler                " << endl
         << endl
         << "  Ver 2.0.0.0  ---- Zhi Qiu & Chun Shen, 04/2012 " << endl;
-   cout << endl << "**********************************************************" << endl;
+   cout << endl << "**********************************************************" 
+        << endl;
    display_logo(3); // Hail to the king~
-   cout << endl << "**********************************************************" << endl << endl;
+   cout << endl << "**********************************************************" 
+        << endl << endl;
    
    // read in parameters
    ParameterReader *paraRdr = new ParameterReader;
@@ -67,7 +68,8 @@ int main(int argc, char** argv)
    
    //read the chemical potential on the freeze out surface
    particle_info *particle = new particle_info [Maxparticle];
-   int Nparticle = freeze_out_data.read_in_chemical_potentials(path, FO_length, FOsurf_ptr, particle);
+   int Nparticle = freeze_out_data.read_in_chemical_potentials(
+                                        path, FO_length, FOsurf_ptr, particle);
    
    cout << endl << " -- Read in data finished!" << endl << endl;
 
@@ -76,15 +78,21 @@ int main(int argc, char** argv)
    timeval a;
    gettimeofday(&a, 0);
    long randomSeed=paraRdr->getVal("randomSeed");
-   if (randomSeed<0) randomSeed=a.tv_usec; // randomSeed<0 means to use CPU clock
+   // randomSeed<0 means to use CPU clock
+   if (randomSeed<0) randomSeed=a.tv_usec; 
    srand48(randomSeed);
 
-   Table chosen_particles("EOS/chosen_particles.dat"); // skip others except for these particle
-   Table pT_tab("tables/pT_gauss_table.dat"); // pt position and weight table
-   Table phi_tab("tables/phi_gauss_table.dat"); // phi position and weight table
-   //Table eta_tab("tables/eta_gauss_table_30_full.dat"); // eta uniform dist table
-   Table eta_tab("tables/eta_uni_table.dat"); // eta uniform dist table
-   EmissionFunctionArray efa(&chosen_particles, &pT_tab, &phi_tab, &eta_tab, particle, Nparticle, FOsurf_ptr, FO_length, paraRdr);
+   // skip others except for these particle
+   Table chosen_particles("EOS/chosen_particles.dat"); 
+
+   Table pT_tab("tables/pT_gauss_table.dat");   // pt tables
+   Table phi_tab("tables/phi_gauss_table.dat"); // phi tables
+   // eta uniform dist table
+   Table eta_tab("tables/eta_uni_table.dat"); 
+   //Table eta_tab("tables/eta_gauss_table_30_full.dat"); 
+   
+   EmissionFunctionArray efa(&chosen_particles, &pT_tab, &phi_tab, &eta_tab, 
+                          particle, Nparticle, FOsurf_ptr, FO_length, paraRdr);
 
    efa.shell();
    //efa.combine_samples_to_OSCAR();
