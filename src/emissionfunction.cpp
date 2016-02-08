@@ -40,9 +40,12 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   // get info
   pT_tab = pt_tab_in; pT_tab_length = pT_tab->getNumberOfRows();
   phi_tab = phi_tab_in; phi_tab_length = phi_tab->getNumberOfRows();
-  y_minus_eta_tab = y_minus_eta_tab_in; y_minus_eta_tab_length = y_minus_eta_tab->getNumberOfRows();
-  if (y_minus_eta_tab->get(1,1)>-1e-15) positive_y_minus_eta_table_only = true;
-  else positive_y_minus_eta_table_only = false;
+  y_minus_eta_tab = y_minus_eta_tab_in; 
+  y_minus_eta_tab_length = y_minus_eta_tab->getNumberOfRows();
+  if (y_minus_eta_tab->get(1,1)>-1e-15)
+      positive_y_minus_eta_table_only = true;
+  else 
+      positive_y_minus_eta_table_only = false;
 
   particles = particles_in;
   Nparticles = Nparticles_in;
@@ -62,11 +65,14 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   dN_pTdpTdphidy_max = new Table(pT_tab_length, phi_tab_length);
   dN_pTdpTdphidy_filename = "results/dN_pTdpTdphidy.dat";
   
-
   dN_dxtdetady = new double*[y_minus_eta_tab_length];
-  for (int k=0; k<y_minus_eta_tab_length; k++) dN_dxtdetady[k] = new double[FO_length];
+  for (int k=0; k<y_minus_eta_tab_length; k++) 
+      dN_dxtdetady[k] = new double[FO_length];
+
   dN_dxtdetady_pT_max = new double*[y_minus_eta_tab_length];
-  for (int k=0; k<y_minus_eta_tab_length; k++) dN_dxtdetady_pT_max[k] = new double[FO_length];
+  for (int k=0; k<y_minus_eta_tab_length; k++)
+      dN_dxtdetady_pT_max[k] = new double[FO_length];
+
   dN_dxtdetady_filename = "results/dN_dxdetady.dat";
 
   // deal with chosen_particle_xxx tables
@@ -113,11 +119,14 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   // check whether all chosen particles are in the particle list
   if(number_of_chosen_particles != current_idx)
   {
-     cout << "Warning: not all chosen particles are in the pdg particle list!" << endl;
-     cout << "There are " << number_of_chosen_particles - current_idx << " particles can not be found in the pdg particle list!" << endl;
+     cout << "Warning: not all chosen particles are in the pdg particle list!" 
+          << endl;
+     cout << "There are " << number_of_chosen_particles - current_idx 
+          << " particles can not be found in the pdg particle list!" << endl;
      cout << "Their monte carlo numbers are:" << endl;
      for(int i = 0; i < number_of_chosen_particles - current_idx ; i++)
         cout << unidentifiedPid_table[i] << endl;
+
      number_of_chosen_particles = current_idx;
   }
   // next re-order them so that particles with similar mass are adjacent
@@ -126,7 +135,8 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   {
     for (int m=0; m<number_of_chosen_particles; m++)
       for (int n=0; n<number_of_chosen_particles-m-1; n++)
-        if (particles[chosen_particles_sampling_table[n]].mass > particles[chosen_particles_sampling_table[n+1]].mass)
+        if (particles[chosen_particles_sampling_table[n]].mass 
+            > particles[chosen_particles_sampling_table[n+1]].mass)
         {
           // swap them
           int particle_idx = chosen_particles_sampling_table[n+1];
@@ -187,7 +197,8 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   OSCAR_output_filename = "OSCAR.DAT";
 
   dN_dxtdy_4all = new double*[FO_length];
-  for (long l=0; l<FO_length; l++) dN_dxtdy_4all[l] = new double[number_of_chosen_particles];
+  for (long l=0; l<FO_length; l++)
+      dN_dxtdy_4all[l] = new double[number_of_chosen_particles];
   sorted_FZ = new long[FO_length];
 
   // for interpolation for the third way of sampling
@@ -197,9 +208,12 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   phi_tab4Sampling.loadTableFromFile("tables/phi_table_for_sampling.dat");
   phi_tab4Sampling_length = phi_tab4Sampling.getNumberOfRows();
   // extend pT_tab and phi_tab in order to extract index info for given pT or phi
-  for (int i=0; i<pT_tab_length; i++) pT_tab->set(3, i+1, i+1);
-  for (int j=0; j<phi_tab_length; j++) phi_tab->set(3, j+1, j+1);
-  // get the index info of pT's and phi's specified in pT_tab4Sampling or phi_tab4Sampling in terms of pT_tab or phi_tab; indecies starts with 1.
+  for (int i=0; i<pT_tab_length; i++)
+      pT_tab->set(3, i+1, i+1);
+  for (int j=0; j<phi_tab_length; j++)
+      phi_tab->set(3, j+1, j+1);
+  // get the index info of pT's and phi's specified in pT_tab4Sampling 
+  // or phi_tab4Sampling in terms of pT_tab or phi_tab; indecies starts with 1.
   for (int i=0; i<pT_tab4Sampling_length; i++)
   {
       double pT = pT_tab4Sampling.get(1, i+1);
@@ -231,15 +245,17 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
 //***************************************************************************
 EmissionFunctionArray::~EmissionFunctionArray()
 {
-  // Total number of "new" in constructor should equal the total number of "delete" in the destructor!
-
+  // Total number of "new" in constructor should equal the total number of 
+  // "delete" in the destructor!
   delete dN_pTdpTdphidy;
   delete dN_pTdpTdphidy_max;
 
-  for (int k=0; k<y_minus_eta_tab_length; k++) delete[] dN_dxtdetady[k];
+  for (int k=0; k<y_minus_eta_tab_length; k++) 
+      delete[] dN_dxtdetady[k];
   delete[] dN_dxtdetady;
 
-  for (int k=0; k<y_minus_eta_tab_length; k++) delete[] dN_dxtdetady_pT_max[k];
+  for (int k=0; k<y_minus_eta_tab_length; k++)
+      delete[] dN_dxtdetady_pT_max[k];
   delete[] dN_dxtdetady_pT_max;
 
 
@@ -247,26 +263,27 @@ EmissionFunctionArray::~EmissionFunctionArray()
   delete[] chosen_particles_sampling_table;
   delete[] unidentifiedPid_table;
 
-  for (int j=0; j<phi_tab_length; j++) delete[] trig_phi_table[j];
+  for (int j=0; j<phi_tab_length; j++)
+      delete[] trig_phi_table[j];
   delete[] trig_phi_table;
 
-  for (int k=0; k<y_minus_eta_tab_length; k++) delete[] hypertrig_y_minus_eta_table[k];
+  for (int k=0; k<y_minus_eta_tab_length; k++)
+      delete[] hypertrig_y_minus_eta_table[k];
   delete[] hypertrig_y_minus_eta_table;
 
-  for (long l=0; l<FO_length; l++) delete[] dN_dxtdy_4all[l];
+  for (long l=0; l<FO_length; l++)
+      delete[] dN_dxtdy_4all[l];
   delete[] dN_dxtdy_4all;
 
   delete[] sorted_FZ;
 
-  for (int j=0; j<phi_tab4Sampling_length; j++) delete[] trig_phi_tab4Sampling[j];
+  for (int j=0; j<phi_tab4Sampling_length; j++)
+      delete[] trig_phi_tab4Sampling[j];
   delete[] trig_phi_tab4Sampling;
+
+  delete bulkdf_coeff;
 }
 //***************************************************************************
-
-
-
-
-
 
 
 //***************************************************************************
@@ -307,7 +324,8 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
   }
 
   // create local cache
-  double pT_tab_double[pT_tab_length], pT_tab_weight[pT_tab_length], mT_tab_double[pT_tab_length];
+  double pT_tab_double[pT_tab_length], pT_tab_weight[pT_tab_length];
+  double mT_tab_double[pT_tab_length];
   for (int i=0; i<pT_tab_length; i++)
   {
     pT_tab_double[i] = pT_tab->get(1, i+1);
@@ -363,7 +381,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
           if(bulk_deltaf_kind == 0)
               bulkPi = surf->bulkPi;
           else
-              bulkPi = surf->bulkPi/hbarC;   // need unit in fm^-4 for the parameterization
+              bulkPi = surf->bulkPi/hbarC; // unit in fm^-4 
           getbulkvisCoefficients(Tdec, bulkvisCoefficients);
       }
 
@@ -395,7 +413,8 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
 
                   double pdotu = pt*gammaT - px*ux - py*uy;
                   double expon = (pdotu - mu) / Tdec;
-                  double f0 = 1./(exp(expon)+sign);       //thermal equilibrium distributions
+                  // thermal equilibrium distributions
+                  double f0 = 1./(exp(expon)+sign);
 
                   double pdsigma = pt*da0 + px*da1 + py*da2;
 
@@ -403,55 +422,82 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
                   double delta_f_shear = 0.0;
                   if(INCLUDE_DELTAF)
                   {
-                      double Wfactor = pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 + pz*pz*pi33;
-                      delta_f_shear = (1 - F0_IS_NOT_SMALL*sign*f0)*Wfactor*deltaf_prefactor;
+                      double Wfactor = (
+                          pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 
+                          + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 
+                          + pz*pz*pi33);
+                      delta_f_shear = (
+                          (1 - F0_IS_NOT_SMALL*sign*f0)*Wfactor
+                          *deltaf_prefactor);
                   }
                   double delta_f_bulk = 0.0;
                   if (INCLUDE_BULK_DELTAF== 1)
                   {
                       if(bulk_deltaf_kind == 0)
-                          delta_f_bulk = -(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi*(bulkvisCoefficients[0]*mass*mass + bulkvisCoefficients[1]*pdotu + bulkvisCoefficients[2]*pdotu*pdotu);
+                      {
+                          delta_f_bulk = (
+                              -(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi
+                              *(bulkvisCoefficients[0]*mass*mass 
+                                + bulkvisCoefficients[1]*pdotu 
+                                + bulkvisCoefficients[2]*pdotu*pdotu));
+                      }
                       else if (bulk_deltaf_kind == 1)
                       {
 
                           double E_over_T = pdotu/Tdec;
                           double mass_over_T = mass/Tdec;
-                          delta_f_bulk = -1.0*(1.-sign*f0)/E_over_T*bulkvisCoefficients[0]*(mass_over_T*mass_over_T/3. - bulkvisCoefficients[1]*E_over_T*E_over_T)*bulkPi;
+                          delta_f_bulk = (
+                              -1.0*(1.-sign*f0)/E_over_T*bulkvisCoefficients[0]
+                              *(mass_over_T*mass_over_T/3. 
+                                - bulkvisCoefficients[1]*E_over_T*E_over_T)
+                              *bulkPi);
                       }
                       else if (bulk_deltaf_kind == 2)
                       {
                           double E_over_T = pdotu/Tdec;
-                          delta_f_bulk = -1.*(1.-sign*f0)*(-bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T)*bulkPi;
+                          delta_f_bulk = (
+                              -1.*(1.-sign*f0)*(-bulkvisCoefficients[0] 
+                                  + bulkvisCoefficients[1]*E_over_T)*bulkPi);
                       }
                       else if (bulk_deltaf_kind == 3)
                       {
                           double E_over_T = pdotu/Tdec;
-                          delta_f_bulk = -1.0*(1.-sign*f0)/sqrt(E_over_T)*(-bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T)*bulkPi;
+                          delta_f_bulk = (
+                              -1.0*(1.-sign*f0)/sqrt(E_over_T)
+                              *(-bulkvisCoefficients[0] 
+                                + bulkvisCoefficients[1]*E_over_T)*bulkPi);
                       }
                       else if (bulk_deltaf_kind == 4)
                       {
                           double E_over_T = pdotu/Tdec;
-                          delta_f_bulk = -1.0*(1.-sign*f0)*(bulkvisCoefficients[0] - bulkvisCoefficients[1]/E_over_T)*bulkPi;
+                          delta_f_bulk = (
+                              -1.0*(1.-sign*f0)*(bulkvisCoefficients[0] 
+                                  - bulkvisCoefficients[1]/E_over_T)*bulkPi);
                       }
                   }
 
                   double result;
-                  if(1 + delta_f_shear + delta_f_bulk < 0.0) //set results to zero when delta f turns whole expression to negative
-                     result = 0.0;
-                  else
-                     result = prefactor*degen*f0*(1. + delta_f_shear + delta_f_bulk)*pdsigma*tau;
+                  // restrict the size of delta f to be smaller than f_0
+                  double ratio_max = 1.0;
+                  double deltaf_size = fabs(delta_f_shear + delta_f_bulk);
+                  double resize_factor = min(1., 
+                                             ratio_max/(deltaf_size + 1e-10));
+                  result = (prefactor*degen*f0*pdsigma*tau
+                         *(1. + (delta_f_shear + delta_f_bulk)*resize_factor));
 
-                  if (use_pos_dN_only && result<0) continue;
+                  if (use_pos_dN_only && result < 0.)
+                      continue;
+
                   dN_dxtdetady_tmp += result*pT_phi_inte_weight;
-                  if (dN_dxtdetady_pT_max_tmp<result*pT) dN_dxtdetady_pT_max_tmp=result*pT;
 
+                  if (dN_dxtdetady_pT_max_tmp<result*pT)
+                      dN_dxtdetady_pT_max_tmp=result*pT;
               } // j
           } // i
           dN_dxtdetady[k][l] = dN_dxtdetady_tmp;
           dN_dxtdetady_pT_max[k][l] = dN_dxtdetady_pT_max_tmp;
 
       }
-
       if (AMOUNT_OF_OUTPUT>0) print_progressbar((double)(l)/progress_total);
   }
   if (AMOUNT_OF_OUTPUT>0) print_progressbar(1);
@@ -460,13 +506,11 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
   delete [] bulkvisCoefficients;
 
   sw.toc();
-  cout << endl << " -- Calculate_dN_dxtdetady finished in " << sw.takeTime() << " seconds." << endl;
+  cout << endl 
+       << " -- Calculate_dN_dxtdetady finished in " 
+       << sw.takeTime() << " seconds." << endl;
 }
 //***************************************************************************
-
-
-
-
 
 
 //***************************************************************************
@@ -502,16 +546,19 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
   // for intermedia results
   //cout << "initializing intermedia variables... ";
   double dN_pTdpTdphidy_tab[pT_tab_length][phi_tab_length];
-  for (int i=0; i<pT_tab_length; i++) for (int j=0; j<phi_tab_length; j++)
-    dN_pTdpTdphidy_tab[i][j] = 0.0;
+  for (int i=0; i<pT_tab_length; i++)
+      for (int j=0; j<phi_tab_length; j++)
+          dN_pTdpTdphidy_tab[i][j] = 0.0;
   double dN_pTdpTdphidy_max_tab[pT_tab_length][phi_tab_length];
-  for (int i=0; i<pT_tab_length; i++) for (int j=0; j<phi_tab_length; j++)
-    dN_pTdpTdphidy_max_tab[i][j] = 0.0;
+  for (int i=0; i<pT_tab_length; i++)
+      for (int j=0; j<phi_tab_length; j++)
+          dN_pTdpTdphidy_max_tab[i][j] = 0.0;
 
 
   // create local cache
   double delta_y_minus_eta_tab[y_minus_eta_tab_length];
-  for (int k=0; k<y_minus_eta_tab_length; k++) delta_y_minus_eta_tab[k] = y_minus_eta_tab->get(2,k+1);
+  for (int k=0; k<y_minus_eta_tab_length; k++)
+      delta_y_minus_eta_tab[k] = y_minus_eta_tab->get(2,k+1);
 
   //---------------------------
   // THE main summation loop
@@ -567,7 +614,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
                   if(bulk_deltaf_kind == 0)
                       bulkPi = surf->bulkPi;
                   else 
-                      bulkPi = surf->bulkPi/hbarC;   // need unit in fm^-4 for the parameterization
+                      bulkPi = surf->bulkPi/hbarC;   // unit in fm^-4 
                   getbulkvisCoefficients(Tdec, bulkvisCoefficients);
               }
 
@@ -581,7 +628,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
 
                   double pdotu = pt*gammaT - px*ux - py*uy;
                   double expon = (pdotu - mu) / Tdec;
-                  double f0 = 1./(exp(expon)+sign);       //thermal equilibrium distributions
+                  double f0 = 1./(exp(expon)+sign);
 
                   double pdsigma = pt*da0 + px*da1 + py*da2;
 
@@ -589,75 +636,105 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
                   double delta_f_shear = 0.0;
                   if(INCLUDE_DELTAF)
                   {
-                      double Wfactor = pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 + pz*pz*pi33;
-                      delta_f_shear = (1 - F0_IS_NOT_SMALL*sign*f0)*Wfactor*deltaf_prefactor;
+                      double Wfactor = (
+                          pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 
+                          + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 
+                          + pz*pz*pi33);
+                      delta_f_shear = (
+                          (1 - F0_IS_NOT_SMALL*sign*f0)
+                          *Wfactor*deltaf_prefactor);
                   }
                   double delta_f_bulk = 0.0;
                   if (INCLUDE_BULK_DELTAF == 1)
                   {
                       if(bulk_deltaf_kind == 0)
-                          delta_f_bulk = -(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi*(bulkvisCoefficients[0]*mass*mass + bulkvisCoefficients[1]*pdotu + bulkvisCoefficients[2]*pdotu*pdotu);
+                          delta_f_bulk = (
+                              -(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi
+                              *(bulkvisCoefficients[0]*mass*mass 
+                                + bulkvisCoefficients[1]*pdotu 
+                                + bulkvisCoefficients[2]*pdotu*pdotu));
                       else if (bulk_deltaf_kind == 1)
                       {
 
                           double E_over_T = pdotu/Tdec;
                           double mass_over_T = mass/Tdec;
-                          delta_f_bulk = -1.0*(1.-sign*f0)/E_over_T*bulkvisCoefficients[0]*(mass_over_T*mass_over_T/3. - bulkvisCoefficients[1]*E_over_T*E_over_T)*bulkPi;
+                          delta_f_bulk = (
+                              -1.0*(1.-sign*f0)/E_over_T*bulkvisCoefficients[0]
+                              *(mass_over_T*mass_over_T/3. 
+                                - bulkvisCoefficients[1]*E_over_T*E_over_T)
+                              *bulkPi);
                       }
                       else if (bulk_deltaf_kind == 2)
                       {
                           double E_over_T = pdotu/Tdec;
-                          delta_f_bulk = -1.*(1.-sign*f0)*(-bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T)*bulkPi;
+                          delta_f_bulk = (
+                              -1.*(1.-sign*f0)
+                              *(-bulkvisCoefficients[0] 
+                                + bulkvisCoefficients[1]*E_over_T)*bulkPi);
                       }
                       else if (bulk_deltaf_kind == 3)
                       {
                           double E_over_T = pdotu/Tdec;
-                          delta_f_bulk = -1.0*(1.-sign*f0)/sqrt(E_over_T)*(-bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T)*bulkPi;
+                          delta_f_bulk = (
+                              -1.0*(1.-sign*f0)/sqrt(E_over_T)
+                              *(-bulkvisCoefficients[0] 
+                                + bulkvisCoefficients[1]*E_over_T)*bulkPi);
                       }
                       else if (bulk_deltaf_kind == 4)
                       {
                           double E_over_T = pdotu/Tdec;
-                          delta_f_bulk = -1.0*(1.-sign*f0)*(bulkvisCoefficients[0] - bulkvisCoefficients[1]/E_over_T)*bulkPi;
+                          delta_f_bulk = (
+                              -1.0*(1.-sign*f0)
+                              *(bulkvisCoefficients[0] 
+                                - bulkvisCoefficients[1]/E_over_T)*bulkPi);
                       }
                   }
                   
                   double result;
-                  if(1 + delta_f_shear + delta_f_bulk < 0.0) //set results to zero when delta f turns whole expression to negative
-                     result = 0.0;
-                  else
-                     result = prefactor*degen*f0*(1. + delta_f_shear + delta_f_bulk)*pdsigma*tau;
+                  // restrict the size of delta f to be smaller than f_0
+                  double ratio_max = 1.0;
+                  double deltaf_size = fabs(delta_f_shear + delta_f_bulk);
+                  double resize_factor = min(1., 
+                                             ratio_max/(deltaf_size + 1e-10));
+                  result = (prefactor*degen*f0*pdsigma*tau
+                         *(1. + (delta_f_shear + delta_f_bulk)*resize_factor));
 
-                  if (use_pos_dN_only && result<0) continue;
+                  if (use_pos_dN_only && result < 0.)
+                      continue;
+
                   dN_pTdpTdphidy_tmp += result*delta_eta;
-                  if (dN_pTdpTdphidy_max_tmp<result) dN_pTdpTdphidy_max_tmp=result;
+
+                  if (dN_pTdpTdphidy_max_tmp<result)
+                      dN_pTdpTdphidy_max_tmp=result;
 
               } // k
           } // l
           dN_pTdpTdphidy_tab[i][j] = dN_pTdpTdphidy_tmp;
           dN_pTdpTdphidy_max_tab[i][j] = dN_pTdpTdphidy_max_tmp;
-          if (AMOUNT_OF_OUTPUT>0) print_progressbar((i*phi_tab_length+j)/progress_total);
+          if (AMOUNT_OF_OUTPUT>0)
+              print_progressbar((i*phi_tab_length+j)/progress_total);
       }
   }
   if (AMOUNT_OF_OUTPUT>0) print_progressbar(1);
   //cout << endl << "------------------------------------- " << endl;
 
   //cout << "Copy out results... ";
-  for (int i=0; i<pT_tab_length; i++) for (int j=0; j<phi_tab_length; j++)
-  {
-    dN_pTdpTdphidy->set(i+1,j+1,dN_pTdpTdphidy_tab[i][j]);
-    dN_pTdpTdphidy_max->set(i+1,j+1,dN_pTdpTdphidy_max_tab[i][j]);
-  }
+  for (int i=0; i<pT_tab_length; i++)
+      for (int j=0; j<phi_tab_length; j++)
+      {
+          dN_pTdpTdphidy->set(i+1,j+1,dN_pTdpTdphidy_tab[i][j]);
+          dN_pTdpTdphidy_max->set(i+1,j+1,dN_pTdpTdphidy_max_tab[i][j]);
+      }
   //cout << "done." << endl;
 
   delete [] bulkvisCoefficients;
 
   sw.toc();
-  cout << endl << " -- Calculate_dN_pTdpTdphidy finished in " << sw.takeTime() << " seconds." << endl;
+  cout << endl 
+       << " -- Calculate_dN_pTdpTdphidy finished in " 
+       << sw.takeTime() << " seconds." << endl;
 }
 //***************************************************************************
-
-
-
 
 
 //***************************************************************************
@@ -690,11 +767,10 @@ void EmissionFunctionArray::write_dN_dxtdetady_toFile()
 //***************************************************************************
 
 
-
-
-
 //***************************************************************************
-void EmissionFunctionArray::calculate_flows(int to_order, string flow_differential_filename_in, string flow_integrated_filename_in)
+void EmissionFunctionArray::calculate_flows(
+    int to_order, string flow_differential_filename_in, 
+    string flow_integrated_filename_in)
 // Calculate flow from order from_order to to_order and store them to files.
 {
   /*
@@ -709,8 +785,11 @@ void EmissionFunctionArray::calculate_flows(int to_order, string flow_differenti
 
   int number_of_flows = to_order-from_order+1;
 
-  Table vn_diff(3+number_of_flows*3, pT_tab_length); // line format: pT, mT, dN/(pT dpT), flow_1_real, flow_1_imag, flow_1_norm, ...
-  Table vn_inte(6, to_order+1); // line format: order# (starting from 0), numerator_real, numerator_imag, flow_real, flow_imag, flow_norm
+  // line format: pT, mT, dN/(pT dpT), flow_1_real, flow_1_imag, flow_1_norm, ...
+  Table vn_diff(3+number_of_flows*3, pT_tab_length); 
+  // line format: order# (starting from 0), numerator_real, numerator_imag, 
+  // flow_real, flow_imag, flow_norm
+  Table vn_inte(6, to_order+1); 
 
   double mass = particles[last_particle_idx].mass;
 
@@ -722,7 +801,8 @@ void EmissionFunctionArray::calculate_flows(int to_order, string flow_differenti
   double normalization[pT_tab_length]; // normalization factor
   for (int i=0; i<pT_tab_length; i++) normalization[i] = 0.0;
 
-  double vn[pT_tab_length][number_of_flows][2]; // diff_flow numerators; 2: 0,1->real,imag
+  // diff_flow numerators; 2: 0,1->real,imag
+  double vn[pT_tab_length][number_of_flows][2]; 
   for (int i=0; i<pT_tab_length; i++)
   for (int t=0; t<number_of_flows; t++)
     {vn[i][t][0]=0; vn[i][t][1]=0;}
@@ -752,12 +832,15 @@ void EmissionFunctionArray::calculate_flows(int to_order, string flow_differenti
     // store values
     vn_diff.set(1, i+1, pT);
     vn_diff.set(2, i+1, mT-mass);
-    vn_diff.set(3, i+1, normalization[i]/(2.0*M_PI)); // 2*pi: azimuthal angle averaged
+    vn_diff.set(3, i+1, normalization[i]/(2.0*M_PI)); 
+    // 2*pi: azimuthal angle averaged
     for (int t=0; t<number_of_flows; t++)
     {
       vn_diff.set(4+t*3, i+1, vn[i][t][0]/normalization[i]);
       vn_diff.set(5+t*3, i+1, vn[i][t][1]/normalization[i]);
-      vn_diff.set(6+t*3, i+1, sqrt(vn[i][t][0]*vn[i][t][0]+vn[i][t][1]*vn[i][t][1])/normalization[i]);
+      vn_diff.set(6+t*3, i+1, 
+                  sqrt(vn[i][t][0]*vn[i][t][0] + vn[i][t][1]*vn[i][t][1])
+                  /normalization[i]);
     }
 
   }
@@ -771,8 +854,13 @@ void EmissionFunctionArray::calculate_flows(int to_order, string flow_differenti
 
   double normalizationi = 0;
 
-  double vni[number_of_flows][2]; // integrated_flow numerators; 2: 0,1->real,imag
-  for (int t=0; t<number_of_flows; t++) {vni[t][0]=0; vni[t][1]=0;}
+  // integrated_flow numerators; 2: 0,1->real,imag
+  double vni[number_of_flows][2]; 
+  for (int t=0; t<number_of_flows; t++)
+  {
+      vni[t][0]=0; 
+      vni[t][1]=0;
+  }
 
   for (int i=0; i<pT_tab_length; i++)
   //for (int i=0; i<1; i++) // for debugging
@@ -788,8 +876,6 @@ void EmissionFunctionArray::calculate_flows(int to_order, string flow_differenti
     }
 
   }
-
-
 
   // store values
   // To mimic:
@@ -810,7 +896,10 @@ void EmissionFunctionArray::calculate_flows(int to_order, string flow_differenti
     vn_inte.set(3, t+2, vni[from_order+t-1][1]);
     vn_inte.set(4, t+2, vni[from_order+t-1][0]/normalizationi);
     vn_inte.set(5, t+2, vni[from_order+t-1][1]/normalizationi);
-    vn_inte.set(6, t+2, sqrt(vni[from_order+t-1][0]*vni[from_order+t-1][0]+vni[from_order+t-1][1]*vni[from_order+t-1][1])/normalizationi);
+    vn_inte.set(6, t+2, 
+                sqrt(vni[from_order+t-1][0]*vni[from_order+t-1][0] 
+                     + vni[from_order+t-1][1]*vni[from_order+t-1][1])
+                /normalizationi);
   }
   //cout << "done." << endl;
 
@@ -833,12 +922,11 @@ void EmissionFunctionArray::calculate_flows(int to_order, string flow_differenti
 
 
 
-
-
-
 //***************************************************************************
-void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all_old_output(int perform_sampling)
-// Calculate dN_pTdpTdphidy and flows for all particles given in chosen_particle array.
+void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all_old_output(
+                                                          int perform_sampling)
+// Calculate dN_pTdpTdphidy and flows for all particles given in chosen_particle 
+// array.
 // This version output dN / (ptdpt dphi dy) matrices and flows in a single file
 // as the Azspectra7 did.
 // If perform_sampling is 1 then sample_using_dN_pTdpTdphidy will be called.
@@ -847,7 +935,8 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all_old_output(i
     cout << endl
         << "*****************************************************************"
         << endl
-        << "Function calculate_dN_pTdpTdphidy_and_flows_4all(old) started... " << endl;
+        << "Function calculate_dN_pTdpTdphidy_and_flows_4all(old) started... " 
+        << endl;
     Stopwatch sw;
     sw.tic();
 
@@ -865,7 +954,8 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all_old_output(i
     for (int n=0; n<Nparticles; n++)
     {
         particle = &particles[n];
-        cout << "Index: " << n << ", Name: " << particle->name << ", Monte-carlo index: " << particle->monval;
+        cout << "Index: " << n << ", Name: " << particle->name 
+             << ", Monte-carlo index: " << particle->monval;
 
         // first, calculate dN_pTdpTdphidy arrays:
         if (chosen_particles_01_table[n]==0)
@@ -881,7 +971,8 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all_old_output(i
             if (n>0 && particles_are_the_same(n,n-1))
             {
                 // no need to calculate dN_pTdpTdphidy again
-                cout << " -- Using previously calculated dN_pTdpTdphidy... " << endl;
+                cout << " -- Using previously calculated dN_pTdpTdphidy... " 
+                     << endl;
                 last_particle_idx = n; // fake a "calculation"
             }
             else
@@ -912,14 +1003,14 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all_old_output(i
         ofstream of2(flow_integrated_filename_old.c_str(), ios_base::app);
         of2 << "# For: " << particle->name << endl;
         of2.close();
-        calculate_flows(to_order, flow_differential_filename_old, flow_integrated_filename_old);
-
+        calculate_flows(to_order, flow_differential_filename_old, 
+                        flow_integrated_filename_old);
 
     } // n: particle loop
 
     sw.toc();
-    cout << " -- Calculate_dN_pTdpTdphidy_and_flows_4all finishes " << sw.takeTime() << " seconds." << endl;
-
+    cout << " -- Calculate_dN_pTdpTdphidy_and_flows_4all finishes " 
+         << sw.takeTime() << " seconds." << endl;
 }
 //***************************************************************************
 
@@ -929,7 +1020,8 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all_old_output(i
 
 
 //***************************************************************************
-void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(int perform_sampling)
+void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(
+                                                          int perform_sampling)
 // Calculate dN_pTdpTdphidy and flows for all particles given in chosen_particle array.
 // This version output dN / (ptdpt dphi dy) matrices in one file, but flows in separated
 // ones.
@@ -938,7 +1030,8 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(int perform_
     cout << endl
         << "****************************************************************"
         << endl
-        << "Function calculate_dN_pTdpTdphidy_and_flows_4all started... " << endl;
+        << "Function calculate_dN_pTdpTdphidy_and_flows_4all started... " 
+        << endl;
     Stopwatch sw;
     sw.tic();
 
@@ -958,11 +1051,15 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(int perform_
         int particle_idx = chosen_particles_sampling_table[m];
         particle = &particles[particle_idx];
         int monval = particle->monval;
-        cout << "Index: " << m << ", Name: " << particle->name << ", Monte-carlo index: " << monval << endl;
+        cout << "Index: " << m << ", Name: " << particle->name 
+             << ", Monte-carlo index: " << monval << endl;
         // Calculate dN / (ptdpt dphi dy)
-        if (m>0 && particles_are_the_same(particle_idx, chosen_particles_sampling_table[m-1]))
+        if (m > 0. 
+            && particles_are_the_same(particle_idx, 
+                                      chosen_particles_sampling_table[m-1]))
         {
-           cout << " -- Using dN_pTdpTdphidy from previous calculation... " << endl;
+           cout << " -- Using dN_pTdpTdphidy from previous calculation... " 
+                << endl;
            last_particle_idx = particle_idx; // fake a calculation
         }
         else
@@ -991,7 +1088,8 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(int perform_
     // write out dN / (ptdpt dphi dy) matrices
     remove(dN_pTdpTdphidy_filename.c_str());
     ofstream of(dN_pTdpTdphidy_filename.c_str(), ios_base::app);
-    Table zero(dN_pTdpTdphidy->getNumberOfCols(), dN_pTdpTdphidy->getNumberOfRows(), 0);
+    Table zero(dN_pTdpTdphidy->getNumberOfCols(), 
+               dN_pTdpTdphidy->getNumberOfRows(), 0);
     for (int n=0; n<Nparticles; n++)
     {
         if (dNs[n]==NULL)
@@ -1007,7 +1105,8 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(int perform_
     of.close();
 
     sw.toc();
-    cout << " -- Calculate_dN_pTdpTdphidy_and_flows_4all finishes " << sw.takeTime() << " seconds." << endl;
+    cout << " -- Calculate_dN_pTdpTdphidy_and_flows_4all finishes " 
+         << sw.takeTime() << " seconds." << endl;
 
 }
 //***************************************************************************
@@ -1043,9 +1142,14 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
     sw.tic();
 
     double pT_to = paraRdr->getVal("sample_pT_up_to");
-    if (pT_to<0) pT_to = pT_tab->getLast(1); // use table to determine pT range
-    double zero = paraRdr->getVal("minimum_emission_function_val"); // If dN/(dx_t deta dy) is evaluated to be smaller than this value, then it is replaced by this value.
-    long number_of_repeated_sampling = paraRdr->getVal("number_of_repeated_sampling");
+    if (pT_to < 0.)
+        pT_to = pT_tab->getLast(1); // use table to determine pT range
+    
+    // If dN/(dx_t deta dy) is evaluated to be smaller than this value, 
+    // then it is replaced by this value.
+    double zero = paraRdr->getVal("minimum_emission_function_val"); 
+    long number_of_repeated_sampling = (
+                    paraRdr->getVal("number_of_repeated_sampling"));
 
     particle_info* particle = &particles[last_particle_idx];
 
@@ -1065,31 +1169,40 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
 
     // create local cache
     double delta_y_minus_eta_tab[y_minus_eta_tab_length];
-    for (int k=0; k<y_minus_eta_tab_length; k++) delta_y_minus_eta_tab[k] = y_minus_eta_tab->get(2,k+1);
+    for (int k=0; k<y_minus_eta_tab_length; k++)
+        delta_y_minus_eta_tab[k] = y_minus_eta_tab->get(2,k+1);
 
     // prepare the inverse CDF
     // put back eta_weight in sampling function
     double **dN_dxtdetady_with_weight;
     dN_dxtdetady_with_weight = new double*[y_minus_eta_tab_length];
-    for (int k=0; k<y_minus_eta_tab_length; k++) dN_dxtdetady_with_weight[k] = new double[FO_length];
     for (int k=0; k<y_minus_eta_tab_length; k++)
-    for (long l=0; l<FO_length; l++)
-      dN_dxtdetady_with_weight[k][l] = dN_dxtdetady[k][l]*delta_y_minus_eta_tab[k];
-    RandomVariable2DArray rand2D(dN_dxtdetady_with_weight, FO_length, y_minus_eta_tab_length,zero);
+        dN_dxtdetady_with_weight[k] = new double[FO_length];
+
+    for (int k=0; k<y_minus_eta_tab_length; k++)
+        for (long l=0; l<FO_length; l++)
+            dN_dxtdetady_with_weight[k][l] = (
+                            dN_dxtdetady[k][l]*delta_y_minus_eta_tab[k]);
+
+    RandomVariable2DArray rand2D(dN_dxtdetady_with_weight, FO_length, 
+                                 y_minus_eta_tab_length, zero);
 
     // first calcualte total number of particles
     double dN_dy = 0.0;
     for (long l=0; l<FO_length; l++)
-    for (int k=0; k<y_minus_eta_tab_length; k++)
-      dN_dy += dN_dxtdetady_with_weight[k][l];
+        for (int k=0; k<y_minus_eta_tab_length; k++)
+            dN_dy += dN_dxtdetady_with_weight[k][l];
+
     // recycle
-    for (int k=0; k<y_minus_eta_tab_length; k++) delete[] dN_dxtdetady_with_weight[k];
+    for (int k=0; k<y_minus_eta_tab_length; k++)
+        delete[] dN_dxtdetady_with_weight[k];
     delete[] dN_dxtdetady_with_weight;
 
     // prepare for outputs
     // the control file records how many particles are there in each sampling
     char samples_control_filename_buffer[300];
-    sprintf(samples_control_filename_buffer, samples_control_filename.c_str(), particle->monval);
+    sprintf(samples_control_filename_buffer, samples_control_filename.c_str(), 
+            particle->monval);
     remove(samples_control_filename_buffer);
     ofstream of_control(samples_control_filename_buffer);
 
@@ -1122,9 +1235,12 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
     long sample_writing_signal = 0;
     long control_writing_signal = 0;
     long maximum_impatience = 5000; // used in pt-phi sampling
-    for (long sampling_idx=1; sampling_idx<=number_of_repeated_sampling; sampling_idx++)
+    for (long sampling_idx=1; sampling_idx<=number_of_repeated_sampling; 
+         sampling_idx++)
     {
-        long number_to_sample = determine_number_to_sample(dN, sampling_model, sampling_para1, sampling_para2, sampling_para3, sampling_para4, sampling_para5);
+        long number_to_sample = determine_number_to_sample(
+            dN, sampling_model, sampling_para1, sampling_para2, 
+            sampling_para3, sampling_para4, sampling_para5);
 
         // write to control file
         sprintf(line_buffer, "%lu\n", number_to_sample);
@@ -1144,7 +1260,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             // first, sample eta and freeze-out cell index
             rand2D.sampleAccToInvCDF(&y_minus_eta_s_idx, &FO_idx);
             surf = &FOsurf_ptr[FO_idx];
-            double y_minus_eta_s = y_minus_eta_tab->get(1,y_minus_eta_s_idx+1); // Table starts with 1
+
+            // Table starts with 1
+            double y_minus_eta_s = y_minus_eta_tab->get(1,y_minus_eta_s_idx+1); 
 
             double Tdec = surf->Tdec;
             double inv_Tdec = 1.0/Tdec;
@@ -1178,7 +1296,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
                 if(bulk_deltaf_kind == 0)
                     bulkPi = surf->bulkPi;
                 else
-                    bulkPi = surf->bulkPi/hbarC;   // need unit in fm^-4 for the parameterization
+                    bulkPi = surf->bulkPi/hbarC;   // unit in fm^-4 
                 getbulkvisCoefficients(Tdec, bulkvisCoefficients);
             }
 
@@ -1188,7 +1306,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             while (tries<maximum_impatience)
             {
 
-                // refer to calculate_dNArrays function to see how the rate is calculated
+                // refer to calculate_dNArrays function to see how the rate 
+                // is calculated
                 // Basically it is "just Cooper-Frye"
                 pT = drand(0, pT_to); // sample according to pT dpT
                 mT = sqrt(mass*mass + pT*pT);
@@ -1209,55 +1328,99 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
                 double delta_f_shear = 0.0;
                 if(INCLUDE_DELTAF)
                 {
-                    double Wfactor = pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 + pz*pz*pi33;
-                    delta_f_shear = (1 - F0_IS_NOT_SMALL*sign*f0)*Wfactor*deltaf_prefactor;
+                    double Wfactor = (
+                        pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 
+                        + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 
+                        + pz*pz*pi33);
+                    delta_f_shear = (
+                        (1. - F0_IS_NOT_SMALL*sign*f0)
+                        *Wfactor*deltaf_prefactor);
                 }
                 double delta_f_bulk = 0.0;
                 if (INCLUDE_BULK_DELTAF == 1)
                 {
                     if(bulk_deltaf_kind == 0)
-                        delta_f_bulk = -(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi*(bulkvisCoefficients[0]*mass*mass + bulkvisCoefficients[1]*pdotu + bulkvisCoefficients[2]*pdotu*pdotu);
+                        delta_f_bulk = (
+                            -(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi
+                            *(bulkvisCoefficients[0]*mass*mass 
+                              + bulkvisCoefficients[1]*pdotu 
+                              + bulkvisCoefficients[2]*pdotu*pdotu));
                     else if (bulk_deltaf_kind == 1)
                     {
 
                         double E_over_T = pdotu/Tdec;
                         double mass_over_T = mass/Tdec;
-                        delta_f_bulk = -1.0*(1.-sign*f0)/E_over_T*bulkvisCoefficients[0]*(mass_over_T*mass_over_T/3. - bulkvisCoefficients[1]*E_over_T*E_over_T)*bulkPi;
+                        delta_f_bulk = (
+                            -1.0*(1.-sign*f0)/E_over_T*bulkvisCoefficients[0]
+                            *(mass_over_T*mass_over_T/3. 
+                              - bulkvisCoefficients[1]*E_over_T*E_over_T)
+                            *bulkPi);
                     }
                     else if (bulk_deltaf_kind == 2)
                     {
                         double E_over_T = pdotu/Tdec;
-                        delta_f_bulk = -1.*(1.-sign*f0)*(-bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T)*bulkPi;
+                        delta_f_bulk = (
+                            -1.*(1.-sign*f0)
+                            *(-bulkvisCoefficients[0] 
+                              + bulkvisCoefficients[1]*E_over_T)*bulkPi);
                     }
                     else if (bulk_deltaf_kind == 3)
                     {
                         double E_over_T = pdotu/Tdec;
-                        delta_f_bulk = -1.0*(1.-sign*f0)/sqrt(E_over_T)*(-bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T)*bulkPi;
+                        delta_f_bulk = (
+                            -1.0*(1.-sign*f0)/sqrt(E_over_T)
+                            *(-bulkvisCoefficients[0] 
+                              + bulkvisCoefficients[1]*E_over_T)*bulkPi);
                     }
                     else if (bulk_deltaf_kind == 4)
                     {
                         double E_over_T = pdotu/Tdec;
-                        delta_f_bulk = -1.0*(1.-sign*f0)*(bulkvisCoefficients[0] - bulkvisCoefficients[1]/E_over_T)*bulkPi;
+                        delta_f_bulk = (
+                            -1.0*(1.-sign*f0)
+                            *(bulkvisCoefficients[0] 
+                              - bulkvisCoefficients[1]/E_over_T)*bulkPi);
                     }
                 }
 
                 double result;
-                if(1 + delta_f_shear + delta_f_bulk < 0.0) //set results to zero when delta f turns whole expression to negative
-                   result = 0.0;
-                else
-                   result = prefactor*degen*f0*(1. + delta_f_shear + delta_f_bulk)*pdsigma*tau;
+                double result;
+                // restrict the size of delta f to be smaller than f_0
+                double ratio_max = 1.0;
+                double deltaf_size = fabs(delta_f_shear + delta_f_bulk);
+                double resize_factor = min(1., 
+                                           ratio_max/(deltaf_size + 1e-10));
+                result = (prefactor*degen*f0*pdsigma*tau
+                       *(1. + (delta_f_shear + delta_f_bulk)*resize_factor));
 
-                if (result*pT/dN_dxtdetady_pT_max[y_minus_eta_s_idx][FO_idx]/1.0>1 && AMOUNT_OF_OUTPUT>1) cout << "WTH?!" << endl; // for debugging; 1.0: the maximum on the discrete lattice may not be the maximum for the actual continuous function
-                if (drand48()<result*pT/dN_dxtdetady_pT_max[y_minus_eta_s_idx][FO_idx]/1.0) break; // accept sample! // Note that the factor 1.0 used here assumes that the maximum on the discrete lattice is the same as the maximum of the actual function, which is of course only an approximation
+                // Note that the factor 1.0 used here assumes that the maximum 
+                // on the discrete lattice is the same as the maximum of the 
+                // actual function, which is of course only an approximation
+                double test = (result*pT
+                               /dN_dxtdetady_pT_max[y_minus_eta_s_idx][FO_idx]
+                               /1.0);
+
+                // for debugging; 1.0: the maximum on the discrete lattice 
+                // may not be the maximum for the actual continuous function
+                if (AMOUNT_OF_OUTPUT>1 && test > 1.)
+                    cout << "WTH?!" << endl; 
+
+                if (drand48() < test) 
+                    break;  // accept sample! 
 
                 tries ++;
             }
-            if (tries==maximum_impatience && AMOUNT_OF_OUTPUT>5) cout << "EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi warning: maximum_impatience reached." << endl;
+            if (tries == maximum_impatience && AMOUNT_OF_OUTPUT>5)
+                cout << "EmissionFunctionArray::"
+                     << "sample_using_dN_dxtdetady_smooth_pT_phi warning: "
+                     << "maximum_impatience reached." << endl;
 
-            if (tries==maximum_impatience) continue; // resample
-            else sample_idx++; // write-out sample
+            if (tries == maximum_impatience)
+                continue; // resample
+            else 
+                sample_idx++; // write-out sample
 
-            if (positive_y_minus_eta_table_only) y_minus_eta_s = irand(0,1)==0 ? y_minus_eta_s : -y_minus_eta_s;
+            if (positive_y_minus_eta_table_only)
+                y_minus_eta_s = irand(0,1)==0 ? y_minus_eta_s : -y_minus_eta_s;
 
             double y = y_LB + drand48()*(y_RB-y_LB);
             double eta_s = y - y_minus_eta_s;
@@ -1271,12 +1434,18 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             // write to sample file
             if (!USE_OSCAR_FORMAT)
             {
-                sprintf(line_buffer, "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, pT, phi, surf->da0, surf->da1, surf->da2, vx, vy, y, eta_s, E, p_z, t, z);
+                sprintf(line_buffer, 
+                        "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", 
+                        FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, 
+                        pT, phi, surf->da0, surf->da1, surf->da2, vx, vy, y, 
+                        eta_s, E, p_z, t, z);
             }
             // To be combined to OSCAR
             if (USE_OSCAR_FORMAT)
             {
-                sprintf(line_buffer, "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", px, py, p_z, E, mass, surf->xpt, surf->ypt, z, t);
+                sprintf(line_buffer, 
+                        "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", 
+                        px, py, p_z, E, mass, surf->xpt, surf->ypt, z, t);
             }
             sample_str_buffer << line_buffer;
             sample_writing_signal++;
@@ -1286,10 +1455,10 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
               sample_str_buffer.str("");
               sample_writing_signal=0;
             }
-
-
         }
-        if (AMOUNT_OF_OUTPUT>0) print_progressbar((double)(sampling_idx)/number_of_repeated_sampling);
+        if (AMOUNT_OF_OUTPUT>0)
+            print_progressbar((double)(sampling_idx)
+                                      /number_of_repeated_sampling);
     }
     // flushing buffers
     if (control_writing_signal!=0)
@@ -1353,7 +1522,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
     delete [] bulkvisCoefficients;
 
     sw.toc();
-    cout << endl << "Sampling finished in " << sw.takeTime() << " seconds." << endl;
+    cout << endl 
+         << "Sampling finished in " << sw.takeTime() << " seconds." << endl;
 
 }
 //***************************************************************************
@@ -1675,8 +1845,9 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
 // example, if one line of it reads as "foo=1" means that the variable
 // "foo" is the recorded in the 1st column.
 // Parameters:
-// -- number_of_repeated_sampling: number of successive sampling; in each sampling
-//    the number of particles is determined by dN_dy and the model parameter.
+// -- number_of_repeated_sampling: number of successive sampling; in each 
+//    sampling the number of particles is determined by dN_dy and the 
+//    model parameter.
 // -- pT_to: sample up to what pT
 // -- model parameter:
 //    1): The fractional part of dN_dy is used as a probability to determine
@@ -1686,9 +1857,13 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
     sw.tic();
 
     double pT_to = paraRdr->getVal("sample_pT_up_to");
-    if (pT_to<0) pT_to = pT_tab->getLast(1); // use table to determine pT range
-    double zero = paraRdr->getVal("minimum_emission_function_val"); // If dN/(dx_t deta dy) is evaluated to be smaller than this value, then it is replaced by this value.
-    long number_of_repeated_sampling = paraRdr->getVal("number_of_repeated_sampling");
+    if (pT_to<0)
+        pT_to = pT_tab->getLast(1); // use table to determine pT range
+    // If dN/(dx_t deta dy) is evaluated to be smaller than this value, 
+    // then it is replaced by this value.
+    double zero = paraRdr->getVal("minimum_emission_function_val"); 
+    long number_of_repeated_sampling = paraRdr->getVal(
+                                                "number_of_repeated_sampling");
 
     particle_info* particle = &particles[last_particle_idx];
 
@@ -1706,54 +1881,72 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
     else 
         bulkvisCoefficients = new double [2];
 
-    //--------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------
     // Prepare the inverse CDF
-    // Step 1) interp dN and dN_max matrices from pT_tab and phi_tab to pT_tab4Sampling and phi_tab4Sampling
-    // allocation
-    double **dN_pTdpTdphidy_with_weight_4Sampling = new double* [pT_tab4Sampling_length];
-    for (int i=0; i<pT_tab4Sampling_length; i++) dN_pTdpTdphidy_with_weight_4Sampling[i] = new double [phi_tab4Sampling_length];
+    // Step 1) interp dN and dN_max matrices from pT_tab and phi_tab to 
+    // pT_tab4Sampling and phi_tab4Sampling allocation
+    double **dN_pTdpTdphidy_with_weight_4Sampling = (
+                                         new double* [pT_tab4Sampling_length]);
+    for (int i=0; i<pT_tab4Sampling_length; i++)
+        dN_pTdpTdphidy_with_weight_4Sampling[i] = (
+                                         new double [phi_tab4Sampling_length]);
+
     double **dN_pTdpTdphidy_max_4Sampling = new double* [pT_tab4Sampling_length];
-    for (int i=0; i<pT_tab4Sampling_length; i++) dN_pTdpTdphidy_max_4Sampling[i] = new double [phi_tab4Sampling_length];
+    for (int i=0; i<pT_tab4Sampling_length; i++)
+        dN_pTdpTdphidy_max_4Sampling[i] = new double [phi_tab4Sampling_length];
+
     // interpolation
-    for (int i=0; i<pT_tab4Sampling_length; i++) for (int j=0; j<phi_tab4Sampling_length; j++)
+    for (int i=0; i<pT_tab4Sampling_length; i++)
     {
-        double pT = pT_tab4Sampling.get(1, i+1); // get pT
-        double pT_weight = pT_tab4Sampling.get(2, i+1); // get pT weight
-        double pT_index = pT_tab4Sampling.get(3, i+1); // get pT index
-        double phi_weight = phi_tab4Sampling.get(2, j+1); // get phi weight
-        double phi_index = phi_tab4Sampling.get(3, j+1); // get phi index
-        dN_pTdpTdphidy_with_weight_4Sampling[i][j] = dN_pTdpTdphidy->interp2(pT_index, phi_index, 4)*pT*pT_weight*phi_weight; // interp2: parameter 2 -> allow extrapolation
-        dN_pTdpTdphidy_max_4Sampling[i][j] = dN_pTdpTdphidy_max->interp2(pT_index, phi_index, 4);
+        for (int j=0; j<phi_tab4Sampling_length; j++)
+        {
+            double pT = pT_tab4Sampling.get(1, i+1); // get pT
+            double pT_weight = pT_tab4Sampling.get(2, i+1); // get pT weight
+            double pT_index = pT_tab4Sampling.get(3, i+1); // get pT index
+            double phi_weight = phi_tab4Sampling.get(2, j+1); // get phi weight
+            double phi_index = phi_tab4Sampling.get(3, j+1); // get phi index
+            dN_pTdpTdphidy_with_weight_4Sampling[i][j] = (
+                dN_pTdpTdphidy->interp2(pT_index, phi_index, 4)
+                *pT*pT_weight*phi_weight); 
+            // interp2: parameter 2 -> allow extrapolation
+            dN_pTdpTdphidy_max_4Sampling[i][j] = (
+                dN_pTdpTdphidy_max->interp2(pT_index, phi_index, 4));
+        }
     }
         
     // create random variable using inverse CDF
-    RandomVariable2DArray rand2D(dN_pTdpTdphidy_with_weight_4Sampling, phi_tab4Sampling_length, pT_tab4Sampling_length, zero);
+    RandomVariable2DArray rand2D(dN_pTdpTdphidy_with_weight_4Sampling, 
+                                 phi_tab4Sampling_length, 
+                                 pT_tab4Sampling_length, zero);
 
-
-    
-    //--------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------
     // start sampling
     // first calcualte total number of particles
     double dN_dy = 0.0;
-    for (long i=0; i<pT_tab4Sampling_length; i++) for (int j=0; j<phi_tab4Sampling_length; j++)
-        dN_dy += dN_pTdpTdphidy_with_weight_4Sampling[i][j];
+    for (long i=0; i<pT_tab4Sampling_length; i++)
+        for (int j=0; j<phi_tab4Sampling_length; j++)
+            dN_dy += dN_pTdpTdphidy_with_weight_4Sampling[i][j];
 
     // dN_dy *= 100000;
 
     // create caches
     double mT_tab[pT_tab4Sampling_length]; // mT table
-    for (long i=0; i<pT_tab4Sampling_length; i++) mT_tab[i]=sqrt(mass*mass + pT_tab4Sampling.get(1,i+1)*pT_tab4Sampling.get(1,i+1));
+    for (long i=0; i<pT_tab4Sampling_length; i++)
+        mT_tab[i] = sqrt(mass*mass + pT_tab4Sampling.get(1,i+1)
+                                     *pT_tab4Sampling.get(1,i+1));
 
     // prepare for outputs
     // the control file records how many particles are there in each sampling
     char samples_control_filename_buffer[300];
-    sprintf(samples_control_filename_buffer, samples_control_filename.c_str(), particle->monval);
+    sprintf(samples_control_filename_buffer, samples_control_filename.c_str(), 
+            particle->monval);
     remove(samples_control_filename_buffer);
     ofstream of_control(samples_control_filename_buffer);
 
     // the sample file contains the actual samples
     char samples_filename_buffer[300];
-    sprintf(samples_filename_buffer, samples_filename.c_str(), particle->monval);
+    sprintf(samples_filename_buffer, samples_filename.c_str(), 
+            particle->monval);
     remove(samples_filename_buffer);
     ofstream of_sample(samples_filename_buffer);
 
@@ -1782,11 +1975,14 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
     long maximum_impatience = 5000; // used in pt-phi sampling
 
     long total_tries = 0, total_violation = 0;
-//     double largest_violation = -1.0;
+    //double largest_violation = -1.0;
     
-    for (long sampling_idx=1; sampling_idx<=number_of_repeated_sampling; sampling_idx++)
+    for (long sampling_idx=1; sampling_idx<=number_of_repeated_sampling; 
+         sampling_idx++)
     {
-        long number_to_sample = determine_number_to_sample(dN, sampling_model, sampling_para1, sampling_para2, sampling_para3, sampling_para4, sampling_para5);
+        long number_to_sample = determine_number_to_sample(
+            dN, sampling_model, sampling_para1, sampling_para2, sampling_para3, 
+            sampling_para4, sampling_para5);
 
         // write to control file
         sprintf(line_buffer, "%lu\n", number_to_sample);
@@ -1815,14 +2011,17 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
             double py = pT*trig_phi_tab4Sampling[phi_idx][1];
 
             // use local variable to substitute global ones
-            double dN_max_sampling = dN_pTdpTdphidy_max_4Sampling[pT_idx][phi_idx];
+            double dN_max_sampling = (
+                            dN_pTdpTdphidy_max_4Sampling[pT_idx][phi_idx]);
 
             long tries = 1;
             while (tries<maximum_impatience)
             {
                 bool found_sample = false;
 
-                FO_idx = floor(drand48()*(FO_length-1e-30)); // get a surface index
+                // get a surface index
+                FO_idx = floor(drand48()*(FO_length-1e-30));
+
                 surf = &FOsurf_ptr[FO_idx];
 
                 double Tdec = surf->Tdec;
@@ -1857,7 +2056,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                     if(bulk_deltaf_kind == 0)
                         bulkPi = surf->bulkPi;
                     else 
-                        bulkPi = surf->bulkPi/hbarC;   // need unit in fm^-4 for the parameterization
+                        bulkPi = surf->bulkPi/hbarC;   // unit in fm^-4 
                     getbulkvisCoefficients(Tdec, bulkvisCoefficients);
                 }
 
@@ -1875,79 +2074,87 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                 double delta_f_shear = 0.0;
                 if(INCLUDE_DELTAF)
                 {
-                    double Wfactor_max = pt_max*pt_max*pi00 - 2.0*pt_max*px*pi01 - 2.0*pt_max*py*pi02 + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 + pz_max*pz_max*pi33;
-                    delta_f_shear = (1 - F0_IS_NOT_SMALL*sign*f0_max)*Wfactor_max*deltaf_prefactor;
+                    double Wfactor_max = (
+                        pt_max*pt_max*pi00 - 2.0*pt_max*px*pi01 
+                        - 2.0*pt_max*py*pi02 + px*px*pi11 
+                        + 2.0*px*py*pi12 + py*py*pi22 
+                        + pz_max*pz_max*pi33);
+                    delta_f_shear = (
+                        (1. - F0_IS_NOT_SMALL*sign*f0_max)
+                        *Wfactor_max*deltaf_prefactor);
                 }
                 double delta_f_bulk = 0.0;
                 if (INCLUDE_BULK_DELTAF == 1)
                 {
                     if(bulk_deltaf_kind == 0)
-                        delta_f_bulk = -(1. - F0_IS_NOT_SMALL*sign*f0_max)*bulkPi*(bulkvisCoefficients[0]*mass*mass + bulkvisCoefficients[1]*pdotu_max + bulkvisCoefficients[2]*pdotu_max*pdotu_max);
+                        delta_f_bulk = (
+                            -(1. - F0_IS_NOT_SMALL*sign*f0_max)*bulkPi
+                            *(bulkvisCoefficients[0]*mass*mass 
+                              + bulkvisCoefficients[1]*pdotu_max 
+                              + bulkvisCoefficients[2]*pdotu_max*pdotu_max));
                     else if (bulk_deltaf_kind == 1)
                     {
 
                         double E_over_T = pdotu_max/Tdec;
                         double mass_over_T = mass/Tdec;
-                        delta_f_bulk = -1.0*(1.-sign*f0_max)/E_over_T*bulkvisCoefficients[0]*(mass_over_T*mass_over_T/3. - bulkvisCoefficients[1]*E_over_T*E_over_T)*bulkPi;
+                        delta_f_bulk = (
+                            -1.0*(1.-sign*f0_max)/E_over_T
+                            *bulkvisCoefficients[0]
+                            *(mass_over_T*mass_over_T/3. 
+                              - bulkvisCoefficients[1]*E_over_T*E_over_T)
+                            *bulkPi);
                     }
                     else if (bulk_deltaf_kind == 2)
                     {
                         double E_over_T = pdotu_max/Tdec;
-                        delta_f_bulk = -1.*(1.-sign*f0_max)*(-bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T)*bulkPi;
+                        delta_f_bulk = (
+                            -1.*(1.-sign*f0_max)
+                            *(-bulkvisCoefficients[0] 
+                              + bulkvisCoefficients[1]*E_over_T)*bulkPi);
                     }
                     else if (bulk_deltaf_kind == 3)
                     {
                         double E_over_T = pdotu_max/Tdec;
-                        delta_f_bulk = -1.0*(1.-sign*f0_max)/sqrt(E_over_T)*(-bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T)*bulkPi;
+                        delta_f_bulk = (
+                            -1.0*(1.-sign*f0_max)/sqrt(E_over_T)
+                            *(-bulkvisCoefficients[0] 
+                              + bulkvisCoefficients[1]*E_over_T)*bulkPi);
                     }
                     else if (bulk_deltaf_kind == 4)
                     {
                         double E_over_T = pdotu_max/Tdec;
-                        delta_f_bulk = -1.0*(1.-sign*f0_max)*(bulkvisCoefficients[0] - bulkvisCoefficients[1]/E_over_T)*bulkPi;
+                        delta_f_bulk = (
+                            -1.0*(1.-sign*f0_max)
+                            *(bulkvisCoefficients[0] 
+                              - bulkvisCoefficients[1]/E_over_T)*bulkPi);
                     }
                 }
                 
                 double results_max;
                 delta_f_shear = max(delta_f_shear, 0.0);
                 delta_f_bulk = max(delta_f_bulk, 0.0);
-                results_max = prefactor*degen*f0_max*(1. + delta_f_shear + delta_f_bulk)*pdsigma_max*tau;
+                results_max = (prefactor*degen*f0_max
+                         *(1. + delta_f_shear + delta_f_bulk)*pdsigma_max*tau);
 
-                if (results_max/dN_max_sampling>1.0+1e-6)
-                    {
-                        total_violation++;
-//                         if (result_max/dN_max_sampling > largest_violation) largest_violation = result_max/dN_max_sampling;
-//                         cout << "result=" << result << endl
-//                              << "result_max=" << result_max << endl
-//                              << "pT=" << pT << endl
-//                              << "phi=" << phi << endl;
-//                         cout << "error msg; eta_s vs result" << endl;
-//                         cout << result_max << endl;
-//                         cout << dN_max_sampling << endl;
-//                         for (y_minus_eta_s_idx=0; y_minus_eta_s_idx<y_minus_eta_tab_length; y_minus_eta_s_idx++)
-//                         {
-//                             double pt = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][0];
-//                             double pz = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][1];
-// 
-//                             double expon = (gammaT*(pt*1 - px*vx - py*vy) - mu) * inv_Tdec;
-//                             double f0 = 1./(exp(expon)+sign);
-// 
-//                             double pdsigma = pt*da0 + px*da1 + py*da2;
-// 
-//                             double Wfactor = pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 + pz*pz*pi33;
-// 
-//                             double deltaf = (1 - F0_IS_NOT_SMALL*sign*f0)*Wfactor*deltaf_prefactor;
-// 
-//                             double result = prefactor*degen*f0*(1+deltaf)*pdsigma*tau;
-//                             cout << y_minus_eta_tab->get(1,y_minus_eta_s_idx+1) << "  " << result << endl;
-//                         }
-                        
-                    } // for debugging; 1.0: the maximum on the discrete lattice may not be the maximum for the actual continuous function
-                if (drand48()>results_max/dN_max_sampling) {tries++; continue;} // discard this freeze-out cell
+                // for debugging; 1.0: the maximum on the discrete lattice 
+                // may not be the maximum for the actual continuous function
+                if (results_max/dN_max_sampling > (1.0+1e-6) )
+                {
+                    total_violation++;
+                } 
+                
+                if (drand48() > results_max/dN_max_sampling)
+                {
+                    tries++; 
+                    continue;
+                } // discard this freeze-out cell
                 
                 for (int sub_try=0; sub_try<y_minus_eta_tab_length/2; sub_try++)
                 {
                     
-                    y_minus_eta_s_idx = floor(drand48()*(y_minus_eta_tab_length-1e-30)); // get a y-eta_s index
+                    // get a y-eta_s index
+                    y_minus_eta_s_idx = (floor(drand48()
+                                         *(y_minus_eta_tab_length-1e-30))); 
                     double pt = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][0];
                     double pz = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][1];
 
@@ -1961,63 +2168,79 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                     double delta_f_shear = 0.0;
                     if(INCLUDE_DELTAF)
                     {
-                        double Wfactor = pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 + pz*pz*pi33;
-                        delta_f_shear = (1 - F0_IS_NOT_SMALL*sign*f0)*Wfactor*deltaf_prefactor;
+                        double Wfactor = (
+                            pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 
+                            + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 
+                            + pz*pz*pi33);
+                        delta_f_shear = (
+                            (1. - F0_IS_NOT_SMALL*sign*f0)
+                            *Wfactor*deltaf_prefactor);
                     }
                     double delta_f_bulk = 0.0;
                     if (INCLUDE_BULK_DELTAF == 1)
                     {
                         if(bulk_deltaf_kind == 0)
-                            delta_f_bulk = -(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi*(bulkvisCoefficients[0]*mass*mass + bulkvisCoefficients[1]*pdotu + bulkvisCoefficients[2]*pdotu*pdotu);
+                            delta_f_bulk = (
+                                -(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi
+                                *(bulkvisCoefficients[0]*mass*mass 
+                                  + bulkvisCoefficients[1]*pdotu 
+                                  + bulkvisCoefficients[2]*pdotu*pdotu));
                         else if (bulk_deltaf_kind == 1)
                         {
 
                             double E_over_T = pdotu/Tdec;
                             double mass_over_T = mass/Tdec;
-                            delta_f_bulk = -1.0*(1.-sign*f0)/E_over_T*bulkvisCoefficients[0]*(mass_over_T*mass_over_T/3. - bulkvisCoefficients[1]*E_over_T*E_over_T)*bulkPi;
+                            delta_f_bulk = (
+                                -1.0*(1.-sign*f0)/E_over_T
+                                *bulkvisCoefficients[0]
+                                *(mass_over_T*mass_over_T/3. 
+                                  - bulkvisCoefficients[1]*E_over_T*E_over_T)
+                                *bulkPi);
                         }
                         else if (bulk_deltaf_kind == 2)
                         {
                             double E_over_T = pdotu/Tdec;
-                            delta_f_bulk = -1.*(1.-sign*f0)*(-bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T)*bulkPi;
+                            delta_f_bulk = (
+                                -1.*(1.-sign*f0)
+                                *(-bulkvisCoefficients[0] 
+                                  + bulkvisCoefficients[1]*E_over_T)*bulkPi);
                         }
                         else if (bulk_deltaf_kind == 3)
                         {
                             double E_over_T = pdotu/Tdec;
-                            delta_f_bulk = -1.0*(1.-sign*f0)/sqrt(E_over_T)*(-bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T)*bulkPi;
+                            delta_f_bulk = (
+                                -1.0*(1.-sign*f0)/sqrt(E_over_T)
+                                *(-bulkvisCoefficients[0] 
+                                  + bulkvisCoefficients[1]*E_over_T)*bulkPi);
                         }
                         else if (bulk_deltaf_kind == 4)
                         {
                             double E_over_T = pdotu/Tdec;
-                            delta_f_bulk = -1.0*(1.-sign*f0)*(bulkvisCoefficients[0] - bulkvisCoefficients[1]/E_over_T)*bulkPi;
+                            delta_f_bulk = (
+                                -1.0*(1.-sign*f0)
+                                *(bulkvisCoefficients[0] 
+                                  - bulkvisCoefficients[1]/E_over_T)*bulkPi);
                         }
                     }
 
+                    // restrict the size of delta f to be smaller than f_0
+                    double ratio_max = 1.0;
+                    double deltaf_size = fabs(delta_f_shear + delta_f_bulk);
+                    double resize_factor = min(1., 
+                                              ratio_max/(deltaf_size + 1e-10));
+                    result = (prefactor*degen*f0*pdsigma*tau*(1. 
+                              + (delta_f_shear + delta_f_bulk)*resize_factor));
 
-                    double result = prefactor*degen*f0*(1. + delta_f_shear + delta_f_bulk)*pdsigma*tau;
-
-
-//                     if (result/dN_max_sampling/f0_max/1.0>1 && AMOUNT_OF_OUTPUT>1) cout << "WTH?!" << endl; // for debugging; 1.0: the maximum on the discrete lattice may not be the maximum for the actual continuous function
-//                     if (result/dN_max_sampling>1.0+1e-6)
-//                     {
-//                         total_violation++;
-//                         cout << "result=" << result << endl
-//                              << "dN_max_sampling=" << dN_max_sampling << endl
-//                              << "pT=" << pT << endl
-//                              << "phi=" << phi << endl;
-//                     } // for debugging; 1.0: the maximum on the discrete lattice may not be the maximum for the actual continuous function
-                    if (result/results_max>1.0+1e-6)
+                    if ( result/results_max > (1.0+1e-6))
                     {
                         total_violation++;
-//                         cout << "result=" << result << endl
-//                              << "result_max=" << result_max << endl
-//                              << "pT=" << pT << endl
-//                              << "phi=" << phi << endl;
-                    } // for debugging; 1.0: the maximum on the discrete lattice may not be the maximum for the actual continuous function
-
-//                     if (drand48()<result/dN_max_sampling) {found_sample=true; break;} // accept sample! // Note that the factor 1.0 used here assumes that the maximum on the discrete lattice is the same as the maximum of the actual function, which is of course only an approximation
-                    if (drand48()<result/results_max) {found_sample=true; break;} // accept sample! // Note that the factor 1.0 used here assumes that the maximum on the discrete lattice is the same as the maximum of the actual function, which is of course only an approximation
-
+                    } 
+                    
+                    if (drand48()<result/results_max)
+                    {
+                        found_sample=true; 
+                        break;
+                    } // accept sample! 
 
                     tries ++;
 
@@ -2028,13 +2251,19 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
 
             total_tries += tries;
 
-            if (tries>=maximum_impatience && AMOUNT_OF_OUTPUT>5) cout << "EmissionFunctionArray::sample_using_dN_pTdpTdphidy warning: maximum_impatience reached." << endl;
+            if (tries >= maximum_impatience && AMOUNT_OF_OUTPUT > 5)
+                cout << "EmissionFunctionArray::"
+                     << "sample_using_dN_pTdpTdphidy warning: "
+                     << "maximum_impatience reached." << endl;
 
-            if (tries>=maximum_impatience) continue; // resample
-            else sample_idx++; // write-out sample
+            if (tries >= maximum_impatience)
+                continue; // resample
+            else
+                sample_idx++; // write-out sample
 
             double y_minus_eta_s = y_minus_eta_tab->get(1,y_minus_eta_s_idx+1);
-            if (positive_y_minus_eta_table_only) y_minus_eta_s = irand(0,1)==0 ? y_minus_eta_s : -y_minus_eta_s;
+            if (positive_y_minus_eta_table_only)
+                y_minus_eta_s = irand(0,1)==0 ? y_minus_eta_s : -y_minus_eta_s;
 
             double y = y_LB + drand48()*(y_RB-y_LB);
             double eta_s = y - y_minus_eta_s;
@@ -2046,12 +2275,19 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
             // write to sample file
             if (!USE_OSCAR_FORMAT)
             {
-                sprintf(line_buffer, "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, pT, phi, surf->da0, surf->da1, surf->da2, surf->u1/surf->u0, surf->u2/surf->u0, y, eta_s, E, p_z, t, z);
+                sprintf(line_buffer, 
+                        "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", 
+                        FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, 
+                        pT, phi, surf->da0, surf->da1, surf->da2, 
+                        surf->u1/surf->u0, surf->u2/surf->u0, y, eta_s, E, 
+                        p_z, t, z);
             }
             // To be combined to OSCAR
             if (USE_OSCAR_FORMAT)
             {
-                sprintf(line_buffer, "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", px, py, p_z, E, mass, surf->xpt, surf->ypt, z, t);
+                sprintf(line_buffer, 
+                        "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", 
+                        px, py, p_z, E, mass, surf->xpt, surf->ypt, z, t);
             }
             sample_str_buffer << line_buffer;
             sample_writing_signal++;
@@ -2062,10 +2298,10 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
               sample_writing_signal=0;
             }
 
-
         }
-        if (AMOUNT_OF_OUTPUT>0) print_progressbar((double)(sampling_idx)/number_of_repeated_sampling);
-
+        if (AMOUNT_OF_OUTPUT > 0)
+            print_progressbar((double)(sampling_idx)
+                                      /number_of_repeated_sampling);
     }
 
     // flushing buffers
@@ -2085,9 +2321,10 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
     of_sample.close();
     if (AMOUNT_OF_OUTPUT>0) print_progressbar(1);
 
-    cout << endl << "Average number of tries: " << total_tries/number_of_repeated_sampling/dN << endl;
-    cout << endl << "Average number of violations: " << float(total_violation)/number_of_repeated_sampling/dN << endl;
-//     cout << endl << "Largest violation: " << largest_violation << endl;
+    cout << endl << "Average number of tries: " 
+         << total_tries/number_of_repeated_sampling/dN << endl;
+    cout << endl << "Average number of violations: " 
+         << float(total_violation)/number_of_repeated_sampling/dN << endl;
     
     ofstream of_sample_format(samples_format_filename.c_str());
     // Be careful that ParameterReader class convert all strings to lower case
@@ -2132,35 +2369,35 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
     of_sample_format.close();
 
     // delete the intermedia variables (very important)
-    for (int i=0; i<pT_tab4Sampling_length; i++) delete[] dN_pTdpTdphidy_with_weight_4Sampling[i];
+    for (int i=0; i<pT_tab4Sampling_length; i++)
+        delete[] dN_pTdpTdphidy_with_weight_4Sampling[i];
     delete[] dN_pTdpTdphidy_with_weight_4Sampling;
-    for (int i=0; i<pT_tab4Sampling_length; i++) delete[] dN_pTdpTdphidy_max_4Sampling[i];
+
+    for (int i=0; i<pT_tab4Sampling_length; i++)
+        delete[] dN_pTdpTdphidy_max_4Sampling[i];
     delete[] dN_pTdpTdphidy_max_4Sampling;
 
     delete [] bulkvisCoefficients;
 
     sw.toc();
-    cout << endl << "Sampling finished in " << sw.takeTime() << " seconds." << endl;
-
+    cout << endl 
+         << "Sampling finished in " << sw.takeTime() << " seconds." << endl;
 }
 //***************************************************************************
 
 
-
-
-
-
-
-
-
 //***************************************************************************
-inline long EmissionFunctionArray::determine_number_to_sample(double dN_dy_in, int model, double para1, double para2, double para3, double para4, double para5)
+inline long EmissionFunctionArray::determine_number_to_sample(
+    double dN_dy_in, int model, double para1, double para2, 
+    double para3, double para4, double para5)
 // From a non-integer averaged particles number dN, return an actual interger
 // particle number that can be used in sampling.
 {
     if (dN_dy_in<0)
     {
-        cout << "EmissionFunctionArray::determine_number_to_sample error: dN_dy should be positive but receives " << dN_dy_in << endl;
+        cout << "EmissionFunctionArray::"
+             << "determine_number_to_sample error: "
+             << "dN_dy should be positive but receives " << dN_dy_in << endl;
         exit(-1);
     }
     double dN_dy = dN_dy_in;
@@ -2174,35 +2411,43 @@ inline long EmissionFunctionArray::determine_number_to_sample(double dN_dy_in, i
     {
         case 1: // with possibly 1 more particle
             number_to_sample = dN_dy_int;
-            if (drand48()<dN_dy_fraction) number_to_sample++; // lucky! 1 more particle...
+            // lucky! 1 more particle...
+            if (drand48() < dN_dy_fraction)
+                number_to_sample++; 
             break;
         case 10: // use NBD
             k = para1*dN_dy_fraction;
             p = 1.0/(1.0+para1);
-            if (k<1e-15) number_to_sample = dN_dy_int;
-            else number_to_sample = dN_dy_int + nbd.rand(p,k);
+            if (k<1e-15)
+                number_to_sample = dN_dy_int;
+            else 
+                number_to_sample = dN_dy_int + nbd.rand(p,k);
             break;
         case 20:
             k = para1*dN_dy;
             p = 1.0/(1.0+para1);
-            if (k<1e-15) number_to_sample = dN_dy_int;
-            else number_to_sample = nbd.rand(p,k);
+            if (k<1e-15) 
+                number_to_sample = dN_dy_int;
+            else 
+                number_to_sample = nbd.rand(p,k);
             break;
         case 30:  // use Poisson distribution
-            if (dN_dy < 1e-15) number_to_sample = 0;
+            if (dN_dy < 1e-15)
+                number_to_sample = 0;
             number_to_sample = poissonDistribution.rand(dN_dy);
             break;
         default:
-            cout << "EmissionFunctionArray::determine_number_to_sample error: the model specified (" << model << ") to determine the number of particles is not found" << endl;
+            cout << "EmissionFunctionArray::"
+                 << "determine_number_to_sample error: "
+                 << "the model specified (" << model << ") "
+                 << "to determine the number of particles is not found" 
+                 << endl;
             exit(-1);
     }
 
     return number_to_sample;
 }
 //***************************************************************************
-
-
-
 
 
 
@@ -2214,7 +2459,8 @@ void EmissionFunctionArray::calculate_dN_dxtdetady_and_sample_4all()
     cout << endl
         << "***********************************************************"
         << endl
-        << "Function calculate_dN_dxtdetady_and_sample_4all started... " << endl;
+        << "Function calculate_dN_dxtdetady_and_sample_4all started... " 
+        << endl;
     Stopwatch sw;
     sw.tic();
 
