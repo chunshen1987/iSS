@@ -1383,7 +1383,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
                 }
 
                 double result;
-                double result;
                 // restrict the size of delta f to be smaller than f_0
                 double ratio_max = 1.0;
                 double deltaf_size = fabs(delta_f_shear + delta_f_bulk);
@@ -2223,6 +2222,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                         }
                     }
 
+                    double result;
                     // restrict the size of delta f to be smaller than f_0
                     double ratio_max = 1.0;
                     double deltaf_size = fabs(delta_f_shear + delta_f_bulk);
