@@ -3067,7 +3067,8 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
     }
 
     sw.toc();
-    cout << endl << " -- Calculate_dN_dxtdy_4all_particles finished in " << sw.takeTime() << " seconds." << endl;
+    cout << endl << " -- Calculate_dN_dxtdy_4all_particles finished in " 
+         << sw.takeTime() << " seconds." << endl;
 
 }
 
@@ -3409,7 +3410,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     }
 
                     // next viscous part
-                    // p*dsigma pT f < dsgima_all*tmp_factor*sqrt(3)*E^3*f0*trace_Pi2/(2*T^2*(e+p))
+                    // p*dsigma pT f < dsgima_all*tmp_factor*sqrt(3)
+                    //                 *E^3*f0*trace_Pi2/(2*T^2*(e+p))
                     double trace_Pi2 = (
                         pi00*pi00 + pi11*pi11 + pi22*pi22 + pi33*pi33 
                         - 2*pi01*pi01 - 2*pi02*pi02 + 2*pi12*pi12);
@@ -3758,7 +3760,7 @@ void EmissionFunctionArray::getbulkvisCoefficients(
    }
    else if (bulk_deltaf_kind == 2)
    {
-       // A Polynomial fit to each coefficient -- Tfm is the temperature in fm^-1
+       // A Polynomial fit to each coefficient -- X is the temperature in fm^-1
        // Both fits are reliable between T=100 -- 180 MeV
        // do not trust it beyond
        bulkvisCoefficients[0] = (  21091365.1182649 
