@@ -27,7 +27,7 @@
 #include "arsenal.h"
 #include "Stopwatch.h"
 
-#define AMOUNT_OF_OUTPUT 0 // smaller value means less outputs
+#define AMOUNT_OF_OUTPUT 5 // smaller value means less outputs
 #define NUMBER_OF_LINES_TO_WRITE   100000 // string buffer for sample files
 
 using namespace std;
@@ -3269,7 +3269,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                         double pt = mT*cosh(y_minus_eta_s);
                         double pz = mT*sinh(y_minus_eta_s);
 
-                        double expon = ((pt*u0 - px*u1 - py*u2) - mu)*inv_Tdec;
+                        double pdotu = pt*u0 - px*u1 - py*u2;
+                        double expon = (pdotu - mu)*inv_Tdec;
                         double f0 = 1./(exp(expon)+sign);
 
                         double pdsigma = pt*da0 + px*da1 + py*da2;
@@ -3278,14 +3279,72 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                             pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 
                             + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 
                             + pz*pz*pi33);
-                        double deltaf = (
+
+                        double delta_f_shear = (
                             (1. - F0_IS_NOT_SMALL*sign*f0)*Wfactor
                             *deltaf_prefactor);
 
-                        // there is an additional pT factor, 
-                        // because we want pT*dN_dxtdetady
-                        double result = (
-                            prefactor*tau*degen*f0*(1+deltaf)*pdsigma); 
+                        double delta_f_bulk = 0.0;
+                        if (INCLUDE_BULK_DELTAF== 1)
+                        {
+                            if(bulk_deltaf_kind == 0)
+                            {
+                                delta_f_bulk = (
+                                    -(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi
+                                    *(bulkvisCoefficients[0]*mass*mass 
+                                      + bulkvisCoefficients[1]*pdotu 
+                                      + bulkvisCoefficients[2]*pdotu*pdotu));
+                            }
+                            else if (bulk_deltaf_kind == 1)
+                            {
+
+                                double E_over_T = pdotu/Tdec;
+                                double mass_over_T = mass/Tdec;
+                                delta_f_bulk = (
+                                    -1.0*(1.-sign*f0)/E_over_T
+                                    *bulkvisCoefficients[0]
+                                    *(mass_over_T*mass_over_T/3. 
+                                      - bulkvisCoefficients[1]
+                                        *E_over_T*E_over_T)
+                                    *bulkPi);
+                            }
+                            else if (bulk_deltaf_kind == 2)
+                            {
+                                double E_over_T = pdotu/Tdec;
+                                delta_f_bulk = (
+                                    -1.*(1.-sign*f0)*(-bulkvisCoefficients[0] 
+                                        + bulkvisCoefficients[1]*E_over_T)
+                                    *bulkPi);
+                            }
+                            else if (bulk_deltaf_kind == 3)
+                            {
+                                double E_over_T = pdotu/Tdec;
+                                delta_f_bulk = (
+                                    -1.0*(1.-sign*f0)/sqrt(E_over_T)
+                                    *(-bulkvisCoefficients[0] 
+                                      + bulkvisCoefficients[1]*E_over_T)
+                                    *bulkPi);
+                            }
+                            else if (bulk_deltaf_kind == 4)
+                            {
+                                double E_over_T = pdotu/Tdec;
+                                delta_f_bulk = (
+                                    -1.0*(1.-sign*f0)*(bulkvisCoefficients[0] 
+                                        - bulkvisCoefficients[1]/E_over_T)
+                                    *bulkPi);
+                            }
+                        }
+
+                        double result;
+                        // restrict the size of delta f to be smaller than f_0
+                        double ratio_max = 1.0 - 1e-6;
+                        double deltaf_size = fabs(delta_f_shear 
+                                                  + delta_f_bulk);
+                        double resize_factor = (
+                            min(1., ratio_max/(deltaf_size + 1e-10)));
+                        result = (prefactor*degen*f0*pdsigma*tau
+                                  *(1. + (delta_f_shear + delta_f_bulk)
+                                          *resize_factor));
 
                         double accept_prob = (
                             result/(actual_adjusted_maximum_factor
