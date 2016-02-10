@@ -309,19 +309,21 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
      surf_ptr[idx].tau = temp_tau;
      surf_ptr[idx].xpt = temp_xpt;
      surf_ptr[idx].ypt = temp_ypt;
-     surf_ptr[idx].eta = temp_eta;
+     surf_ptr[idx].eta = 0.0;
 
      // freeze out normal vectors
      ss >> surf_ptr[idx].da0;
      ss >> surf_ptr[idx].da1;
      ss >> surf_ptr[idx].da2;
      ss >> surf_ptr[idx].da3;
+     surf_ptr[idx].da3 = 0.0;
 
      // flow velocity
      ss >> surf_ptr[idx].u0;
      ss >> surf_ptr[idx].u1;
      ss >> surf_ptr[idx].u2;
      ss >> surf_ptr[idx].u3;
+     surf_ptr[idx].u3 = 0.0;
 
      // thermodynamic quantities at freeze out
      ss >> dummy;
@@ -343,19 +345,19 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
      ss >> dummy;
      surf_ptr[idx].pi02 = dummy*hbarC;
      ss >> dummy;
-     surf_ptr[idx].pi03 = dummy*hbarC;
+     surf_ptr[idx].pi03 = 0.0*hbarC;
      ss >> dummy;
      surf_ptr[idx].pi11 = dummy*hbarC;
      ss >> dummy;
      surf_ptr[idx].pi12 = dummy*hbarC;
      ss >> dummy;
-     surf_ptr[idx].pi13 = dummy*hbarC;
+     surf_ptr[idx].pi13 = 0.0*hbarC;
      ss >> dummy;
      surf_ptr[idx].pi22 = dummy*hbarC;
      ss >> dummy;
-     surf_ptr[idx].pi23 = dummy*hbarC;
+     surf_ptr[idx].pi23 = 0.0*hbarC;
      ss >> dummy;
-     surf_ptr[idx].pi33 = dummy*hbarC;
+     surf_ptr[idx].pi33 = 0.0*hbarC;
      if(turn_on_bulk == 1)
      {
          ss >> dummy;
@@ -363,7 +365,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
      }
      else
          surf_ptr[idx].bulkPi = 0.0;
-     if(turn_on_muB == 1)
+     if(turn_on_rhob == 1)
      {
          ss >> dummy;
          surf_ptr[idx].muB = dummy*hbarC;
@@ -399,11 +401,13 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
      surf_ptr[idx].tau = temp_tau;
      surf_ptr[idx].xpt = temp_xpt;
      surf_ptr[idx].ypt = temp_ypt;
+     surf_ptr[idx].eta = 0.0;
 
      // freeze out normal vectors
      ss >> surf_ptr[idx].da0;
      ss >> surf_ptr[idx].da1;
      ss >> surf_ptr[idx].da2;
+     surf_ptr[idx].da3 = 0.0;
 
      // thermodynamic quantities at freeze out
      ss >> surf_ptr[idx].Tdec;
@@ -414,6 +418,7 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
      surf_ptr[idx].u0 = 1./sqrt(1. - temp_vx*temp_vx - temp_vy*temp_vy);
      surf_ptr[idx].u1 = surf_ptr[idx].u0*temp_vx;
      surf_ptr[idx].u2 = surf_ptr[idx].u0*temp_vy;
+     surf_ptr[idx].u3 = 0.0;
 
      surf_ptr[idx].Edec = 0.0;   
      surf_ptr[idx].muB = 0.0;
@@ -446,7 +451,7 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
 
 void read_FOdata::read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr)
 {
-  cout<<" -- Read spatial positions of freeze out surface from MUSIC...";
+  cout << " -- Read spatial positions of freeze out surface from MUSIC...";
   ostringstream surfdat_stream;
   double dummy;
   surfdat_stream << path << "/surface.dat";
@@ -511,7 +516,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr)
      }
      else
          surf_ptr[i].bulkPi = 0.0;
-     if(turn_on_muB == 1)
+     if(turn_on_rhob == 1)
      {
          surfdat >> dummy;
          surf_ptr[i].muB = dummy*hbarC;
