@@ -27,7 +27,7 @@
 #include "arsenal.h"
 #include "Stopwatch.h"
 
-#define AMOUNT_OF_OUTPUT 5 // smaller value means less outputs
+#define AMOUNT_OF_OUTPUT 0 // smaller value means less outputs
 #define NUMBER_OF_LINES_TO_WRITE   100000 // string buffer for sample files
 
 using namespace std;
@@ -3136,21 +3136,21 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                         // choose upper sign; (*) always has a solution
                         // which gives the maximum
                         double Emax = Tdec*(
-                                    lambertw.map(A*exp(inv_Tdec*mu-A)) + A);
+                                    lambertw.map(A*exp(inv_Tdec*mu - A)) + A);
                         if (Emax < mass)
                             Emax = mass; // maximum in [mass, inf]
                         guess_ideal = (
-                            pow(Emax,A) / (exp((Emax-mu)*inv_Tdec) + sign));
+                            pow(Emax, A)/(exp((Emax - mu)*inv_Tdec) + sign));
                     }
                     else // boson
                     {
                         // choose lower sign; (*) has a solution only 
                         // when A*exp(beta*mu-A)<=1/e
-                        double rhs = A*exp(inv_Tdec*mu-A);
+                        double rhs = A*exp(inv_Tdec*mu - A);
                         if (rhs>0.3678794) // 1/e = 0.367879441171442
                         {
                             // no solution; maximum is attained at E=mass
-                            guess_ideal = pow(mass,A)/f0_mass;
+                            guess_ideal = pow(mass, A)*f0_mass;
                         }
                         else
                         {
@@ -3250,7 +3250,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     // will-be sampled values
                     double pT, mT, phi, px, py, y_minus_eta_s; 
                     long tries = 1;
-                    while (tries<maximum_impatience)
+                    double accept_prob_max = 0.0;
+                    while (tries < maximum_impatience)
                     {
                         // refer to calculate_dNArrays function to see how 
                         // the rate is calculated
@@ -3349,11 +3350,16 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                         double accept_prob = (
                             result/(actual_adjusted_maximum_factor
                                     *maximum_guess));
+                        if (AMOUNT_OF_OUTPUT > 5)
+                        {
+                            if(accept_prob > accept_prob_max)
+                                accept_prob_max = accept_prob;
+                        }
 
                         // to track success rate
                         number_of_tries ++;
                         if (accept_prob > maximum_ratio)
-                                maximum_ratio=accept_prob;
+                                maximum_ratio = accept_prob;
 
                         // for debugging
                         if (accept_prob > 1 && AMOUNT_OF_OUTPUT > 1)
@@ -3365,12 +3371,19 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                         if (drand48() < accept_prob)
                             break; // accept sample!
 
-                        tries ++;
+                        tries++;
                     }
-                    if (tries==maximum_impatience && AMOUNT_OF_OUTPUT>5)
+                    if (tries == maximum_impatience && AMOUNT_OF_OUTPUT > 5)
+                    {
                         cout << "EmissionFunctionArray::"
                              << "sample_using_dN_dxtdy_4all_particles warning:"
                              << "maximum_impatience reached." << endl;
+                        cout << "accept_prob_max = " << accept_prob_max << ", "
+                             << "maximum_guess = " << maximum_guess << endl;
+                        cout << "guess_ideal = " << guess_ideal << ", "
+                             << "guess_shear = " << guess_viscous << ", "
+                             << "guess_bulk = " << guess_bulk << endl;
+                    }
 
                     if (tries == maximum_impatience)
                         continue; // resample
