@@ -67,7 +67,8 @@ int main(int argc, char** argv)
    
    //read the chemical potential on the freeze out surface
    particle_info *particle = new particle_info [Maxparticle];
-   int Nparticle = freeze_out_data.read_in_chemical_potentials(path, FO_length, FOsurf_ptr, particle);
+   int Nparticle = freeze_out_data.read_in_chemical_potentials(
+                                        path, FO_length, FOsurf_ptr, particle);
    
    cout << endl << " -- Read in data finished!" << endl << endl;
 
