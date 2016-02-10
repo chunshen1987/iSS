@@ -373,7 +373,6 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
       double pi33 = surf->pi33;
       double bulkPi = 0.0;
       double deltaf_prefactor = 0.0;
-      double bulk_coeff1, bulk_coeff2;
       if(INCLUDE_DELTAF == 1)
           deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
       if(INCLUDE_BULK_DELTAF == 1)
@@ -2801,11 +2800,15 @@ double EmissionFunctionArray::calculate_dN_analytic(
    double results = 0.0;
    double N_eq = 0.0;
    double deltaN_bulk = 0.0;
-   double *bulkvisCoefficients;
+   double *bulkvisCoefficients = new double [2];
    if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1)
    {
-       bulkvisCoefficients = new double [2];
        getbulkvisCoefficients(Temperature, bulkvisCoefficients);
+   }
+   else
+   {
+       bulkvisCoefficients[0] = 0.0;
+       bulkvisCoefficients[1] = 0.0;
    }
 
    int truncate_order = 10;
@@ -2842,12 +2845,12 @@ double EmissionFunctionArray::calculate_dN_analytic(
        deltaN_bulk = (prefactor*prefactor_bulk
                *( - bulkvisCoefficients[1]*mass*mass/beta*deltaN_bulk_term1
                   + mass*mass*mass/3.*deltaN_bulk_term2));
-       delete[] bulkvisCoefficients;
    }
    else
        deltaN_bulk = 0.0;
 
    results = N_eq + deltaN_bulk;
+   delete[] bulkvisCoefficients;
 
    return(results);
 }
