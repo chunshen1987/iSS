@@ -35,7 +35,10 @@ using namespace std;
 
 // Class EmissionFunctionArray ------------------------------------------
 //***************************************************************************
-EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* pt_tab_in, Table* phi_tab_in, Table* y_minus_eta_tab_in, particle_info* particles_in, int Nparticles_in, FO_surf* FOsurf_ptr_in, long FO_length_in, ParameterReader* paraRdr_in)
+EmissionFunctionArray::EmissionFunctionArray(
+    Table* chosen_particles_in, Table* pt_tab_in, Table* phi_tab_in, 
+    Table* y_minus_eta_tab_in, particle_info* particles_in, int Nparticles_in, 
+    FO_surf* FOsurf_ptr_in, long FO_length_in, ParameterReader* paraRdr_in)
 {
   // get info
   pT_tab = pt_tab_in; pT_tab_length = pT_tab->getNumberOfRows();
@@ -95,7 +98,8 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   // next, for sampling processes
   chosen_particles_sampling_table = new int[number_of_chosen_particles];
   unidentifiedPid_table = new int [number_of_chosen_particles];
-  // first copy the chosen_particles table, but now using indecies instead of monval
+  // first copy the chosen_particles table, but now using indecies 
+  // instead of monval
   int current_idx = 0;
   int temp_idx = 0;
   for (int m=0; m<number_of_chosen_particles; m++)
@@ -131,7 +135,8 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
   }
   // next re-order them so that particles with similar mass are adjacent
   grouping_particles = paraRdr->getVal("grouping_particles");
-  if (grouping_particles) // sort particles according to their mass; bubble-sorting
+  // sort particles according to their mass; bubble-sorting
+  if (grouping_particles) 
   {
     for (int m=0; m<number_of_chosen_particles; m++)
       for (int n=0; n<number_of_chosen_particles-m-1; n++)
@@ -140,7 +145,8 @@ EmissionFunctionArray::EmissionFunctionArray(Table* chosen_particles_in, Table* 
         {
           // swap them
           int particle_idx = chosen_particles_sampling_table[n+1];
-          chosen_particles_sampling_table[n+1] = chosen_particles_sampling_table[n];
+          chosen_particles_sampling_table[n+1] = (
+                          chosen_particles_sampling_table[n]);
           chosen_particles_sampling_table[n] = particle_idx;
         }
   }

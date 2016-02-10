@@ -105,7 +105,7 @@ int read_FOdata::read_in_chemical_potentials(
    {
        // determine the type of the EOS 
        ostringstream config_file;
-       config_file << path << "/input";
+       config_file << path << "/music_input";
        ifstream configuration(config_file.str().c_str());
        string temp1;
        string temp_name;
