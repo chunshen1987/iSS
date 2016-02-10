@@ -2696,10 +2696,14 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
     // now loop over all freeze-out cells and particles
     FO_surf *surf; particle_info* particle;
     double prefactor = 1.0/pow(hbarC,3);  // unit: convert to unitless
+
     double integral_laststep[number_of_chosen_particles];
-    double last_temp = -1;
-    if (AMOUNT_OF_OUTPUT>0) print_progressbar(-1);
-    for (long l=0; l<FO_length; l++)
+
+    if (AMOUNT_OF_OUTPUT > 0)
+        print_progressbar(-1);
+
+    // loop over all the fluid cells
+    for (long l = 0; l < FO_length; l++)
     {
         surf = &FOsurf_ptr[sorted_FZ[l]];
         double temp = surf->Tdec;
@@ -2713,69 +2717,62 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
         double da1 = surf->da1;
         double da2 = surf->da2;
 
-        double bulkPi = surf->bulkPi;
+        double bulkPi = 0.0;
+        if(bulk_deltaf_kind == 0)
+            bulkPi = surf->bulkPi;
+        else
+            bulkPi = surf->bulkPi/hbarC; // unit in fm^-4 
 
         double dsigma_dot_u = tau*(da0*gammaT + ux*da1 + uy*da2);
 
-        if (l>0 && (temp-last_temp)/(last_temp+1e-30)<1e-30)
+        // calculate dN / (dxt dy) for all particles
+        int last_particle_sign=0;
+        int last_particle_degen=0;
+        double last_particle_mass=-1;
+        double last_particle_mu=-1;
+        double integral_single_laststep = 0;
+        for (long n = 0; n < number_of_chosen_particles; n++)
         {
-            // temperature are the same, use results from previous step
-            for (long n=0; n<number_of_chosen_particles; n++)
-                dN_dxtdy_4all[l][n] = integral_laststep[n];
-        }
-        else
-        {
-            // calculate dN / (dxt dy) for all particles
-            // use previous result to speed up calculation if possible
-            last_temp = temp;
-
-            int last_particle_sign=0;
-            int last_particle_degen=0;
-            double last_particle_mass=-1;
-            double last_particle_mu=-1;
-            double integral_single_laststep = 0;
-            for (long n=0; n<number_of_chosen_particles; n++)
+            long real_particle_idx = chosen_particles_sampling_table[n];
+            particle = &particles[real_particle_idx];
+            int sign = particle->sign;
+            int degen = particle->gspin;
+            double mass = particle->mass;
+            double mu = surf->particle_mu[real_particle_idx];
+            if ( n > 0 && last_particle_sign == sign 
+                 && last_particle_degen == degen 
+                 && abs((last_particle_mass - mass)
+                         /(last_particle_mass+1e-30)) < tolerance 
+                 && abs((last_particle_mu - mu)
+                         /(last_particle_mu+1e-30)) < tolerance
+            )
             {
-                long real_particle_idx = chosen_particles_sampling_table[n];
-                particle = &particles[real_particle_idx];
-                int sign = particle->sign;
-                int degen = particle->gspin;
-                double mass = particle->mass;
-                double mu = surf->particle_mu[real_particle_idx];
-                if ( n > 0 && last_particle_sign == sign 
-                     && last_particle_degen == degen 
-                     && abs((last_particle_mass - mass)
-                             /(last_particle_mass+1e-30))<tolerance 
-                     && abs((last_particle_mu - mu)
-                             /(last_particle_mu+1e-30))<tolerance
-                )
-                {
-                    // skip calculation for the current particle
-                    integral_laststep[n] = integral_single_laststep;
-                }
-                else
-                {
-                    // calculate dN / (dxt dy)
-                    last_particle_sign = sign;
-                    last_particle_degen = degen;
-                    last_particle_mass = mass;
-                    last_particle_mu = mu;
-
-                    integral_single_laststep = (
-                            calculate_dN_analytic(particle, mu, temp, bulkPi));
-                    integral_laststep[n] = integral_single_laststep;
-                }
-                dN_dxtdy_4all[l][n] = integral_laststep[n];
+                // skip calculation for the current particle
+                integral_laststep[n] = integral_single_laststep;
             }
+            else
+            {
+                // calculate dN / (dxt dy)
+                last_particle_sign = sign;
+                last_particle_degen = degen;
+                last_particle_mass = mass;
+                last_particle_mu = mu;
+
+                integral_single_laststep = (
+                        calculate_dN_analytic(particle, mu, temp, bulkPi));
+                integral_laststep[n] = integral_single_laststep;
+            }
+            dN_dxtdy_4all[l][n] = integral_laststep[n];
         }
 
-        for (long n=0; n<number_of_chosen_particles; n++)
+        for (long n = 0; n < number_of_chosen_particles; n++)
             dN_dxtdy_4all[l][n] *= prefactor*dsigma_dot_u;
 
-        if (AMOUNT_OF_OUTPUT>0)
+        if (AMOUNT_OF_OUTPUT > 0)
             print_progressbar((double)(l)/FO_length);
     }
-    if (AMOUNT_OF_OUTPUT>0) print_progressbar(1);
+    if (AMOUNT_OF_OUTPUT > 0)
+            print_progressbar(1);
 
     if ((int)(paraRdr->getVal("output_dN_dxtdy_4all")))
     {
@@ -2804,7 +2801,6 @@ double EmissionFunctionArray::calculate_dN_analytic(
 */
 {
    double results = 0.0;
-   double N_eq = 0.0;
    double deltaN_bulk = 0.0;
    double *bulkvisCoefficients = new double [2];
    if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1)
@@ -2829,13 +2825,14 @@ double EmissionFunctionArray::calculate_dN_analytic(
    double lambda = exp(beta*mu);
 
    // compute the sum in the series
+   double N_eq = 0.0;
    double deltaN_bulk_term1 = 0.0;
    double deltaN_bulk_term2 = 0.0;
    for(int n = 1; n <= truncate_order; n++)
    {
       double arg = n*mass*beta;  // argument inside bessel functions
 
-      double theta = pow(sign, n-1);
+      double theta = pow(-sign, n-1);
       double fugacity = pow(lambda, n);
       double K_1 = gsl_sf_bessel_K1(arg);
       double K_2 = gsl_sf_bessel_Kn(2, arg);
