@@ -148,8 +148,8 @@ public:
   string dN_dx_filename;
 
   // Second sampling method
-  double calculate_dN_analytic(
-                  particle_info* particle, double mu, double Temperature);
+  double calculate_dN_analytic(particle_info* particle, double mu, 
+                               double Temperature, double bulkPi);
 
   // the following variables need to be set first in order to 
   // call this function

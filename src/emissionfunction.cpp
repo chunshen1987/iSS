@@ -1022,9 +1022,10 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all_old_output(
 //***************************************************************************
 void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(
                                                           int perform_sampling)
-// Calculate dN_pTdpTdphidy and flows for all particles given in chosen_particle array.
-// This version output dN / (ptdpt dphi dy) matrices in one file, but flows in separated
-// ones.
+// Calculate dN_pTdpTdphidy and flows 
+// for all particles given in chosen_particle array.
+// This version output dN / (ptdpt dphi dy) matrices in one file, 
+// but flows in separated ones.
 {
 
     cout << endl
@@ -1069,13 +1070,15 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(
         }
 
         // perform sampling
-        if (perform_sampling) sample_using_dN_pTdpTdphidy();
+        if (perform_sampling)
+            sample_using_dN_pTdpTdphidy();
 
         // Store calculated table
         dNs[particle_idx] = new Table(*dN_pTdpTdphidy);
 
         // Calcualte dN / dphi
-        if (calculate_dN_dphi) calculate_dN_dphi_using_dN_pTdpTdphidy();
+        if (calculate_dN_dphi)
+            calculate_dN_dphi_using_dN_pTdpTdphidy();
 
         char buffer_diff[500], buffer_inte[500];
         sprintf(buffer_diff, flow_differential_filename.c_str(), monval);
@@ -1131,8 +1134,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
 // example, if one line of it reads as "foo=1" means that the variable
 // "foo" is the recorded in the 1st column.
 // Parameters:
-// -- number_of_repeated_sampling: number of successive sampling; in each sampling
-//    the number of particles is determined by dN_dy and the model parameter.
+// -- number_of_repeated_sampling: number of successive sampling; 
+//    in each sampling the number of particles is determined
+//    by dN_dy and the model parameter.
 // -- pT_to: sample up to what pT
 // -- model parameter:
 //    1): The fractional part of dN_dy is used as a probability to determine
@@ -1208,7 +1212,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
 
     // the sample file contains the actual samples
     char samples_filename_buffer[300];
-    sprintf(samples_filename_buffer, samples_filename.c_str(), particle->monval);
+    sprintf(samples_filename_buffer, samples_filename.c_str(), 
+            particle->monval);
     remove(samples_filename_buffer);
     ofstream of_sample(samples_filename_buffer);
 
@@ -1312,8 +1317,10 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
                 pT = drand(0, pT_to); // sample according to pT dpT
                 mT = sqrt(mass*mass + pT*pT);
 
-                double pt = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][0];
-                double pz = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][1];
+                double pt = (
+                    mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][0]);
+                double pz = (
+                    mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][1]);
 
                 phi = drand(0, 2*M_PI);
                 px = pT*cos(phi);
@@ -1529,305 +1536,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
 
 
 
-
-
-
-// //***************************************************************************
-// void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
-// // Sample according to the dN_pTdpTdphidy and dN_pTdpTdphidy_max array. These
-// // arrays are asssumed to be already cacluated.
-// // The particle index is assumed to be already stored in the
-// // "last_particle_idx" internal variable.
-// // Emission function below "zero" will be treated as "zero".
-// // Each line in the sample file contains the following data:
-// // FZ_cell_idx tau, xpt, ypt, y_minus_eta_s, pT, phi, da0, da1, da2, vx, vy
-// // Each line in the sample control file records the number of particles
-// // sampled in one event.
-// // The format file is a file that can be read by ParameterReader class
-// // which records the the purpose of each column in the sample file. For
-// // example, if one line of it reads as "foo=1" means that the variable
-// // "foo" is the recorded in the 1st column.
-// // Parameters:
-// // -- number_of_repeated_sampling: number of successive sampling; in each sampling
-// //    the number of particles is determined by dN_dy and the model parameter.
-// // -- pT_to: sample up to what pT
-// // -- model parameter:
-// //    1): The fractional part of dN_dy is used as a probability to determine
-// //       whether we have 0 or 1 more particle.
-// {
-//     Stopwatch sw;
-//     sw.tic();
-// 
-//     double pT_to = paraRdr->getVal("sample_pT_up_to");
-//     if (pT_to<0) pT_to = pT_tab->getLast(1); // use table to determine pT range
-//     double zero = paraRdr->getVal("minimum_emission_function_val"); // If dN/(dx_t deta dy) is evaluated to be smaller than this value, then it is replaced by this value.
-//     long number_of_repeated_sampling = paraRdr->getVal("number_of_repeated_sampling");
-// 
-//     particle_info* particle = &particles[last_particle_idx];
-// 
-//     double mass = particle->mass;
-//     double sign = particle->sign;
-//     double degen = particle->gspin;
-// 
-//     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
-// 
-//     FO_surf* surf = &FOsurf_ptr[0];
-// 
-//     //--------------------------------------------------------------------------------------------
-//     // prepare the inverse CDF
-//     double **dN_pTdpTdphidy_with_weight = new double* [pT_tab_length];
-//     for (int i=0; i<pT_tab_length; i++) dN_pTdpTdphidy_with_weight[i] = new double [phi_tab_length];
-//     for (int i=0; i<pT_tab_length; i++) for (int j=0; j<phi_tab_length; j++)
-//       dN_pTdpTdphidy_with_weight[i][j] = dN_pTdpTdphidy->get(i+1,j+1)*pT_tab->get(1,i+1)*pT_tab->get(2,i+1)*phi_tab->get(2,j+1);
-// 
-//     // create random variable using inverse CDF
-//     RandomVariable2DArray rand2D(dN_pTdpTdphidy_with_weight, phi_tab_length, pT_tab_length, zero);
-//     // delete the intermedia variables ()very important)
-// 
-//     //--------------------------------------------------------------------------------------------
-//     // start sampling
-//     // first calcualte total number of particles
-//     double dN_dy = 0.0;
-//     for (long i=0; i<pT_tab_length; i++) for (int j=0; j<phi_tab_length; j++)
-//         dN_dy += dN_pTdpTdphidy_with_weight[i][j];
-//     for (int i=0; i<pT_tab_length; i++) delete[] dN_pTdpTdphidy_with_weight[i];
-//     delete[] dN_pTdpTdphidy_with_weight;
-// 
-//     dN_dy *= 100000;
-// 
-//     // create caches
-//     double mT_tab[pT_tab_length]; // mT table
-//     for (long i=0; i<pT_tab_length; i++) mT_tab[i]=sqrt(mass*mass + pT_tab->get(1,i+1)*pT_tab->get(1,i+1));
-// 
-//     // prepare for outputs
-//     // the control file records how many particles are there in each sampling
-//     char samples_control_filename_buffer[300];
-//     sprintf(samples_control_filename_buffer, samples_control_filename.c_str(), particle->monval);
-//     remove(samples_control_filename_buffer);
-//     ofstream of_control(samples_control_filename_buffer);
-// 
-//     // the sample file contains the actual samples
-//     char samples_filename_buffer[300];
-//     sprintf(samples_filename_buffer, samples_filename.c_str(), particle->monval);
-//     remove(samples_filename_buffer);
-//     ofstream of_sample(samples_filename_buffer);
-// 
-//     // buffers are used to speed up the output process
-//     char line_buffer[500]; // only used in text mode
-//     stringstream sample_str_buffer; // to speed up outputing process
-//     stringstream control_str_buffer;
-// 
-//     int sampling_model = paraRdr->getVal("dN_dy_sampling_model");
-//     double sampling_para1 = paraRdr->getVal("dN_dy_sampling_para1");
-//     double sampling_para2 = paraRdr->getVal("dN_dy_sampling_para2");
-//     double sampling_para3 = paraRdr->getVal("dN_dy_sampling_para3");
-//     double sampling_para4 = paraRdr->getVal("dN_dy_sampling_para4");
-//     double sampling_para5 = paraRdr->getVal("dN_dy_sampling_para5");
-// 
-//     // get y range for sampling
-//     double y_LB = paraRdr->getVal("y_LB");
-//     double y_RB = paraRdr->getVal("y_RB");
-// 
-//     cout << " dN_dy=" << dN_dy << ", ";
-//     double dN = (y_RB-y_LB)*dN_dy;
-//     cout << "dN=" << dN << "..." << endl;
-//     if (AMOUNT_OF_OUTPUT>0) print_progressbar(-1);
-//     long sample_writing_signal = 0;
-//     long control_writing_signal = 0;
-//     long maximum_impatience = 5000; // used in pt-phi sampling
-//     for (long sampling_idx=1; sampling_idx<=number_of_repeated_sampling; sampling_idx++)
-//     {
-//         long number_to_sample = determine_number_to_sample(dN, sampling_model, sampling_para1, sampling_para2, sampling_para3, sampling_para4, sampling_para5);
-// 
-//         // write to control file
-//         sprintf(line_buffer, "%lu\n", number_to_sample);
-//         control_str_buffer << line_buffer;
-//         control_writing_signal++;
-//         if (control_writing_signal==NUMBER_OF_LINES_TO_WRITE)
-//         {
-//             of_control << control_str_buffer.str();
-//             control_str_buffer.str("");
-//             control_writing_signal=0;
-//         }
-// 
-//         long pT_idx, phi_idx;
-//         long FO_idx, y_minus_eta_s_idx;
-// 
-//         long sample_idx = 1;
-//         while (sample_idx <= number_to_sample)
-//         {
-//             // first, sample eta and freeze-out cell index
-//             rand2D.sampleAccToInvCDF(&pT_idx, &phi_idx);
-//             double pT = pT_tab->get(1,pT_idx+1);
-//             double phi = phi_tab->get(1,phi_idx+1);
-// 
-//             double mT = mT_tab[pT_idx];
-//             double px = pT*trig_phi_table[phi_idx][0];
-//             double py = pT*trig_phi_table[phi_idx][1];
-// 
-//             // use local variable to substitute global ones
-//             double dN_max_sampling = dN_pTdpTdphidy_max->get(pT_idx+1, phi_idx+1);
-// 
-//             long tries = 1;
-//             while (tries<maximum_impatience)
-//             {
-//                 FO_idx = floor(drand48()*(FO_length-1e-30)); // get a surface index
-//                 surf = &FOsurf_ptr[FO_idx];
-// 
-//                 double Tdec = surf->Tdec;
-//                 double inv_Tdec = 1.0/Tdec;
-//                 double Pdec = surf->Pdec;
-//                 double Edec = surf->Edec;
-//                 double deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec))*INCLUDE_DELTAF;
-// 
-//                 double tau = surf->tau;
-//                 double vx = surf->vx;
-//                 double vy = surf->vy;
-// 
-//                 double mu = surf->particle_mu[last_particle_idx];
-// 
-//                 double da0 = surf->da0;
-//                 double da1 = surf->da1;
-//                 double da2 = surf->da2;
-//                 double pi00 = surf->pi00;
-//                 double pi01 = surf->pi01;
-//                 double pi02 = surf->pi02;
-//                 double pi11 = surf->pi11;
-//                 double pi12 = surf->pi12;
-//                 double pi22 = surf->pi22;
-//                 double pi33 = surf->pi33;
-// 
-//                 double v2 = vx*vx + vy*vy;
-//                 double gammaT = 1.0/sqrt(1.0 - v2);
-// 
-//                 y_minus_eta_s_idx = floor(drand48()*(y_minus_eta_tab_length-1e-30)); // get a y-eta_s index
-//                 double pt = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][0];
-//                 double pz = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][1];
-// 
-//                 double expon = (gammaT*(pt*1 - px*vx - py*vy) - mu) * inv_Tdec;
-//                 double f0 = 1./(exp(expon)+sign);
-// 
-//                 double pdsigma = pt*da0 + px*da1 + py*da2;
-// 
-//                 double Wfactor = pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 + pz*pz*pi33;
-//                 double deltaf = (1 - F0_IS_NOT_SMALL*sign*f0)*Wfactor*deltaf_prefactor;
-// 
-//                 double result = prefactor*degen*f0*(1+deltaf)*pdsigma*tau; // there is an additional pT factor, because we want pT*dN_dxtdetady
-// 
-//                 if (result/dN_max_sampling/1.0>1 && AMOUNT_OF_OUTPUT>1) cout << "WTH?!" << endl; // for debugging; 1.0: the maximum on the discrete lattice may not be the maximum for the actual continuous function
-//                 if (drand48()<result/dN_max_sampling/1.0) break; // accept sample! // Note that the factor 1.0 used here assumes that the maximum on the discrete lattice is the same as the maximum of the actual function, which is of course only an approximation
-// 
-//                 tries ++;
-//             }
-// 
-//             if (tries==maximum_impatience && AMOUNT_OF_OUTPUT>5) cout << "EmissionFunctionArray::sample_using_dN_pTdpTdphidy warning: maximum_impatience reached." << endl;
-// 
-//             if (tries==maximum_impatience) continue; // resample
-//             else sample_idx++; // write-out sample
-// 
-//             double y_minus_eta_s = y_minus_eta_tab->get(1,y_minus_eta_s_idx+1);
-//             if (positive_y_minus_eta_table_only) y_minus_eta_s = irand(0,1)==0 ? y_minus_eta_s : -y_minus_eta_s;
-// 
-//             double y = y_LB + drand48()*(y_RB-y_LB);
-//             double eta_s = y - y_minus_eta_s;
-//             double p_z = mT*sinh(y);
-//             double E = mT*cosh(y);
-//             double z = surf->tau*sinh(eta_s);
-//             double t = surf->tau*cosh(eta_s);
-// 
-//             // write to sample file
-//             if (!USE_OSCAR_FORMAT)
-//             {
-//                 sprintf(line_buffer, "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, pT, phi, surf->da0, surf->da1, surf->da2, surf->vx, surf->vy, y, eta_s, E, p_z, t, z);
-//             }
-//             // To be combined to OSCAR
-//             if (USE_OSCAR_FORMAT)
-//             {
-//                 sprintf(line_buffer, "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", px, py, p_z, E, mass, surf->xpt, surf->ypt, z, t);
-//             }
-//             sample_str_buffer << line_buffer;
-//             sample_writing_signal++;
-//             if (sample_writing_signal==NUMBER_OF_LINES_TO_WRITE)
-//             {
-//               of_sample << sample_str_buffer.str();
-//               sample_str_buffer.str("");
-//               sample_writing_signal=0;
-//             }
-// 
-// 
-//         }
-//         if (AMOUNT_OF_OUTPUT>0) print_progressbar((double)(sampling_idx)/number_of_repeated_sampling);
-//     }
-//     // flushing buffers
-//     if (control_writing_signal!=0)
-//     {
-//       of_control << control_str_buffer.str();
-//       control_str_buffer.str("");
-//       control_writing_signal = 0;
-//     }
-//     of_control.close();
-//     if (sample_writing_signal!=0)
-//     {
-//       of_sample << sample_str_buffer.str();
-//       sample_str_buffer.str("");
-//       sample_writing_signal = 0;
-//     }
-//     of_sample.close();
-//     if (AMOUNT_OF_OUTPUT>0) print_progressbar(1);
-// 
-//     ofstream of_sample_format(samples_format_filename.c_str());
-//     // Be careful that ParameterReader class convert all strings to lower case
-//     // so do NOT use variable names that differ only by cases!
-//     if (!USE_OSCAR_FORMAT)
-//     {
-//         of_sample_format
-//         << "Total_number_of_columns = " << 18 << endl
-//         << "FZ_cell_idx = " << 1 << endl
-//         << "tau = " << 2 << endl
-//         << "FZ_x = " << 3 << endl
-//         << "FZ_y = " << 4 << endl
-//         << "y_minus_eta_s = " << 5 << endl
-//         << "pT = " << 6 << endl
-//         << "phi = " << 7 << endl
-//         << "surf_da0 = " << 8 << endl
-//         << "surf_da1 = " << 9 << endl
-//         << "surf_da2 = " << 10 << endl
-//         << "surf_vx = " << 11 << endl
-//         << "surf_vy = " << 12 << endl
-//         << "y = " << 13 << endl
-//         << "eta_s = " << 14 << endl
-//         << "E = " << 15 << endl
-//         << "p_z = " << 16 << endl
-//         << "t = " << 17 << endl
-//         << "z = " << 18 << endl;
-//     }
-//     if (USE_OSCAR_FORMAT)
-//     {
-//         of_sample_format
-//         << "Total_number_of_columns = " << 9 << endl
-//         << "t = " << 9 << endl
-//         << "FZ_x = " << 6 << endl
-//         << "FZ_y = " << 7 << endl
-//         << "z = " << 8 << endl
-//         << "E = " << 4 << endl
-//         << "px = " << 1 << endl
-//         << "py = " << 2 << endl
-//         << "p_z = " << 3 << endl
-//         << "mass =" << 5 << endl;
-//     }
-//     of_sample_format.close();
-// 
-//     sw.toc();
-//     cout << endl << "Sampling finished in " << sw.takeTime() << " seconds." << endl;
-// 
-// }
-// //***************************************************************************
-
-
-
-
-
-
 //***************************************************************************
 void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
 // Sample according to the dN_pTdpTdphidy and dN_pTdpTdphidy_max array. These
@@ -1890,7 +1598,8 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
         dN_pTdpTdphidy_with_weight_4Sampling[i] = (
                                          new double [phi_tab4Sampling_length]);
 
-    double **dN_pTdpTdphidy_max_4Sampling = new double* [pT_tab4Sampling_length];
+    double **dN_pTdpTdphidy_max_4Sampling = (
+                                         new double* [pT_tab4Sampling_length]);
     for (int i=0; i<pT_tab4Sampling_length; i++)
         dN_pTdpTdphidy_max_4Sampling[i] = new double [phi_tab4Sampling_length];
 
@@ -2060,8 +1769,10 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                 }
 
                 y_minus_eta_s_idx = y_minus_eta_min_index;
-                double pt_max = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][0];
-                double pz_max = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][1];
+                double pt_max = (
+                        mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][0]);
+                double pz_max = (
+                        mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][1]);
 
                 double pdotu_max = pt_max*gammaT - px*ux - py*uy;
                 double expon_max = (pdotu_max - mu) * inv_Tdec;
@@ -2148,14 +1859,17 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                     continue;
                 } // discard this freeze-out cell
                 
-                for (int sub_try=0; sub_try<y_minus_eta_tab_length/2; sub_try++)
+                for (int sub_try=0; sub_try<y_minus_eta_tab_length/2; 
+                     sub_try++)
                 {
                     
                     // get a y-eta_s index
                     y_minus_eta_s_idx = (floor(drand48()
                                          *(y_minus_eta_tab_length-1e-30))); 
-                    double pt = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][0];
-                    double pz = mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][1];
+                    double pt = (
+                        mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][0]);
+                    double pz = (
+                        mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][1]);
 
                     double pdotu = (pt*gammaT - px*ux - py*uy);
                     double expon = (pdotu - mu) * inv_Tdec;
@@ -2949,7 +2663,8 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
     sw.tic();
 
     // sort freeze-out temperature for furture use
-    for (long l=0; l<FO_length; l++) sorted_FZ[l] = l; // natural order
+    for (long l=0; l<FO_length; l++)
+        sorted_FZ[l] = l; // natural order
     // now bubble sort temperature; smaller temperature goes first
     long sort_to = FO_length-1;
     while (sort_to>0)
@@ -2992,6 +2707,8 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
         double da0 = surf->da0;
         double da1 = surf->da1;
         double da2 = surf->da2;
+
+        double bulkPi = surf->bulkPi;
 
         double dsigma_dot_u = tau*(da0*gammaT + ux*da1 + uy*da2);
 
@@ -3040,7 +2757,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
                     last_particle_mu = mu;
 
                     integral_single_laststep = (
-                                    calculate_dN_analytic(particle, mu, temp));
+                            calculate_dN_analytic(particle, mu, temp, bulkPi));
                     integral_laststep[n] = integral_single_laststep;
                 }
                 dN_dxtdy_4all[l][n] = integral_laststep[n];
@@ -3075,26 +2792,63 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
 
 //***************************************************************************
 double EmissionFunctionArray::calculate_dN_analytic(
-                particle_info* particle, double mu, double Temperature)
+      particle_info* particle, double mu, double Temperature, double bulkPi)
 /* calculate particle yield using analytic formula as a series sum of Bessel 
    functions. The particle yield emitted from a given fluid cell is 
    \dsigma_mu u^\mu times the return value from this function
 */
 {
    double results = 0.0;
+   double N_eq = 0.0;
+   double deltaN_bulk = 0.0;
+   double *bulkvisCoefficients;
+   if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1)
+   {
+       bulkvisCoefficients = new double [2];
+       getbulkvisCoefficients(Temperature, bulkvisCoefficients);
+   }
+
    int truncate_order = 10;
    int sign = particle->sign;
    double mass = particle->mass;
    double beta = 1./Temperature;
-   double prefactor = particle->gspin/(2*M_PI*M_PI)*mass*mass*Temperature;
+
+   double prefactor = particle->gspin/(2*M_PI*M_PI);
+   double prefactor_Neq = mass*mass*Temperature;
+   double prefactor_bulk = (-bulkPi)*bulkvisCoefficients[0]; // -Pi/\hat{zeta}
+
    double lambda = exp(beta*mu);
-   for(int i=0; i < truncate_order; i++)
+
+   // compute the sum in the series
+   double deltaN_bulk_term1 = 0.0;
+   double deltaN_bulk_term2 = 0.0;
+   for(int n = 1; n <= truncate_order; n++)
    {
-      double arg = (i+1)*mass*beta;
-      results += (pow((-1.0)*sign, i)/(i+1)
-                      *pow(lambda, i+1)*gsl_sf_bessel_Kn(2, arg));
+      double arg = n*mass*beta;  // argument inside bessel functions
+
+      double theta = pow(sign, n-1);
+      double fugacity = pow(lambda, n);
+      double K_1 = gsl_sf_bessel_K1(arg);
+      double K_2 = gsl_sf_bessel_Kn(2, arg);
+
+      N_eq += theta/n*fugacity*K_2;
+      deltaN_bulk_term1 += theta*fugacity*(mass*beta*K_1 + 3./n*K_2);
+      deltaN_bulk_term2 += theta*fugacity*K_1;
    }
-   results = results*prefactor;
+
+   N_eq = prefactor*prefactor_Neq*N_eq;
+   if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1)
+   {
+       deltaN_bulk = (prefactor*prefactor_bulk
+               *( - bulkvisCoefficients[1]*mass*mass/beta*deltaN_bulk_term1
+                  + mass*mass*mass/3.*deltaN_bulk_term2));
+       delete[] bulkvisCoefficients;
+   }
+   else
+       deltaN_bulk = 0.0;
+
+   results = N_eq + deltaN_bulk;
+
    return(results);
 }
 
@@ -3268,9 +3022,12 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
             long sample_writing_signal = 0;
             long control_writing_signal = 0;
             long maximum_impatience = 5000; // used in etas-pt-phi sampling
-            if (AMOUNT_OF_OUTPUT>0) print_progressbar(-1);
-            for (long repeated_sampling_idx=1; 
-                 repeated_sampling_idx<=number_of_repeated_sampling; 
+
+            if (AMOUNT_OF_OUTPUT>0)
+                print_progressbar(-1);
+
+            for (long repeated_sampling_idx = 1; 
+                 repeated_sampling_idx <= number_of_repeated_sampling; 
                  repeated_sampling_idx++)
             {
                 long number_to_sample = determine_number_to_sample(
@@ -3281,19 +3038,19 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                 sprintf(line_buffer, "%lu\n", number_to_sample);
                 control_str_buffer << line_buffer;
                 control_writing_signal++;
-                if (control_writing_signal==NUMBER_OF_LINES_TO_WRITE)
+                if (control_writing_signal == NUMBER_OF_LINES_TO_WRITE)
                 {
                     of_control << control_str_buffer.str();
-                if (use_dynamic_maximum && !has_adjusted_maximum)
-                {
-                    if (number_of_tries > adjust_maximum_after)
+                    if (use_dynamic_maximum && !has_adjusted_maximum)
                     {
-                        // adjust maximum
-                        actual_adjusted_maximum_factor = (
-                                        maximum_ratio*adjust_maximum_to);
-                        has_adjusted_maximum = true;
+                        if (number_of_tries > adjust_maximum_after)
+                        {
+                            // adjust maximum
+                            actual_adjusted_maximum_factor = (
+                                            maximum_ratio*adjust_maximum_to);
+                            has_adjusted_maximum = true;
+                        }
                     }
-                }
                     control_str_buffer.str("");
                     control_writing_signal=0;
                 }
@@ -3351,6 +3108,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     double dsigma_all = (
                                     abs(da0*u0+da1*u1+da2*u2) + abs(dsigmaT));
 
+                    double f0_mass = 1./(exp((mass - mu)*inv_Tdec) + sign);
+
                     // ideal first, p*dsigma pT f < dsgima_all*E^2*f0
                     // Here pT is involved because instead of sampling pT^2 
                     // uniformly by using d(pT^2) uniformly, 
@@ -3369,10 +3128,10 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                         // which gives the maximum
                         double Emax = Tdec*(
                                     lambertw.map(A*exp(inv_Tdec*mu-A)) + A);
-                        if (Emax<mass)
-                            Emax=mass; // maximum in [mass, inf]
+                        if (Emax < mass)
+                            Emax = mass; // maximum in [mass, inf]
                         guess_ideal = (
-                            pow(Emax,A) / (exp((Emax-mu)*inv_Tdec)+sign));
+                            pow(Emax,A) / (exp((Emax-mu)*inv_Tdec) + sign));
                     }
                     else // boson
                     {
@@ -3382,8 +3141,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                         if (rhs>0.3678794) // 1/e = 0.367879441171442
                         {
                             // no solution; maximum is attained at E=mass
-                            guess_ideal = (
-                                pow(mass,A) / (exp((mass-mu)*inv_Tdec)+sign));
+                            guess_ideal = pow(mass,A)/f0_mass;
                         }
                         else
                         {
@@ -3391,18 +3149,16 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                             // the solution E=Emax or at E=mass. Note that 
                             // there are two Emax solutions to (*) and we want 
                             // the larger one.
-                            double Emax = Tdec*(A-z_exp_m_z.map(rhs));
-                            if (Emax<mass)
+                            double Emax = Tdec*(A - z_exp_m_z.map(rhs));
+                            if (Emax < mass)
                             {
-                                guess_ideal = (pow(mass, A)
-                                               /(exp((mass-mu)*inv_Tdec)+sign));
+                                guess_ideal = pow(mass, A)*f0_mass;
                             }
                             else
                             {
                                 double guess_ideal1 = (pow(Emax, A)
                                           /(exp((Emax - mu)*inv_Tdec) + sign));
-                                double guess_ideal2 = (pow(mass, A)
-                                         /(exp((mass - mu)*inv_Tdec) + sign));
+                                double guess_ideal2 = pow(mass, A)*f0_mass;
                                 guess_ideal = (guess_ideal1>guess_ideal2 ? 
                                                 guess_ideal1 : guess_ideal2);
                             }
@@ -3431,39 +3187,36 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     A = 3;
                     // ideal part for the guess of the maximum
                     double guess_viscous = 0; 
-                    if (sign==1) // fermion
+                    if (sign == 1) // fermion
                     {
                         // choose upper sign; (*) always has a solution 
                         // which gives the maximum
                         double Emax = (Tdec*(lambertw.map(
                                                 A*exp(inv_Tdec*mu - A)) + A));
-                        if (Emax<mass)
+                        if (Emax < mass)
                             Emax = mass;
                         guess_viscous = (pow(Emax, A)
                                     /(exp((Emax - mu)*inv_Tdec) + sign));
                     }
                     else // boson
                     {
-                        double rhs = A*exp(inv_Tdec*mu-A);
+                        double rhs = A*exp(inv_Tdec*mu - A);
                         if (rhs>0.3678794) // 1/e = 0.367879441171442
                         {
-                            guess_viscous = (pow(mass, A)
-                                          /(exp((mass - mu)*inv_Tdec) + sign));
+                            guess_viscous = pow(mass, A)*f0_mass;
                         }
                         else
                         {
                             double Emax = Tdec*(A - z_exp_m_z.map(rhs));
-                            if (Emax<mass)
+                            if (Emax < mass)
                             {
-                                guess_viscous = (pow(mass, A)
-                                          /(exp((mass - mu)*inv_Tdec) + sign));
+                                guess_viscous = pow(mass, A)*f0_mass;
                             }
                             else
                             {
                                 double guess_viscous1 = (pow(Emax, A)
                                           /(exp((Emax - mu)*inv_Tdec) + sign));
-                                double guess_viscous2 = (pow(mass, A)
-                                          /(exp((mass - mu)*inv_Tdec) + sign));
+                                double guess_viscous2 = pow(mass, A)*f0_mass;
                                 guess_viscous = (
                                     guess_viscous1>guess_viscous2 ? 
                                     guess_viscous1 : guess_viscous2);
@@ -3473,10 +3226,16 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     guess_viscous *= (tmp_factor/2.0*inv_Tdec*inv_Tdec
                                       *sqrt(trace_Pi2)/(Edec+Pdec));
 
+                    // bulk delta f
+                    double guess_bulk = (
+                        fabs(bulkPi*bulkvisCoefficients[0])
+                        *mass*mass*inv_Tdec/3.
+                        *f0_mass*(1. - sign*f0_mass));
+                    
                     // combine
                     double maximum_guess = (
                         prefactor*tau*degen*dsigma_all
-                        *(guess_ideal + guess_viscous));
+                        *(guess_ideal + guess_viscous + guess_bulk));
 
                     // next sample pt and phi
                     // will-be sampled values
@@ -3519,7 +3278,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                         double result = (
                             prefactor*tau*degen*f0*(1+deltaf)*pdsigma); 
 
-                        double accept_prob = result/(actual_adjusted_maximum_factor*maximum_guess);
+                        double accept_prob = (
+                            result/(actual_adjusted_maximum_factor
+                                    *maximum_guess));
 
                         // to track success rate
                         number_of_tries ++;
@@ -3533,7 +3294,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                                  << "warning: emission function is bigger "
                                  << "than 1: " << accept_prob << endl;
 
-                        if (drand48()<accept_prob)
+                        if (drand48() < accept_prob)
                             break; // accept sample!
 
                         tries ++;
