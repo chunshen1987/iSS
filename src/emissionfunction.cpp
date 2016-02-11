@@ -3108,6 +3108,12 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     double da2 = surf->da2;
                     double da3 = surf->da3;
 
+                    double eta_s;
+                    if(hydro_mode == 2)
+                        eta_s = surf->eta;
+                    else
+                        eta_s = 0.0;
+
                     double pi00 = surf->pi00;
                     double pi01 = surf->pi01;
                     double pi02 = surf->pi02;
@@ -3280,7 +3286,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
 
                     // next sample pt and phi
                     // will-be sampled values
-                    double pT, mT, phi, px, py, y_minus_eta_s; 
+                    double pT, mT, phi, px, py; 
+                    double rapidity_y, y_minus_eta_s;
                     long tries = 1;
                     double accept_prob_max = 0.0;
                     while (tries < maximum_impatience)
@@ -3299,8 +3306,10 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
 
                         y_minus_eta_s = drand(-y_minus_eta_s_range, 
                                               y_minus_eta_s_range);
-                        double p0 = mT*cosh(y_minus_eta_s);  // p0 = p^tau
-                        double p3 = mT*sinh(y_minus_eta_s);  // p3 = tau p^eta
+                        rapidity_y = y_minus_eta_s + eta_s;
+
+                        double p0 = mT*cosh(rapidity_y);  // p0 = p^tau
+                        double p3 = mT*sinh(rapidity_y);  // p3 = tau p^eta
 
                         double pdotu = p0*u0 - px*u1 - py*u2 - p3*u3;
                         double expon = (pdotu - mu)*inv_Tdec;
@@ -3426,20 +3435,14 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
 
                     number_of_success++; // to track success rate
 
-                    double y, eta_s;
                     if(hydro_mode != 2)
                     {
-                        y = y_LB + drand48()*(y_RB-y_LB);
-                        eta_s = y - y_minus_eta_s;
-                    }
-                    else
-                    {
-                        eta_s = surf->eta;
-                        y = y_minus_eta_s + eta_s;
+                        rapidity_y = y_LB + drand48()*(y_RB-y_LB);
+                        eta_s = rapidity_y - y_minus_eta_s;
                     }
 
-                    double p_z = mT*sinh(y);
-                    double E = mT*cosh(y);
+                    double p_z = mT*sinh(rapidity_y);
+                    double E = mT*cosh(rapidity_y);
                     double z = surf->tau*sinh(eta_s);
                     double t = surf->tau*cosh(eta_s);
 
@@ -3451,7 +3454,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                                 FO_idx, surf->tau, surf->xpt, surf->ypt, 
                                 y_minus_eta_s, pT, phi, surf->da0, surf->da1, 
                                 surf->da2, surf->u1/surf->u0, 
-                                surf->u2/surf->u0, y, eta_s, E, p_z, t, z);
+                                surf->u2/surf->u0, rapidity_y, eta_s, E, p_z, 
+                                t, z);
                     }
                     // To be combined to OSCAR
                     if (USE_OSCAR_FORMAT)
