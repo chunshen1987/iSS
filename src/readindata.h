@@ -77,9 +77,12 @@ class read_FOdata
         void read_chemical_potentials_music(int FO_length, FO_surf* FOsurf_ptr, 
                                             int N_stable, double** particle_mu);
         int read_resonances_list(particle_info* particle);
-        void calculate_particle_mu(int Nparticle, FO_surf* FOsurf_ptr, 
-                                   int FO_length, particle_info* particle, 
-                                   double** particle_mu);
+        void calculate_particle_mu_PCE(int Nparticle, FO_surf* FOsurf_ptr, 
+                                       int FO_length, particle_info* particle, 
+                                       double** particle_mu);
+        void calculate_particle_mu(int Nparticle, 
+                                   FO_surf* FOsurf_ptr, int FO_length, 
+                                   particle_info* particle);
 };
 
 #endif

@@ -69,6 +69,10 @@ EmissionFunctionArray::EmissionFunctionArray(
   INCLUDE_BULK_DELTAF = paraRdr->getVal("turn_on_bulk");
   bulk_deltaf_kind = paraRdr->getVal("bulk_deltaf_kind");
 
+  INCLUDE_DIFFUSION_DELTAF = paraRdr->getVal("turn_on_diff");
+
+  turn_on_rhob = paraRdr->getVal("turn_on_rhob");
+
   // allocate internal buffer
   dN_pTdpTdphidy = new Table(pT_tab_length, phi_tab_length);
   dN_pTdpTdphidy_max = new Table(pT_tab_length, phi_tab_length);

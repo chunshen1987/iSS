@@ -189,8 +189,8 @@ int read_FOdata::read_in_chemical_potentials(
            read_chemical_potentials_music(FO_length, surf_ptr, 
                                           N_stableparticle, particle_mu);
 
-       calculate_particle_mu(Nparticle, surf_ptr, FO_length, 
-                             particle_ptr, particle_mu);
+       calculate_particle_mu_PCE(Nparticle, surf_ptr, FO_length, 
+                                 particle_ptr, particle_mu);
        for(int i = 0; i < N_stableparticle; i++)
            delete [] particle_mu[i];
        delete [] particle_mu;
@@ -202,6 +202,7 @@ int read_FOdata::read_in_chemical_potentials(
         for(int j = 0; j < FO_length; j++)
            surf_ptr[j].particle_mu[i] = 0.0e0;
    }
+   calculate_particle_mu(Nparticle, surf_ptr, FO_length, particle_ptr);
 
    return(Nparticle);
 }
@@ -374,7 +375,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
      if(turn_on_rhob == 1)
      {
          ss >> dummy;
-         surf_ptr[idx].Bn = dummy*hbarC;
+         surf_ptr[idx].Bn = dummy;   // 1/fm^3
      }
      else
      {
@@ -551,7 +552,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr)
      if(turn_on_rhob == 1)
      {
          surfdat >> dummy;
-         surf_ptr[i].Bn = dummy*hbarC;
+         surf_ptr[i].Bn = dummy;   // 1/fm^3
      }
      else
      {
@@ -762,9 +763,9 @@ int read_FOdata::read_resonances_list(particle_info* particle)
    return(Nparticle);
 }
 
-void read_FOdata::calculate_particle_mu(int Nparticle, FO_surf* FOsurf_ptr, 
-                                        int FO_length, particle_info* particle, 
-                                        double** particle_mu)
+void read_FOdata::calculate_particle_mu_PCE(
+    int Nparticle, FO_surf* FOsurf_ptr, int FO_length, 
+    particle_info* particle, double** particle_mu)
 {
    int Nstable_particle;
    int Idummy;
@@ -824,7 +825,7 @@ void read_FOdata::calculate_particle_mu(int Nparticle, FO_surf* FOsurf_ptr,
 
    // calculating chemical potentials for unstable resonances
    print_progressbar(-1);
-   for(int i=0; i < Nparticle ; i++)
+   for(int i = 0; i < Nparticle; i++)
    {
       if(particle[i].stable==0)
       {
@@ -854,5 +855,22 @@ void read_FOdata::calculate_particle_mu(int Nparticle, FO_surf* FOsurf_ptr,
    print_progressbar(1);
 
    return;
+}
+
+void read_FOdata::calculate_particle_mu(int Nparticle, 
+                                        FO_surf* FOsurf_ptr, int FO_length, 
+                                        particle_info* particle)
+{
+    if(turn_on_rhob == 1)
+    {
+        for(int i = 0; i < Nparticle; i++)
+        {
+            int baryon = particle[i].baryon;
+            for(int m = 0; m < FO_length; m++)
+            {
+                FOsurf_ptr[m].particle_mu[i] += baryon*FOsurf_ptr[m].muB;
+            }
+        }
+    }
 }
 
