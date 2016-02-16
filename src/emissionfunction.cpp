@@ -3309,10 +3309,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
 
                         y_minus_eta_s = drand(-y_minus_eta_s_range, 
                                               y_minus_eta_s_range);
-                        rapidity_y = y_minus_eta_s + eta_s;
 
-                        double p0 = mT*cosh(rapidity_y);  // p0 = p^tau
-                        double p3 = mT*sinh(rapidity_y);  // p3 = tau p^eta
+                        double p0 = mT*cosh(y_minus_eta_s);  // p0 = p^tau
+                        double p3 = mT*sinh(y_minus_eta_s);  // p3 = tau p^eta
 
                         double pdotu = p0*u0 - px*u1 - py*u2 - p3*u3;
                         double expon = (pdotu - mu)*inv_Tdec;
@@ -3442,6 +3441,10 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     {
                         rapidity_y = y_LB + drand48()*(y_RB-y_LB);
                         eta_s = rapidity_y - y_minus_eta_s;
+                    }
+                    else
+                    {
+                        rapidity_y = y_minus_eta_s + eta_s;
                     }
 
                     double p_z = mT*sinh(rapidity_y);

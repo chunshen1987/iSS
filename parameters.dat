@@ -1,10 +1,10 @@
-hydro_mode = 1           # mode for reading in freeze out information 
+hydro_mode = 2           # mode for reading in freeze out information 
                          # 0: reads outputs from VISH2+1
                          # 1: reads outputs from MUSIC assuming 
                          #    boost-invariant
                          # 2: reads outputs from MUSIC full (3+1)-d
 
-turn_on_bulk = 1         # include bulk viscous corrections in delta f
+turn_on_bulk = 0         # include bulk viscous corrections in delta f
 turn_on_shear = 1        # include shear viscous corrections in delta f
 turn_on_rhob = 0         # include net baryon chemical potential
 turn_on_diff = 0         # include baryon diffusion
