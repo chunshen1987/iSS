@@ -26,7 +26,7 @@ typedef struct
   int decays_Npart[Maxdecaychannel];
   double decays_branchratio[Maxdecaychannel];
   int decays_part[Maxdecaychannel][Maxdecaypart];
-  int sign;       //Bose-Einstein or Dirac-Fermi statistics
+  int sign;                   // Bose-Einstein or Dirac-Fermi statistics
 }particle_info;
 
 typedef struct
@@ -47,8 +47,11 @@ class read_FOdata
         ParameterReader* paraRdr;
         string path;
         int mode;
-        int turn_on_bulk;
-        int turn_on_muB;
+
+        int turn_on_bulk;       // switch to read in bulk viscous pressure
+        int turn_on_rhob;       // switch to read in net baryon density
+        int turn_on_diff;       // switch to read in diffusion current
+
         int n_eta_skip;
         int IEOS_music;
 
@@ -76,7 +79,6 @@ class read_FOdata
         void calculate_particle_mu(int Nparticle, FO_surf* FOsurf_ptr, 
                                    int FO_length, particle_info* particle, 
                                    double** particle_mu);
-
 };
 
 #endif
