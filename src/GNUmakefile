@@ -10,7 +10,7 @@
 ##			distclean	remove all objectsfiles and binaries
 ##  
 
-CC := g++
+CC := icpc
 CFLAGS= -O3 -Wall $(shell gsl-config --cflags)
 
 RM		=	rm -f

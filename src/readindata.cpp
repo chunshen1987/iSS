@@ -373,6 +373,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
      }
      else
          surf_ptr[idx].Bn = 0.0;
+
      idx++;
   }
   surfdat.close();
@@ -523,6 +524,24 @@ void read_FOdata::read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr)
      }
      else
          surf_ptr[i].Bn = 0.0;
+     if(turn_on_diff == 1)
+     {
+         surfdat >> dummy;
+         surf_ptr[i].qmu0 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].qmu1 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].qmu2 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].qmu3 = dummy*hbarC;
+     }
+     else
+     {
+         surf_ptr[i].qmu0 = 0.0e0;
+         surf_ptr[i].qmu1 = 0.0e0;
+         surf_ptr[i].qmu2 = 0.0e0;
+         surf_ptr[i].qmu3 = 0.0e0;
+     }
   }
   surfdat.close();
   cout << "done" << endl;

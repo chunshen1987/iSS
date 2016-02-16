@@ -38,6 +38,7 @@ typedef struct
    double Bn, muB, muS;
    double pi00, pi01, pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33;
    double bulkPi;
+   double qmu0, qmu1, qmu2, qmu3;
    double particle_mu[Maxparticle];
 }FO_surf;
 
