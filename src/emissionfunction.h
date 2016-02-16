@@ -39,6 +39,13 @@ class EmissionFunctionArray
         int bulk_deltaf_kind;
 
         int turn_on_rhob;
+
+        // table parameter for diffusion deltaf coefficient
+        int deltaf_qmu_coeff_table_length_T;
+        int deltaf_qmu_coeff_table_length_mu;
+        double delta_qmu_coeff_table_T0, delta_qmu_coeff_table_mu0;
+        double delta_qmu_coeff_table_dT, delta_qmu_coeff_table_dmu;
+        double **deltaf_qmu_coeff_tb;
         
         Table *dN_pTdpTdphidy; // dN / (pt dpt dphi dy)
         // store the largest element when summing over xt and eta 
@@ -175,6 +182,8 @@ class EmissionFunctionArray
         double** trig_phi_tab4Sampling;
 
         void getbulkvisCoefficients(double Tdec, double* bulkvisCoefficients);
+        void load_deltaf_qmu_coeff_table(string filename);
+        double get_deltaf_qmu_coeff(double T, double muB);
 };
 
 #endif

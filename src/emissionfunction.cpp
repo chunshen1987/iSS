@@ -253,8 +253,18 @@ EmissionFunctionArray::EmissionFunctionArray(
     trig_phi_tab4Sampling[j][1] = sin(phi);
   }
 
-  //arrays for bulk delta f coefficients
-  bulkdf_coeff = new Table ("EOS/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat");
+  // arrays for bulk delta f coefficients
+  if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0)
+  {
+      bulkdf_coeff = (
+            new Table ("tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat"));
+  }
+
+  // load table for diffusion delta f coeffient
+  if(INCLUDE_DIFFUSION_DELTAF == 1)
+  {
+      load_deltaf_qmu_coeff_table("tables/Coefficients_RTA_diffusion.dat");
+  }
   
 }
 //***************************************************************************
@@ -300,7 +310,17 @@ EmissionFunctionArray::~EmissionFunctionArray()
       delete[] trig_phi_tab4Sampling[j];
   delete[] trig_phi_tab4Sampling;
 
-  delete bulkdf_coeff;
+  if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0)
+      delete bulkdf_coeff;
+
+  if(INCLUDE_DIFFUSION_DELTAF == 1)
+  {
+      for(int i = 0; i < deltaf_qmu_coeff_table_length_T; i++)
+      {
+          delete [] deltaf_qmu_coeff_tb[i];
+      }
+      delete [] deltaf_qmu_coeff_tb;
+  }
 }
 //***************************************************************************
 
@@ -3738,4 +3758,59 @@ void EmissionFunctionArray::getbulkvisCoefficients(
                                  + 127305171097.249*Tdec_fm_power[10]);
    }
    return;
+}
+
+void EmissionFunctionArray::load_deltaf_qmu_coeff_table(string filename)
+{
+    ifstream table(filename.c_str());                                         
+    deltaf_qmu_coeff_table_length_T = 150;                                    
+    deltaf_qmu_coeff_table_length_mu = 100;                                   
+    delta_qmu_coeff_table_T0 = 0.05;                                          
+    delta_qmu_coeff_table_mu0 = 0.0;                                          
+    delta_qmu_coeff_table_dT = 0.001;                                         
+    delta_qmu_coeff_table_dmu = 0.007892;                                     
+    
+    deltaf_qmu_coeff_tb = new double* [deltaf_qmu_coeff_table_length_T];      
+    for(int i = 0; i < deltaf_qmu_coeff_table_length_T; i++)                  
+        deltaf_qmu_coeff_tb[i] = new double [deltaf_qmu_coeff_table_length_mu];
+
+    // load 2D table
+    double dummy;                                                             
+    for(int j = 0; j < deltaf_qmu_coeff_table_length_mu; j++)
+        for(int i = 0; i < deltaf_qmu_coeff_table_length_T; i++)               
+            table >> dummy >> dummy >> deltaf_qmu_coeff_tb[i][j];               
+    table.close();                                                            
+}                                                                             
+
+double EmissionFunctionArray::get_deltaf_qmu_coeff(double T, double muB)
+{
+    int idx_T = (int)((T - delta_qmu_coeff_table_T0)/delta_qmu_coeff_table_dT);
+    int idx_mu = (int)((muB - delta_qmu_coeff_table_mu0)
+                       /delta_qmu_coeff_table_dmu);
+    double x_fraction = ((T - delta_qmu_coeff_table_T0)
+                         /delta_qmu_coeff_table_dT - idx_T);
+    double y_fraction = ((muB - delta_qmu_coeff_table_mu0)
+                         /delta_qmu_coeff_table_dmu - idx_mu); 
+    
+    //avoid overflow
+    if(idx_mu > deltaf_qmu_coeff_table_length_mu - 2)
+        return(1e30);
+    if(idx_T > deltaf_qmu_coeff_table_length_T - 2)
+        return(1e30);
+    
+    // avoid underflow
+    if(idx_mu < 0)
+        return(1e30);
+    if(idx_T < 0)
+        return(1e30);
+    
+    double f1 = deltaf_qmu_coeff_tb[idx_T][idx_mu];
+    double f2 = deltaf_qmu_coeff_tb[idx_T][idx_mu+1];
+    double f3 = deltaf_qmu_coeff_tb[idx_T+1][idx_mu+1];
+    double f4 = deltaf_qmu_coeff_tb[idx_T+1][idx_mu];
+    double coeff = (  f1*(1. - x_fraction)*(1. - y_fraction)
+                    + f2*(1. - x_fraction)*y_fraction 
+                    + f3*x_fraction*y_fraction
+                    + f4*x_fraction*(1. - y_fraction));
+    return(coeff);
 }
