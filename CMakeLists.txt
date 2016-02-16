@@ -1,0 +1,15 @@
+cmake_minimum_required (VERSION 2.6)
+project (iSS)
+
+set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_HOME_DIRECTORY}")
+
+find_package (GSL REQUIRED)
+
+set (CMAKE_CXX_FLAGS "${GSL_CXX_FLAGS} -O3 -Wall")
+
+SET(INCLUDE_DIRS ${GSL_INCLUDE_DIR})
+SET(LIBS ${GSL_LIBRARIES})
+
+INCLUDE_DIRECTORIES(${INCLUDE_DIRS})
+
+add_subdirectory (src)
