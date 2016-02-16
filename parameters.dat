@@ -70,9 +70,9 @@ dN_dy_sampling_para3 = 0     # Additional parameters for dN/dy sampling.
 dN_dy_sampling_para4 = 0     # Additional parameters for dN/dy sampling. 
 dN_dy_sampling_para5 = 0     # Additional parameters for dN/dy sampling. 
 
-y_LB = -0.5                  # lower bound for y-sampling; 
+y_LB = -2.5                  # lower bound for y-sampling; 
                              # used in "conventional" sampling
-y_RB = 0.5                   # upper bound for y-sampling; used in 
+y_RB = 2.5                   # upper bound for y-sampling; used in 
                              # "conventional" sampling
 
 eta_s_LB = -0.5              # lower bound for eta_s sampling; used only when 
@@ -116,7 +116,7 @@ use_historic_flow_output_format = 0    # 1/0: The "historical flow format"
 
 calculate_vn_to_order = 9              # v_n's are calculated up to this order
 
-number_of_repeated_sampling = 1000      # How many times should the sampling be 
+number_of_repeated_sampling = 1000     # How many times should the sampling be 
                                        # repeated.
 
 sample_pT_up_to = -1                   # Up to this value will pT be sampled; 

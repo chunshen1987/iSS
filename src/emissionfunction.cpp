@@ -2733,10 +2733,13 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
         double da3 = surf->da3;
 
         double bulkPi = 0.0;
-        if(bulk_deltaf_kind == 0)
-            bulkPi = surf->bulkPi;
-        else
-            bulkPi = surf->bulkPi/hbarC; // unit in fm^-4 
+        if(INCLUDE_BULK_DELTAF == 1)
+        {
+            if(bulk_deltaf_kind == 0)
+                bulkPi = surf->bulkPi;
+            else
+                bulkPi = surf->bulkPi/hbarC; // unit in fm^-4 
+        }
 
         double dsigma_dot_u = tau*(da0*gammaT + ux*da1 + uy*da2 + uz*da3/tau);
 
