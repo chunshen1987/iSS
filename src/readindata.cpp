@@ -253,6 +253,11 @@ void read_FOdata::read_decdat(int length, FO_surf* surf_ptr)
          surf_ptr[i].bulkPi = temp;
      else
          surf_ptr[i].bulkPi = 0.0;
+
+     surf_ptr[i].qmu0 = 0.0e0;
+     surf_ptr[i].qmu1 = 0.0e0;
+     surf_ptr[i].qmu2 = 0.0e0;
+     surf_ptr[i].qmu3 = 0.0e0;
   }
   decdat.close();
   cout<<"done"<<endl;
@@ -372,7 +377,27 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
          surf_ptr[idx].Bn = dummy*hbarC;
      }
      else
+     {
          surf_ptr[idx].Bn = 0.0;
+     }
+     if(turn_on_diff == 1)
+     {
+         surfdat >> dummy;
+         surf_ptr[i].qmu0 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].qmu1 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].qmu2 = dummy*hbarC;
+         surfdat >> dummy;
+         surf_ptr[i].qmu3 = dummy*hbarC;
+     }
+     else
+     {
+         surf_ptr[i].qmu0 = 0.0e0;
+         surf_ptr[i].qmu1 = 0.0e0;
+         surf_ptr[i].qmu2 = 0.0e0;
+         surf_ptr[i].qmu3 = 0.0e0;
+     }
 
      idx++;
   }
@@ -425,7 +450,6 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
      surf_ptr[idx].Edec = 0.0;   
      surf_ptr[idx].muB = 0.0;
      surf_ptr[idx].Pdec = 0.0;
-     surf_ptr[idx].Bn = 0.0;
      surf_ptr[idx].muS = 0.0;
 
      // dissipative quantities at freeze out
@@ -441,7 +465,12 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
      surf_ptr[idx].pi33 = 0.0;
 
      surf_ptr[idx].bulkPi = 0.0;
-     surf_ptr[idx].muB = 0.0;
+     surf_ptr[idx].Bn = 0.0;
+
+     surf_ptr[i].qmu0 = 0.0e0;
+     surf_ptr[i].qmu1 = 0.0e0;
+     surf_ptr[i].qmu2 = 0.0e0;
+     surf_ptr[i].qmu3 = 0.0e0;
 
      idx++;
   }
@@ -516,14 +545,18 @@ void read_FOdata::read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr)
          surf_ptr[i].bulkPi = dummy*hbarC;
      }
      else
+     {
          surf_ptr[i].bulkPi = 0.0;
+     }
      if(turn_on_rhob == 1)
      {
          surfdat >> dummy;
          surf_ptr[i].Bn = dummy*hbarC;
      }
      else
+     {
          surf_ptr[i].Bn = 0.0;
+     }
      if(turn_on_diff == 1)
      {
          surfdat >> dummy;
