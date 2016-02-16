@@ -334,7 +334,6 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
      surf_ptr[idx].muB = dummy*hbarC;
      ss >> dummy;              // (e+P)/T
      surf_ptr[idx].Pdec = dummy*surf_ptr[idx].Tdec - surf_ptr[idx].Edec;
-     surf_ptr[idx].Bn = 0.0;
      surf_ptr[idx].muS = 0.0;
 
      // dissipative quantities at freeze out
@@ -368,10 +367,10 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
      if(turn_on_rhob == 1)
      {
          ss >> dummy;
-         surf_ptr[idx].muB = dummy*hbarC;
+         surf_ptr[idx].Bn = dummy*hbarC;
      }
      else
-         surf_ptr[idx].muB = 0.0;
+         surf_ptr[idx].Bn = 0.0;
      idx++;
   }
   surfdat.close();
@@ -485,7 +484,6 @@ void read_FOdata::read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr)
      surf_ptr[i].muB = dummy*hbarC;
      surfdat >> dummy;                    //(e+p)/T
      surf_ptr[i].Pdec = dummy*surf_ptr[i].Tdec - surf_ptr[i].Edec;
-     surf_ptr[i].Bn = 0.0;
      surf_ptr[i].muS = 0.0;
 
      // dissipative quantities at freeze out
@@ -519,10 +517,10 @@ void read_FOdata::read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr)
      if(turn_on_rhob == 1)
      {
          surfdat >> dummy;
-         surf_ptr[i].muB = dummy*hbarC;
+         surf_ptr[i].Bn = dummy*hbarC;
      }
      else
-         surf_ptr[i].muB = 0.0;
+         surf_ptr[i].Bn = 0.0;
   }
   surfdat.close();
   cout << "done" << endl;
