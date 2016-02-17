@@ -3122,12 +3122,14 @@ void EmissionFunctionArray::calculate_dN_analytic(
 
           double double_factorial = 1.;  // record (2k-5)!! 
           double factorial = 2.;         // record k! start with 2!
+          double factor_2_to_k_power = 4.;      // record 2^k start with 2^2
           for(int k = 3; k <= 10; k++)
           {
               double_factorial *= (2*k - 5);
               factorial *= k;
+              factor_2_to_k_power *= 2;
               double I_1_k = (
-                  3.*double_factorial/pow(2., k)/factorial
+                  3.*double_factorial/factor_2_to_k_power/factorial
                   *gsl_sf_expint_En(2*k-2, arg));
               I_1_n += I_1_k;
           }
