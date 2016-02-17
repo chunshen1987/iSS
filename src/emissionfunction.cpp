@@ -66,11 +66,11 @@ EmissionFunctionArray::EmissionFunctionArray(
 
   F0_IS_NOT_SMALL = paraRdr->getVal("f0_is_not_small");
   USE_OSCAR_FORMAT = paraRdr->getVal("use_OSCAR_format");
-  INCLUDE_DELTAF = paraRdr->getVal("turn_on_shear");
-  INCLUDE_BULK_DELTAF = paraRdr->getVal("turn_on_bulk");
+  INCLUDE_DELTAF = paraRdr->getVal("include_deltaf_shear");
+  INCLUDE_BULK_DELTAF = paraRdr->getVal("include_deltaf_bulk");
   bulk_deltaf_kind = paraRdr->getVal("bulk_deltaf_kind");
 
-  INCLUDE_DIFFUSION_DELTAF = paraRdr->getVal("turn_on_diff");
+  INCLUDE_DIFFUSION_DELTAF = paraRdr->getVal("include_deltaf_diffusion");
 
   turn_on_rhob = paraRdr->getVal("turn_on_rhob");
 
