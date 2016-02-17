@@ -4175,5 +4175,5 @@ double EmissionFunctionArray::get_deltaf_qmu_coeff(double T, double muB)
                     + f2*(1. - x_fraction)*y_fraction 
                     + f3*x_fraction*y_fraction
                     + f4*x_fraction*(1. - y_fraction));
-    return(coeff);
+    return(coeff*hbarC);
 }
