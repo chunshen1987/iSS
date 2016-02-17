@@ -1209,24 +1209,3 @@ void get_bin_average_and_count(istream& is, ostream& os, vector<double>* bins, l
 
 }
 
-long long int factorial(int k)
-{
-    long long int result = 1;
-    for(int i = k; i > 1; i--)
-    {
-        result *= i;
-    }
-    return(result);
-}
-
-long long int double_factorial(int k)
-{
-    long long int result = 1;
-    for(int i = k; i > 1; i-=2)
-    {
-        result *= i;
-    }
-    return(result);
-}
-
-

@@ -3084,7 +3084,7 @@ void EmissionFunctionArray::calculate_dN_analytic(
    double deltaN_qmu_term1 = 0.0;      // contribution from baryon diffusion 
    double deltaN_qmu_term2 = 0.0;      // contribution from baryon diffusion 
 
-   int truncate_order = 10;            // truncation order in taylor expansion
+   int truncate_order = 5;            // truncation order in taylor expansion
 
    int sign = particle->sign;
    double mass = particle->mass;
@@ -3119,10 +3119,15 @@ void EmissionFunctionArray::calculate_dN_analytic(
           double I_1_1 = exp(-arg)/arg*(2./(arg*arg) + 2./arg - 1./2.);
           double I_1_2 = 3./8.*gsl_sf_expint_E2(arg);
           I_1_n = I_1_1 + I_1_2;
-          for(int k = 3; k <= truncate_order; k++)
+
+          double double_factorial = 1.;  // record (2k-5)!! 
+          double factorial = 2.;         // record k! start with 2!
+          for(int k = 3; k <= 10; k++)
           {
+              double_factorial *= (2*k - 5);
+              factorial *= k;
               double I_1_k = (
-                  3.*double_factorial(2*k-5)/pow(2., k)/factorial(k)
+                  3.*double_factorial/pow(2., k)/factorial
                   *gsl_sf_expint_En(2*k-2, arg));
               I_1_n += I_1_k;
           }

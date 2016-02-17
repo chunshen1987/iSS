@@ -6,8 +6,8 @@ hydro_mode = 2           # mode for reading in freeze out information
 
 turn_on_bulk = 0         # include bulk viscous corrections in delta f
 turn_on_shear = 1        # include shear viscous corrections in delta f
-turn_on_rhob = 0         # include net baryon chemical potential
-turn_on_diff = 0         # include baryon diffusion
+turn_on_rhob = 1         # include net baryon chemical potential
+turn_on_diff = 1         # include baryon diffusion
 
 bulk_deltaf_kind = 1     # 0 : 14-momentum approximation
                          # 1 : relaxation time approximation
