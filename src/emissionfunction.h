@@ -164,8 +164,8 @@ class EmissionFunctionArray
         string dN_dx_filename;
 
         // Second sampling method
-        double calculate_dN_analytic(particle_info* particle, double mu, 
-                                     double Temperature, double bulkPi);
+        void calculate_dN_analytic(particle_info* particle, double mu, 
+                                   double Temperature, double* results);
 
         // the following variables need to be set first in order to 
         // call this function

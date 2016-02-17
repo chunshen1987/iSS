@@ -2872,6 +2872,15 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
 {
     Stopwatch sw;
     sw.tic();
+  
+    double *bulkvisCoefficients;
+    if(INCLUDE_BULK_DELTAF == 1)
+    {
+        if(bulk_deltaf_kind == 0)
+            bulkvisCoefficients = new double [3];
+        else
+            bulkvisCoefficients = new double [2];
+    }
 
     // sort freeze-out temperature for furture use
     //for (long l=0; l<FO_length; l++)
@@ -2901,7 +2910,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
 
     // now loop over all freeze-out cells and particles
     FO_surf *surf; particle_info* particle;
-    double prefactor = 1.0/pow(hbarC,3);  // unit: convert to unitless
+    double unit_factor = 1.0/pow(hbarC,3);  // unit: convert to unitless
 
     double integral_laststep[number_of_chosen_particles];
 
@@ -2925,7 +2934,10 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
         double da1 = surf->da1;
         double da2 = surf->da2;
         double da3 = surf->da3;
+        
+        double dsigma_dot_u = tau*(da0*gammaT + ux*da1 + uy*da2 + uz*da3/tau);
 
+        // bulk delta f contribution
         double bulkPi = 0.0;
         if(INCLUDE_BULK_DELTAF == 1)
         {
@@ -2933,13 +2945,34 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
                 bulkPi = surf->bulkPi;
             else
                 bulkPi = surf->bulkPi/hbarC; // unit in fm^-4 
+            getbulkvisCoefficients(temp, bulkvisCoefficients);
         }
 
-        double dsigma_dot_u = tau*(da0*gammaT + ux*da1 + uy*da2 + uz*da3/tau);
+        // diffusion delta f
+        double dsigma_dot_q = 0.0;
+        double deltaf_qmu_coeff = 1.0;
+        double prefactor_qmu = 0.0;
+        if(INCLUDE_DIFFUSION_DELTAF == 1)
+        {
+            double qmu0 = surf->qmu0;
+            double qmu1 = surf->qmu1;
+            double qmu2 = surf->qmu2;
+            double qmu3 = surf->qmu3;
+            dsigma_dot_q = tau*(da0*qmu0 + da1*qmu1 + da2*qmu2 + da3*qmu3/tau);
+            
+            double mu_B = surf->muB;
+            deltaf_qmu_coeff = get_deltaf_qmu_coeff(temp, mu_B);
+            
+            double rho_B = surf->Bn;
+            double Edec = surf->Edec;
+            double Pdec = surf->Pdec;
+            prefactor_qmu = rho_B/(Edec + Pdec);  // 1/GeV
+        }
 
         // calculate dN / (dxt dy) for all particles
         int last_particle_sign=0;
         int last_particle_degen=0;
+        int last_particle_baryon = 2;
         double last_particle_mass=-1;
         double last_particle_mu=-1;
         double integral_single_laststep = 0;
@@ -2947,10 +2980,15 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
         {
             long real_particle_idx = chosen_particles_sampling_table[n];
             particle = &particles[real_particle_idx];
+
             int sign = particle->sign;
             int degen = particle->gspin;
             double mass = particle->mass;
+            int baryon = particle->baryon;
             double mu = surf->particle_mu[real_particle_idx];
+
+            double prefactor = degen/(2.*M_PI*M_PI);
+
             if ( n > 0 && last_particle_sign == sign 
                  && last_particle_degen == degen 
                  && abs((last_particle_mass - mass)
@@ -2969,16 +3007,40 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
                 last_particle_degen = degen;
                 last_particle_mass = mass;
                 last_particle_mu = mu;
+                last_particle_baryon = baryon;
 
-                integral_single_laststep = (
-                        calculate_dN_analytic(particle, mu, temp, bulkPi));
-                integral_laststep[n] = integral_single_laststep;
+                double* results_ptr = new double [5];
+                calculate_dN_analytic(particle, mu, temp, results_ptr);
+
+                double N_eq = (
+                        unit_factor*prefactor*dsigma_dot_u*results_ptr[0]);
+
+                double deltaN_bulk = 0.0;
+                if(INCLUDE_BULK_DELTAF == 1)
+                {
+                    deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u
+                                   *(- bulkPi*bulkvisCoefficients[0])
+                                   *(- bulkvisCoefficients[1]*results_ptr[1]
+                                     + results_ptr[2]));
+                }
+
+                double deltaN_qmu = 0.0;
+                if(INCLUDE_DIFFUSION_DELTAF == 1)
+                {
+                    deltaN_qmu = (unit_factor*prefactor
+                                  *dsigma_dot_q/deltaf_qmu_coeff
+                                  *(- prefactor_qmu*results_ptr[3] 
+                                    - baryon*results_ptr[4]));
+                }
+
+                double total_N = N_eq + deltaN_bulk + deltaN_qmu;
+
+                integral_laststep[n] = total_N;
+
+                delete [] results_ptr;
             }
             dN_dxtdy_4all[l][n] = integral_laststep[n];
         }
-
-        for (long n = 0; n < number_of_chosen_particles; n++)
-            dN_dxtdy_4all[l][n] *= prefactor*dsigma_dot_u;
 
         if (AMOUNT_OF_OUTPUT > 0)
             print_progressbar((double)(l)/FO_length);
@@ -2997,6 +3059,9 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
         of.close();
     }
 
+    if(INCLUDE_BULK_DELTAF == 1)
+        delete [] bulkvisCoefficients;
+
     sw.toc();
     cout << endl << " -- Calculate_dN_dxtdy_4all_particles finished in " 
          << sw.takeTime() << " seconds." << endl;
@@ -3005,69 +3070,68 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
 
 
 //***************************************************************************
-double EmissionFunctionArray::calculate_dN_analytic(
-      particle_info* particle, double mu, double Temperature, double bulkPi)
+void EmissionFunctionArray::calculate_dN_analytic(
+      particle_info* particle, double mu, double Temperature, double* results)
 /* calculate particle yield using analytic formula as a series sum of Bessel 
    functions. The particle yield emitted from a given fluid cell is 
    \dsigma_mu u^\mu times the return value from this function
 */
 {
-   double results = 0.0;
-   double deltaN_bulk = 0.0;
-   double *bulkvisCoefficients = new double [2];
-   if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1)
-   {
-       getbulkvisCoefficients(Temperature, bulkvisCoefficients);
-   }
-   else
-   {
-       bulkvisCoefficients[0] = 0.0;
-       bulkvisCoefficients[1] = 0.0;
-   }
+   double N_eq = 0.0;                  // equilibrium contribution
+   double deltaN_bulk_term1 = 0.0;     // contribution from bulk delta f
+   double deltaN_bulk_term2 = 0.0;     // contribution from bulk delta f
+   double deltaN_qmu_term1 = 0.0;      // contribution from baryon diffusion 
+   double deltaN_qmu_term2 = 0.0;      // contribution from baryon diffusion 
 
-   int truncate_order = 10;
+   int truncate_order = 10;            // truncation order in taylor expansion
+
    int sign = particle->sign;
    double mass = particle->mass;
    double beta = 1./Temperature;
 
-   double prefactor = particle->gspin/(2*M_PI*M_PI);
-   double prefactor_Neq = mass*mass*Temperature;
-   double prefactor_bulk = (-bulkPi)*bulkvisCoefficients[0]; // -Pi/\hat{zeta}
-
-   double lambda = exp(beta*mu);
+   double lambda = exp(beta*mu);  // fugacity factor
 
    // compute the sum in the series
-   double N_eq = 0.0;
-   double deltaN_bulk_term1 = 0.0;
-   double deltaN_bulk_term2 = 0.0;
    for(int n = 1; n <= truncate_order; n++)
    {
       double arg = n*mass*beta;  // argument inside bessel functions
 
       double theta = pow(-sign, n-1);
       double fugacity = pow(lambda, n);
-      double K_1 = gsl_sf_bessel_K1(arg);
       double K_2 = gsl_sf_bessel_Kn(2, arg);
 
       N_eq += theta/n*fugacity*K_2;
-      deltaN_bulk_term1 += theta*fugacity*(mass*beta*K_1 + 3./n*K_2);
-      deltaN_bulk_term2 += theta*fugacity*K_1;
+
+      if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1)
+      {
+          double K_1 = gsl_sf_bessel_K1(arg);
+          deltaN_bulk_term1 += theta*fugacity*(mass*beta*K_1 + 3./n*K_2);
+          deltaN_bulk_term2 += theta*fugacity*K_1;
+      }
    }
 
-   N_eq = prefactor*prefactor_Neq*N_eq;
+   // equilibrium contribution
+   double prefactor_Neq = mass*mass*Temperature;
+   N_eq = prefactor_Neq*N_eq;
+
+   // contribution from bulk viscosity
    if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1)
    {
-       deltaN_bulk = (prefactor*prefactor_bulk
-               *( - bulkvisCoefficients[1]*mass*mass/beta*deltaN_bulk_term1
-                  + mass*mass*mass/3.*deltaN_bulk_term2));
+       deltaN_bulk_term1 = mass*mass/beta*deltaN_bulk_term1;
+       deltaN_bulk_term2 = mass*mass*mass/3.*deltaN_bulk_term2;
    }
    else
-       deltaN_bulk = 0.0;
+   {
+       deltaN_bulk_term1 = 0.0;
+       deltaN_bulk_term2 = 0.0;
+   }
 
-   results = N_eq + deltaN_bulk;
-   delete[] bulkvisCoefficients;
-
-   return(results);
+   // final results
+   results[0] = N_eq;
+   results[1] = deltaN_bulk_term1;
+   results[2] = deltaN_bulk_term2;
+   results[3] = deltaN_qmu_term1;
+   results[4] = deltaN_qmu_term2;
 }
 
 
