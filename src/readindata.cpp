@@ -153,7 +153,7 @@ int read_FOdata::read_in_chemical_potentials(
            particletable >> N_stableparticle;
            particletable.close();
        }
-       if(IEOS_music == 7)        // s95p-v1.2 for UrQMD
+       else if(IEOS_music == 7)        // s95p-v1.2 for UrQMD
            N_stableparticle = 0;
        else if(IEOS_music == 10)
            N_stableparticle = 0;
