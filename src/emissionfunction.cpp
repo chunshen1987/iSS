@@ -14,6 +14,7 @@
 #include<string.h>
 
 #include<gsl/gsl_sf_bessel.h>
+#include<gsl/gsl_sf_expint.h>
 
 #include "main.h"
 #include "readindata.h"
@@ -3108,6 +3109,26 @@ void EmissionFunctionArray::calculate_dN_analytic(
           deltaN_bulk_term1 += theta*fugacity*(mass*beta*K_1 + 3./n*K_2);
           deltaN_bulk_term2 += theta*fugacity*K_1;
       }
+
+      if(INCLUDE_DIFFUSION_DELTAF == 1)
+      {
+          deltaN_qmu_term1 += theta/n*fugacity*K_2;
+
+          double mbeta = mass*beta;
+          double I_1_n = 0.0;
+          double I_1_1 = exp(-arg)/arg*(2./(arg*arg) + 2./arg - 1./2.);
+          double I_1_2 = 3./8.*gsl_sf_expint_E2(arg);
+          I_1_n = I_1_1 + I_1_2;
+          for(int k = 3; k <= truncate_order; k++)
+          {
+              double I_1_k = (
+                  3.*double_factorial(2*k-5)/pow(2., k)/factorial(k)
+                  *gsl_sf_expint_En(2*k-2, arg));
+              I_1_n += I_1_k;
+          }
+          I_1_n = -(mbeta*mbeta*mbeta)*I_1_n;
+          deltaN_qmu_term2 += n*theta*fugacity*I_1_n;
+      }
    }
 
    // equilibrium contribution
@@ -3126,6 +3147,13 @@ void EmissionFunctionArray::calculate_dN_analytic(
        deltaN_bulk_term2 = 0.0;
    }
 
+   // contribution from baryon diffusion
+   if(INCLUDE_DIFFUSION_DELTAF == 1)
+   {
+       deltaN_qmu_term1 = mass*mass/(beta*beta)*deltaN_qmu_term1;
+       deltaN_qmu_term2 = 1./(3.*beta*beta*beta)*deltaN_qmu_term2;
+   }
+
    // final results
    results[0] = N_eq;
    results[1] = deltaN_bulk_term1;
@@ -3133,7 +3161,6 @@ void EmissionFunctionArray::calculate_dN_analytic(
    results[3] = deltaN_qmu_term1;
    results[4] = deltaN_qmu_term2;
 }
-
 
 //***************************************************************************
 double EmissionFunctionArray::calculate_total_FZ_energy_flux()
@@ -3561,15 +3588,79 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                                       *sqrt(trace_Pi2)/(Edec+Pdec));
 
                     // bulk delta f
-                    double guess_bulk = (
-                        fabs(bulkPi*bulkvisCoefficients[0])
-                        *mass*mass*inv_Tdec/3.
-                        *f0_mass*(1. - sign*f0_mass));
+                    double guess_bulk = 0.0;
+                    if(INCLUDE_BULK_DELTAF == 1)
+                    {
+                        guess_bulk = (fabs(bulkPi*bulkvisCoefficients[0])
+                                      *mass*mass*inv_Tdec/3.
+                                      *f0_mass*(1. - sign*f0_mass));
+                    }
+
+                    // baryon diffusion delta f
+                    double guess_qmu = 0.0;
+                    if(INCLUDE_DIFFUSION_DELTAF == 1)
+                    {
+                        double qmu_sq = (qmu0*qmu0 - qmu1*qmu1 
+                                        - qmu2*qmu2 - qmu3*qmu3);
+                        double qmu_mag_over_kappa_hat = (
+                                        sqrt(fabs(qmu_sq))/deltaf_qmu_coeff);
+                        // term 1
+                        A = 2;
+                        // ideal part for the guess of the maximum
+                        double guess_G2max = 0; 
+                        if (sign == 1) // fermion
+                        {
+                            // choose upper sign; (*) always has a solution 
+                            // which gives the maximum
+                            double Emax = (Tdec*(lambertw.map(
+                                                A*exp(inv_Tdec*mu - A)) + A));
+                            if (Emax < mass)
+                                Emax = mass;
+                            guess_G2max = (pow(Emax, A)
+                                        /(exp((Emax - mu)*inv_Tdec) + sign));
+                        }
+                        else // boson
+                        {
+                            double rhs = A*exp(inv_Tdec*mu - A);
+                            if (rhs>0.3678794) // 1/e = 0.367879441171442
+                            {
+                                guess_G2max = pow(mass, A)*f0_mass;
+                            }
+                            else
+                            {
+                                double Emax = Tdec*(A - z_exp_m_z.map(rhs));
+                                if (Emax < mass)
+                                {
+                                    guess_G2max = pow(mass, A)*f0_mass;
+                                }
+                                else
+                                {
+                                    double guess_G2max_temp1 = (
+                                        pow(Emax, A)/(exp((Emax - mu)*inv_Tdec) 
+                                                      + sign));
+                                    double guess_G2max_temp2 = (
+                                                    pow(mass, A)*f0_mass);
+                                    guess_G2max = (
+                                        guess_G2max_temp1>guess_G2max_temp2 ? 
+                                        guess_G2max_temp1 : guess_G2max_temp2);
+                                }
+                            }
+                        }
+
+                        double guess_G1max = guess_ideal;
+
+                        guess_qmu = prefactor_qmu*guess_G2max;
+                        if(baryon > 0)
+                            guess_qmu += baryon*guess_G1max;
+
+                        guess_qmu *= tmp_factor*qmu_mag_over_kappa_hat;
+                    }
+
                     
                     // combine
-                    double maximum_guess = (
-                        prefactor*degen*dsigma_all
-                        *(guess_ideal + guess_viscous + guess_bulk));
+                    double maximum_guess = (prefactor*degen*dsigma_all
+                                            *(guess_ideal + guess_viscous 
+                                              + guess_bulk + guess_qmu));
 
                     // next sample pt and phi
                     // will-be sampled values
