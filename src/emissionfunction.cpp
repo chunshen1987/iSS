@@ -326,6 +326,17 @@ EmissionFunctionArray::~EmissionFunctionArray()
       }
       delete [] deltaf_qmu_coeff_tb;
   }
+
+  // clean arrays for special functions
+  for(int i = 0; i < sf_tb_length; i++)
+  {
+      delete [] sf_bessel_Kn[i];
+      if(INCLUDE_DIFFUSION_DELTAF == 1)
+          delete [] sf_expint_En[i];
+  }
+  delete [] sf_bessel_Kn;
+  if(INCLUDE_DIFFUSION_DELTAF == 1)
+      delete [] sf_expint_En;
 }
 //***************************************************************************
 
@@ -2980,7 +2991,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
         int last_particle_baryon = 2;
         double last_particle_mass=-1;
         double last_particle_mu=-1;
-        double integral_single_laststep = 0;
+        double total_N = 0;
         for (long n = 0; n < number_of_chosen_particles; n++)
         {
             long real_particle_idx = chosen_particles_sampling_table[n];
@@ -3003,7 +3014,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
             )
             {
                 // skip calculation for the current particle
-                integral_laststep[n] = integral_single_laststep;
+                integral_laststep[n] = total_N;
             }
             else
             {
@@ -3038,7 +3049,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles()
                                     - baryon*results_ptr[4]));
                 }
 
-                double total_N = N_eq + deltaN_bulk + deltaN_qmu;
+                total_N = N_eq + deltaN_bulk + deltaN_qmu;
 
                 integral_laststep[n] = total_N;
 
