@@ -40,13 +40,6 @@ class EmissionFunctionArray
 
         int turn_on_rhob;
 
-        // table parameter for diffusion deltaf coefficient
-        int deltaf_qmu_coeff_table_length_T;
-        int deltaf_qmu_coeff_table_length_mu;
-        double delta_qmu_coeff_table_T0, delta_qmu_coeff_table_mu0;
-        double delta_qmu_coeff_table_dT, delta_qmu_coeff_table_dmu;
-        double **deltaf_qmu_coeff_tb;
-        
         Table *dN_pTdpTdphidy; // dN / (pt dpt dphi dy)
         // store the largest element when summing over xt and eta 
         // to get dN / (pt dpt dphi dy); used during sampling.
@@ -110,6 +103,20 @@ class EmissionFunctionArray
         //array for bulk delta f coefficients
         Table *bulkdf_coeff;
 
+        // table parameter for diffusion deltaf coefficient
+        int deltaf_qmu_coeff_table_length_T;
+        int deltaf_qmu_coeff_table_length_mu;
+        double delta_qmu_coeff_table_T0, delta_qmu_coeff_table_mu0;
+        double delta_qmu_coeff_table_dT, delta_qmu_coeff_table_dmu;
+        double **deltaf_qmu_coeff_tb;
+
+        // arrays to speed up computing particle yield
+        double sf_dx, sf_x_min, sf_x_max;
+        int sf_tb_length;
+        int sf_expint_truncate_order;
+        double** sf_bessel_Kn;
+        double** sf_expint_En;
+
     public:
         EmissionFunctionArray(Table* chosen_particle, Table* pt_tab_in, 
                               Table* phi_tab_in, Table* eta_tab_in, 
@@ -117,6 +124,11 @@ class EmissionFunctionArray
                               FO_surf* FOsurf_ptr_in, long FO_length_in, 
                               ParameterReader* paraRdr_in);
         ~EmissionFunctionArray();
+
+        void initialize_special_function_arrays();
+        double get_special_function_K1(double arg);
+        double get_special_function_K2(double arg);
+        void get_special_function_En(double arg, double* results);
 
         void calculate_dNArrays(int);
         void calculate_dN_dxtdetady(int);

@@ -266,6 +266,10 @@ EmissionFunctionArray::EmissionFunctionArray(
   {
       load_deltaf_qmu_coeff_table("tables/Coefficients_RTA_diffusion.dat");
   }
+
+  // create arrays for special functions who are needed to compute 
+  // particle yields
+  initialize_special_function_arrays();
   
 }
 //***************************************************************************
@@ -3084,7 +3088,7 @@ void EmissionFunctionArray::calculate_dN_analytic(
    double deltaN_qmu_term1 = 0.0;      // contribution from baryon diffusion 
    double deltaN_qmu_term2 = 0.0;      // contribution from baryon diffusion 
 
-   int truncate_order = 5;            // truncation order in taylor expansion
+   int truncate_order = 10;            // truncation order in taylor expansion
 
    int sign = particle->sign;
    double mass = particle->mass;
@@ -3099,13 +3103,15 @@ void EmissionFunctionArray::calculate_dN_analytic(
 
       double theta = pow(-sign, n-1);
       double fugacity = pow(lambda, n);
-      double K_2 = gsl_sf_bessel_Kn(2, arg);
+      //double K_2 = gsl_sf_bessel_Kn(2, arg);
+      double K_2 = get_special_function_K2(arg);
 
       N_eq += theta/n*fugacity*K_2;
 
       if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1)
       {
-          double K_1 = gsl_sf_bessel_K1(arg);
+          //double K_1 = gsl_sf_bessel_K1(arg);
+          double K_1 = get_special_function_K1(arg);
           deltaN_bulk_term1 += theta*fugacity*(mass*beta*K_1 + 3./n*K_2);
           deltaN_bulk_term2 += theta*fugacity*K_1;
       }
@@ -3114,27 +3120,36 @@ void EmissionFunctionArray::calculate_dN_analytic(
       {
           deltaN_qmu_term1 += theta/n*fugacity*K_2;
 
+          double *sf_expint_En_ptr = new double [sf_expint_truncate_order-1];
+          get_special_function_En(arg, sf_expint_En_ptr);
+
           double mbeta = mass*beta;
           double I_1_n = 0.0;
           double I_1_1 = exp(-arg)/arg*(2./(arg*arg) + 2./arg - 1./2.);
-          double I_1_2 = 3./8.*gsl_sf_expint_E2(arg);
+          //double I_1_2 = 3./8.*gsl_sf_expint_E2(arg);
+          double I_1_2 = 3./8.*sf_expint_En_ptr[0];
           I_1_n = I_1_1 + I_1_2;
 
           double double_factorial = 1.;  // record (2k-5)!! 
           double factorial = 2.;         // record k! start with 2!
           double factor_2_to_k_power = 4.;      // record 2^k start with 2^2
-          for(int k = 3; k <= 10; k++)
+          for(int k = 3; k <= sf_expint_truncate_order; k++)
           {
               double_factorial *= (2*k - 5);
               factorial *= k;
               factor_2_to_k_power *= 2;
+              //double I_1_k = (
+              //    3.*double_factorial/factor_2_to_k_power/factorial
+              //    *gsl_sf_expint_En(2*k-2, arg));
               double I_1_k = (
                   3.*double_factorial/factor_2_to_k_power/factorial
-                  *gsl_sf_expint_En(2*k-2, arg));
+                  *sf_expint_En_ptr[k-2]);
               I_1_n += I_1_k;
           }
           I_1_n = -(mbeta*mbeta*mbeta)*I_1_n;
           deltaN_qmu_term2 += n*theta*fugacity*I_1_n;
+
+          delete [] sf_expint_En_ptr;
       }
    }
 
@@ -4183,4 +4198,91 @@ double EmissionFunctionArray::get_deltaf_qmu_coeff(double T, double muB)
                     + f3*x_fraction*y_fraction
                     + f4*x_fraction*(1. - y_fraction));
     return(coeff*hbarC);
+}
+
+void EmissionFunctionArray::initialize_special_function_arrays()
+{
+    cout << "Initializing special function arrays ... ";
+    sf_expint_truncate_order = 10;
+    sf_x_min = 0.5;
+    sf_x_max = 400;
+    sf_dx = 0.05;
+    sf_tb_length = (int)((sf_x_max - sf_x_min)/sf_dx) + 1;
+    sf_bessel_Kn = new double* [sf_tb_length];
+    if(INCLUDE_DIFFUSION_DELTAF == 1)
+        sf_expint_En = new double* [sf_tb_length];
+    for(int i = 0; i < sf_tb_length; i++)
+    {
+        sf_bessel_Kn[i] = new double [2];
+
+        double sf_x = sf_x_min + i*sf_dx;
+
+        if(INCLUDE_BULK_DELTAF == 1)
+            sf_bessel_Kn[i][0] = gsl_sf_bessel_K1(sf_x);     // store K_1
+        else
+            sf_bessel_Kn[i][0] = 0.0;
+
+        sf_bessel_Kn[i][1] = gsl_sf_bessel_Kn(2, sf_x);  // store K_2
+
+        if(INCLUDE_DIFFUSION_DELTAF == 1)
+        {
+            sf_expint_En[i] = new double [sf_expint_truncate_order-1];
+            sf_expint_En[i][0] = gsl_sf_expint_E2(sf_x);     // store E_2
+            for(int k = 1; k < sf_expint_truncate_order-1; k++)
+            {
+                sf_expint_En[i][k] = gsl_sf_expint_En(2*k+2, sf_x);
+            }
+        }
+    }
+    cout << "done!" << endl;
+}
+
+double EmissionFunctionArray::get_special_function_K2(double arg)
+{
+    double results;
+    if(arg < sf_x_min || arg > sf_x_max-sf_dx)
+        results = 0.0;
+    else
+    {
+        int idx = (int)((arg - sf_x_min)/sf_dx);
+        double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
+        results = ((1. - fraction)*sf_bessel_Kn[idx][1] 
+                    + fraction*sf_bessel_Kn[idx+1][1]);
+    }
+    return(results);
+}
+
+double EmissionFunctionArray::get_special_function_K1(double arg)
+{
+    double results;
+    if(arg < sf_x_min || arg > sf_x_max-sf_dx)
+        results = 0.0;
+    else
+    {
+        int idx = (int)((arg - sf_x_min)/sf_dx);
+        double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
+        results = ((1. - fraction)*sf_bessel_Kn[idx][0] 
+                    + fraction*sf_bessel_Kn[idx+1][0]);
+    }
+    return(results);
+}
+
+void EmissionFunctionArray::get_special_function_En(double arg, 
+                                                    double* results)
+{
+    if(arg < sf_x_min || arg > sf_x_max-sf_dx)
+    {
+        for(int i = 0; i < sf_expint_truncate_order-1; i++)
+            results[i] = 0.0;
+    }
+    else
+    {
+        int idx = (int)((arg - sf_x_min)/sf_dx);
+        double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
+        for(int i = 0; i < sf_expint_truncate_order-1; i++)
+        {
+            results[i] = ((1. - fraction)*sf_expint_En[idx][i] 
+                          + fraction*sf_expint_En[idx+1][i]);
+        }
+    }
 }
