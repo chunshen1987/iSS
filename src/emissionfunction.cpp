@@ -254,6 +254,10 @@ EmissionFunctionArray::EmissionFunctionArray(
     trig_phi_tab4Sampling[j][1] = sin(phi);
   }
 
+  gsl_rng_env_setup();
+  gsl_type_random_number = gsl_rng_default;
+  gsl_random_r = gsl_rng_alloc(gsl_type_random_number);
+
   // arrays for bulk delta f coefficients
   if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0)
   {
@@ -326,6 +330,8 @@ EmissionFunctionArray::~EmissionFunctionArray()
       }
       delete [] deltaf_qmu_coeff_tb;
   }
+
+  gsl_rng_free(gsl_random_r);
 
   // clean arrays for special functions
   for(int i = 0; i < sf_tb_length; i++)
@@ -2375,7 +2381,9 @@ inline long EmissionFunctionArray::determine_number_to_sample(
         case 30:  // use Poisson distribution
             if (dN_dy < 1e-15)
                 number_to_sample = 0;
-            number_to_sample = poissonDistribution.rand(dN_dy);
+            else
+                //number_to_sample = poissonDistribution.rand(dN_dy);
+                number_to_sample = gsl_ran_poisson(gsl_random_r, dN_dy);
             break;
         default:
             cout << "EmissionFunctionArray::"

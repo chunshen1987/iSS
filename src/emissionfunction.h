@@ -8,6 +8,9 @@
 #include<string>
 #include<vector>
 
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
+
 #include "Table.h"
 #include "NBD.h"
 #include "Poisson.h"
@@ -96,6 +99,8 @@ class EmissionFunctionArray
 
         NBD nbd; // NBD random sample generator
         Poisson poissonDistribution;
+        const gsl_rng_type *gsl_type_random_number;
+        gsl_rng *gsl_random_r;
 
         bool particles_are_the_same(int, int);
         //long *sorted_FZ;
