@@ -2368,7 +2368,8 @@ inline long EmissionFunctionArray::determine_number_to_sample(
             if (k<1e-15)
                 number_to_sample = dN_dy_int;
             else 
-                number_to_sample = dN_dy_int + nbd.rand(p,k);
+                number_to_sample = (
+                    dN_dy_int + gsl_ran_negative_binomial(gsl_random_r, p, k));
             break;
         case 20:
             k = para1*dN_dy;
@@ -2376,7 +2377,8 @@ inline long EmissionFunctionArray::determine_number_to_sample(
             if (k<1e-15) 
                 number_to_sample = dN_dy_int;
             else 
-                number_to_sample = nbd.rand(p,k);
+                number_to_sample = (
+                                gsl_ran_negative_binomial(gsl_random_r, p, k));
             break;
         case 30:  // use Poisson distribution
             if (dN_dy < 1e-15)
@@ -4260,7 +4262,16 @@ double EmissionFunctionArray::get_special_function_K2(double arg)
 {
     double results;
     if(arg < sf_x_min || arg > sf_x_max-sf_dx)
+    {
+        if(AMOUNT_OF_OUTPUT > 5)
+        {
+            cout << "EmissionFunctionArray::get_special_function_K2: "
+                 << "out of the table bound!" << endl;
+            cout << "sf_x_min = " << sf_x_min << ", sf_x_max = " << sf_x_max
+                 << ", arg = " << arg << endl;
+        }
         results = 0.0;
+    }
     else
     {
         int idx = (int)((arg - sf_x_min)/sf_dx);
@@ -4275,7 +4286,16 @@ double EmissionFunctionArray::get_special_function_K1(double arg)
 {
     double results;
     if(arg < sf_x_min || arg > sf_x_max-sf_dx)
+    {
+        if(AMOUNT_OF_OUTPUT > 5)
+        {
+            cout << "EmissionFunctionArray::get_special_function_K1: "
+                 << "out of the table bound!" << endl;
+            cout << "sf_x_min = " << sf_x_min << ", sf_x_max = " << sf_x_max
+                 << ", arg = " << arg << endl;
+        }
         results = 0.0;
+    }
     else
     {
         int idx = (int)((arg - sf_x_min)/sf_dx);
@@ -4291,6 +4311,13 @@ void EmissionFunctionArray::get_special_function_En(double arg,
 {
     if(arg < sf_x_min || arg > sf_x_max-sf_dx)
     {
+        if(AMOUNT_OF_OUTPUT > 5)
+        {
+            cout << "EmissionFunctionArray::get_special_function_En: "
+                 << "out of the table bound!" << endl;
+            cout << "sf_x_min = " << sf_x_min << ", sf_x_max = " << sf_x_max
+                 << ", arg = " << arg << endl;
+        }
         for(int i = 0; i < sf_expint_truncate_order-1; i++)
             results[i] = 0.0;
     }
