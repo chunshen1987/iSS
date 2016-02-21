@@ -15,6 +15,7 @@
 
 #include<gsl/gsl_sf_bessel.h>
 #include<gsl/gsl_sf_expint.h>
+#include<gsl/gsl_sf_lambert.h>
 
 #include "main.h"
 #include "readindata.h"
@@ -343,6 +344,7 @@ EmissionFunctionArray::~EmissionFunctionArray()
   delete [] sf_bessel_Kn;
   if(INCLUDE_DIFFUSION_DELTAF == 1)
       delete [] sf_expint_En;
+  delete [] lambert_W;
 }
 //***************************************************************************
 
@@ -3272,9 +3274,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
     }
 
     // load pre-calculated table
-    // (x,y) that y*exp(y) = x
-    TableFunction lambertw("tables/lambertw_function.dat"); 
-    lambertw.interpolation_model = 5;
     // (x,y) that y*exp(-y) = x; y<=1
     TableFunction z_exp_m_z("tables/z_exp_m_z.dat"); 
     z_exp_m_z.interpolation_model = 5;
@@ -3530,7 +3529,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                         // choose upper sign; (*) always has a solution
                         // which gives the maximum
                         double Emax = Tdec*(
-                                    lambertw.map(A*exp(inv_Tdec*mu - A)) + A);
+                                        get_special_function_lambertW(
+                                                A*exp(inv_Tdec*mu - A)) + A);
                         if (Emax < mass)
                             Emax = mass; // maximum in [mass, inf]
                         guess_ideal = (
@@ -3595,8 +3595,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     {
                         // choose upper sign; (*) always has a solution 
                         // which gives the maximum
-                        double Emax = (Tdec*(lambertw.map(
-                                                A*exp(inv_Tdec*mu - A)) + A));
+                        double Emax = (Tdec*(
+                            get_special_function_lambertW(
+                                    A*exp(inv_Tdec*mu - A)) + A));
                         if (Emax < mass)
                             Emax = mass;
                         guess_viscous = (pow(Emax, A)
@@ -3655,7 +3656,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                         {
                             // choose upper sign; (*) always has a solution 
                             // which gives the maximum
-                            double Emax = (Tdec*(lambertw.map(
+                            double Emax = (Tdec*(
+                                get_special_function_lambertW(
                                                 A*exp(inv_Tdec*mu - A)) + A));
                             if (Emax < mass)
                                 Emax = mass;
@@ -4255,6 +4257,22 @@ void EmissionFunctionArray::initialize_special_function_arrays()
             }
         }
     }
+
+    // pre-tabulate the lambert W function
+    lambert_x_min = 0;
+    lambert_x_max = 200.0;
+    lambert_dx = 0.005;
+    lambert_tb_length = (int)((lambert_x_max - lambert_x_min)/lambert_dx) + 1;
+    lambert_W = new double [lambert_tb_length];
+    //ofstream check("lambertw_function.dat");
+    for(int i = 0; i < lambert_tb_length; i++)
+    {
+        double lambert_x_local = lambert_x_min + i*lambert_dx;
+        lambert_W[i] = gsl_sf_lambert_W0(lambert_x_local);
+        //check << scientific << setw(18) << setprecision(8)
+        //      << lambert_x_local << "   " << lambert_W[i] << endl;
+    }
+    //check.close();
     cout << "done!" << endl;
 }
 
@@ -4270,7 +4288,7 @@ double EmissionFunctionArray::get_special_function_K2(double arg)
             cout << "sf_x_min = " << sf_x_min << ", sf_x_max = " << sf_x_max
                  << ", arg = " << arg << endl;
         }
-        results = 0.0;
+        results = gsl_sf_bessel_Kn(2, arg);
     }
     else
     {
@@ -4294,7 +4312,7 @@ double EmissionFunctionArray::get_special_function_K1(double arg)
             cout << "sf_x_min = " << sf_x_min << ", sf_x_max = " << sf_x_max
                  << ", arg = " << arg << endl;
         }
-        results = 0.0;
+        results = gsl_sf_bessel_K1(arg);
     }
     else
     {
@@ -4318,8 +4336,11 @@ void EmissionFunctionArray::get_special_function_En(double arg,
             cout << "sf_x_min = " << sf_x_min << ", sf_x_max = " << sf_x_max
                  << ", arg = " << arg << endl;
         }
-        for(int i = 0; i < sf_expint_truncate_order-1; i++)
-            results[i] = 0.0;
+        results[0] = gsl_sf_expint_E2(arg);
+        for(int i = 1; i < sf_expint_truncate_order-1; i++)
+        {
+            results[i] = gsl_sf_expint_En(2*i+2, arg);
+        }
     }
     else
     {
@@ -4332,3 +4353,28 @@ void EmissionFunctionArray::get_special_function_En(double arg,
         }
     }
 }
+
+double EmissionFunctionArray::get_special_function_lambertW(double arg)
+{
+    double results;
+    if(arg < lambert_x_min || arg > lambert_x_max-lambert_dx)
+    {
+        if(AMOUNT_OF_OUTPUT > 5)
+        {
+            cout << "EmissionFunctionArray::get_special_function_lambertW: "
+                 << "out of the table bound!" << endl;
+            cout << "lambert_x_min = " << lambert_x_min 
+                 << ", lambert_x_max = " << lambert_x_max
+                 << ", arg = " << arg << endl;
+        }
+        results = gsl_sf_lambert_W0(arg);
+    }
+    else
+    {
+        int idx = (int)((arg - lambert_x_min)/lambert_dx);
+        double fraction = (arg - lambert_x_min - idx*lambert_dx)/lambert_dx;
+        results = (1. - fraction)*lambert_W[idx] + fraction*lambert_W[idx+1];
+    }
+    return(results);
+}
+

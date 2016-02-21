@@ -122,6 +122,11 @@ class EmissionFunctionArray
         double** sf_bessel_Kn;
         double** sf_expint_En;
 
+        double lambert_x_min, lambert_x_max, lambert_dx;
+        int lambert_tb_length;
+        double *lambert_W;
+
+
     public:
         EmissionFunctionArray(Table* chosen_particle, Table* pt_tab_in, 
                               Table* phi_tab_in, Table* eta_tab_in, 
@@ -134,6 +139,7 @@ class EmissionFunctionArray
         double get_special_function_K1(double arg);
         double get_special_function_K2(double arg);
         void get_special_function_En(double arg, double* results);
+        double get_special_function_lambertW(double arg);
 
         void calculate_dNArrays(int);
         void calculate_dN_dxtdetady(int);
