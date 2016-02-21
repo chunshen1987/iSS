@@ -6,7 +6,7 @@ hydro_mode = 2           # mode for reading in freeze out information
 
 turn_on_shear = 1        # read in shear stress tensor
 turn_on_bulk = 0         # read in bulk viscous pressure
-turn_on_rhob = 1         # read in net baryon chemical potential
+turn_on_rhob = 0         # read in net baryon chemical potential
 turn_on_diff = 0         # read in baryon diffusion current
 
 include_deltaf_shear = 1      # include delta f contribution from shear

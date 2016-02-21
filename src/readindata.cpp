@@ -24,6 +24,42 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in)
    turn_on_rhob = paraRdr->getVal("turn_on_rhob");
    turn_on_diff = paraRdr->getVal("turn_on_diff");
 
+   if(mode == 1 || mode == 2)
+   {
+       // determine read in format in surface.dat from MUSIC simulation
+       cout << "read in hyper-surface from MUSIC simulations ..." << endl;
+       ostringstream config_file;
+       config_file << path << "/music_input";
+       ifstream configuration(config_file.str().c_str());
+       string temp1;
+       string temp_name;
+       while(!configuration.eof())
+       {
+           getline(configuration, temp1);
+           stringstream ss(temp1);
+           ss >> temp_name;
+           if(temp_name == "Include_Bulk_Visc_Yes_1_No_0")
+           {
+              ss >> turn_on_bulk;
+           }
+           if(temp_name == "Include_Rhob_Yes_1_No_0")
+           {
+              ss >> turn_on_rhob;
+           }
+           if(temp_name == "turn_on_baryon_diffusion")
+           {
+              ss >> turn_on_diff;
+           }
+       }
+       configuration.close();
+       if(turn_on_bulk == 1)
+           cout << "the hyper-surface includes bulk viscosity." << endl;
+       if(turn_on_rhob == 1)
+           cout << "the hyper-surface includes net baryon density." << endl;
+       if(turn_on_diff == 1)
+           cout << "the hyper-surface includes baryon diffusion." << endl;
+   }
+
    n_eta_skip = 0;
 }
 
@@ -122,6 +158,7 @@ int read_FOdata::read_in_chemical_potentials(
               break;
            }
        }
+       configuration.close();
        ifstream particletable;
        if(IEOS_music == 2)        // s95p-v1
            N_stableparticle = 0;
