@@ -1,0 +1,7 @@
+*.[oa]
+*.~
+.DS_Store
+results/
+test/
+iSS.e
+*.DAT
