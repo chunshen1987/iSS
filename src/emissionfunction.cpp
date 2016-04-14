@@ -38,243 +38,228 @@ using namespace std;
 // Class EmissionFunctionArray ------------------------------------------
 //***************************************************************************
 EmissionFunctionArray::EmissionFunctionArray(
-    Table* chosen_particles_in, Table* pt_tab_in, Table* phi_tab_in, 
-    Table* y_minus_eta_tab_in, particle_info* particles_in, int Nparticles_in, 
-    FO_surf* FOsurf_ptr_in, long FO_length_in, ParameterReader* paraRdr_in) {
-  // get info
-  pT_tab = pt_tab_in;
-  pT_tab_length = pT_tab->getNumberOfRows();
-  phi_tab = phi_tab_in; 
-  phi_tab_length = phi_tab->getNumberOfRows();
+    Table* chosen_particles_in, Table* pt_tab_in, Table* phi_tab_in,
+    Table* y_minus_eta_tab_in, particle_info* particles_in, int Nparticles_in,
+    FO_surf* FOsurf_ptr_in, long FO_length_in, int flag_PCE_in,
+    ParameterReader* paraRdr_in) {
+    // get info
+    flag_PCE = flag_PCE_in;
+    pT_tab = pt_tab_in;
+    pT_tab_length = pT_tab->getNumberOfRows();
+    phi_tab = phi_tab_in; 
+    phi_tab_length = phi_tab->getNumberOfRows();
 
-  y_minus_eta_tab = y_minus_eta_tab_in; 
-  y_minus_eta_tab_length = y_minus_eta_tab->getNumberOfRows();
+    y_minus_eta_tab = y_minus_eta_tab_in;
+    y_minus_eta_tab_length = y_minus_eta_tab->getNumberOfRows();
 
-  if (y_minus_eta_tab->get(1,1)>-1e-15)
-      positive_y_minus_eta_table_only = true;
-  else 
-      positive_y_minus_eta_table_only = false;
+    if (y_minus_eta_tab->get(1,1)>-1e-15)
+        positive_y_minus_eta_table_only = true;
+    else 
+        positive_y_minus_eta_table_only = false;
 
-  particles = particles_in;
-  Nparticles = Nparticles_in;
+    particles = particles_in;
+    Nparticles = Nparticles_in;
 
-  FOsurf_ptr = FOsurf_ptr_in;
-  FO_length = FO_length_in;
+    FOsurf_ptr = FOsurf_ptr_in;
+    FO_length = FO_length_in;
 
-  paraRdr = paraRdr_in;
+    paraRdr = paraRdr_in;
 
-  hydro_mode = paraRdr->getVal("hydro_mode");
+    hydro_mode = paraRdr->getVal("hydro_mode");
 
-  F0_IS_NOT_SMALL = paraRdr->getVal("f0_is_not_small");
-  USE_OSCAR_FORMAT = paraRdr->getVal("use_OSCAR_format");
-  INCLUDE_DELTAF = paraRdr->getVal("include_deltaf_shear");
-  INCLUDE_BULK_DELTAF = paraRdr->getVal("include_deltaf_bulk");
-  bulk_deltaf_kind = paraRdr->getVal("bulk_deltaf_kind");
+    F0_IS_NOT_SMALL = paraRdr->getVal("f0_is_not_small");
+    USE_OSCAR_FORMAT = paraRdr->getVal("use_OSCAR_format");
+    INCLUDE_DELTAF = paraRdr->getVal("include_deltaf_shear");
+    INCLUDE_BULK_DELTAF = paraRdr->getVal("include_deltaf_bulk");
+    bulk_deltaf_kind = paraRdr->getVal("bulk_deltaf_kind");
 
-  INCLUDE_DIFFUSION_DELTAF = paraRdr->getVal("include_deltaf_diffusion");
+    INCLUDE_DIFFUSION_DELTAF = paraRdr->getVal("include_deltaf_diffusion");
 
-  turn_on_rhob = paraRdr->getVal("turn_on_rhob");
+    turn_on_rhob = paraRdr->getVal("turn_on_rhob");
 
-  // allocate internal buffer
-  dN_pTdpTdphidy = new Table(pT_tab_length, phi_tab_length);
-  dN_pTdpTdphidy_max = new Table(pT_tab_length, phi_tab_length);
-  dN_pTdpTdphidy_filename = "results/dN_pTdpTdphidy.dat";
+    // allocate internal buffer
+    dN_pTdpTdphidy = new Table(pT_tab_length, phi_tab_length);
+    dN_pTdpTdphidy_max = new Table(pT_tab_length, phi_tab_length);
+    dN_pTdpTdphidy_filename = "results/dN_pTdpTdphidy.dat";
   
-  dN_dxtdetady = new double*[y_minus_eta_tab_length];
-  for (int k=0; k<y_minus_eta_tab_length; k++) 
-      dN_dxtdetady[k] = new double[FO_length];
+    dN_dxtdetady = new double*[y_minus_eta_tab_length];
+    for (int k = 0; k < y_minus_eta_tab_length; k++) 
+        dN_dxtdetady[k] = new double[FO_length];
 
-  dN_dxtdetady_pT_max = new double*[y_minus_eta_tab_length];
-  for (int k=0; k<y_minus_eta_tab_length; k++)
-      dN_dxtdetady_pT_max[k] = new double[FO_length];
+    dN_dxtdetady_pT_max = new double*[y_minus_eta_tab_length];
+    for (int k = 0; k < y_minus_eta_tab_length; k++)
+        dN_dxtdetady_pT_max[k] = new double[FO_length];
 
-  dN_dxtdetady_filename = "results/dN_dxdetady.dat";
+    dN_dxtdetady_filename = "results/dN_dxdetady.dat";
 
-  // deal with chosen_particle_xxx tables
-  number_of_chosen_particles = chosen_particles_in->getNumberOfRows();
-  // first, for spectra and flow calculations
-  chosen_particles_01_table = new int[Nparticles];
-  for (int n=0; n<Nparticles; n++) chosen_particles_01_table[n]=0;
-  for (int m=0; m<number_of_chosen_particles; m++)
-  {
-    int monval = chosen_particles_in->get(1,m+1);
-    for (int n=0; n<Nparticles; n++)
-    {
-      if (particles[n].monval==monval)
-      {
-        chosen_particles_01_table[n]=1;
-        break;
-      }
-    }
-  }
-  // next, for sampling processes
-  chosen_particles_sampling_table = new int[number_of_chosen_particles];
-  unidentifiedPid_table = new int [number_of_chosen_particles];
-  // first copy the chosen_particles table, but now using indecies 
-  // instead of monval
-  int current_idx = 0;
-  int temp_idx = 0;
-  for (int m=0; m<number_of_chosen_particles; m++)
-  {
-    int monval = chosen_particles_in->get(1,m+1);
-    for(int n=0; n<Nparticles; n++)
-    {
-      if (particles[n].monval==monval)
-      {
-        chosen_particles_sampling_table[current_idx] = n;
-        current_idx ++;
-        break;
-      }
-      else if (n == Nparticles - 1)
-      {
-        unidentifiedPid_table[temp_idx] = monval;
-        temp_idx++;
-      }
-    }
-  }
-  // check whether all chosen particles are in the particle list
-  if(number_of_chosen_particles != current_idx)
-  {
-     cout << "Warning: not all chosen particles are in the pdg particle list!" 
-          << endl;
-     cout << "There are " << number_of_chosen_particles - current_idx 
-          << " particles can not be found in the pdg particle list!" << endl;
-     cout << "Their monte carlo numbers are:" << endl;
-     for(int i = 0; i < number_of_chosen_particles - current_idx ; i++)
-        cout << unidentifiedPid_table[i] << endl;
-
-     number_of_chosen_particles = current_idx;
-  }
-  // next re-order them so that particles with similar mass are adjacent
-  grouping_particles = paraRdr->getVal("grouping_particles");
-  // sort particles according to their mass; bubble-sorting
-  if (grouping_particles) 
-  {
-    for (int m=0; m<number_of_chosen_particles; m++)
-      for (int n=0; n<number_of_chosen_particles-m-1; n++)
-        if (particles[chosen_particles_sampling_table[n]].mass 
-            > particles[chosen_particles_sampling_table[n+1]].mass)
-        {
-          // swap them
-          int particle_idx = chosen_particles_sampling_table[n+1];
-          chosen_particles_sampling_table[n+1] = (
-                          chosen_particles_sampling_table[n]);
-          chosen_particles_sampling_table[n] = particle_idx;
+    // deal with chosen_particle_xxx tables
+    number_of_chosen_particles = chosen_particles_in->getNumberOfRows();
+    // first, for spectra and flow calculations
+    chosen_particles_01_table = new int[Nparticles];
+    for (int n = 0; n < Nparticles; n++)
+        chosen_particles_01_table[n] = 0;
+    for (int m = 0; m < number_of_chosen_particles; m++) {
+        int monval = chosen_particles_in->get(1, m+1);
+        for (int n = 0; n < Nparticles; n++) {
+            if (particles[n].monval == monval) {
+                chosen_particles_01_table[n] = 1;
+                break;
+            }
         }
-  }
-
-  // for flow calculation
-  flow_differential_filename_old = "results/v2data.dat";
-  flow_integrated_filename_old = "results/v2data-inte.dat";
-  flow_differential_filename = "results/thermal_%d_vndata.dat";
-  flow_integrated_filename = "results/thermal_%d_integrated_vndata.dat";
-  last_particle_idx = -1;
-
-  // pre-calculate variables
-  //cout << "Caching trig(phi) tables... ";
-  trig_phi_table = new double*[phi_tab_length];
-  for (int j=0; j<phi_tab_length; j++)
-  {
-    trig_phi_table[j] = new double[2]; // 2: 0,1-> cos,sin
-    double phi = phi_tab->get(1,j+1);
-    trig_phi_table[j][0] = cos(phi);
-    trig_phi_table[j][1] = sin(phi);
-  }
-  //cout << "done" << endl;
-
-  //cout << "Caching hyperbolictrig(y-y_minus_eta_s) tables... ";
-  hypertrig_y_minus_eta_table = new double*[y_minus_eta_tab_length];
-  double y_minus_eta_smallest = 100; y_minus_eta_min_index = 0;
-  for (int k=0; k<y_minus_eta_tab_length; k++)
-  {
-    hypertrig_y_minus_eta_table[k] = new double[2]; // 2: 0,1-> cosh,sinh
-
-    // relative to particle_y
-    double y_minus_eta_s = y_minus_eta_tab->get(1,k+1);
-    // "y_minus_eta_s" here is actually y-y_minus_eta_s
-    hypertrig_y_minus_eta_table[k][0] = cosh(-y_minus_eta_s); 
-    hypertrig_y_minus_eta_table[k][1] = sinh(-y_minus_eta_s);
-
-    if (y_minus_eta_s>=0.0 && y_minus_eta_s<y_minus_eta_smallest)
-    {
-        y_minus_eta_smallest = y_minus_eta_s;
-        y_minus_eta_min_index = k;
     }
-  }
-  //cout << "done" << endl;
+    // next, for sampling processes
+    chosen_particles_sampling_table = new int[number_of_chosen_particles];
+    unidentifiedPid_table = new int [number_of_chosen_particles];
+    // first copy the chosen_particles table, but now using indecies 
+    // instead of monval
+    int current_idx = 0;
+    int temp_idx = 0;
+    for (int m = 0; m < number_of_chosen_particles; m++) {
+        int monval = chosen_particles_in->get(1, m+1);
+        for(int n = 0; n < Nparticles; n++) {
+            if (particles[n].monval == monval) {
+                chosen_particles_sampling_table[current_idx] = n;
+                current_idx ++;
+                break;
+            } else if (n == Nparticles - 1) {
+                unidentifiedPid_table[temp_idx] = monval;
+                temp_idx++;
+            }
+        }
+    }
+    // check whether all chosen particles are in the particle list
+    if (number_of_chosen_particles != current_idx) {
+        cout << "Warning: not all chosen particles are "
+             << "in the pdg particle list!" << endl;
+        cout << "There are " << number_of_chosen_particles - current_idx 
+             << " particles can not be found in the pdg particle list!" << endl;
+        cout << "Their monte carlo numbers are:" << endl;
+        for (int i = 0; i < number_of_chosen_particles - current_idx ; i++)
+            cout << unidentifiedPid_table[i] << endl;
+        number_of_chosen_particles = current_idx;
+    }
+    // next re-order them so that particles with similar mass are adjacent
+    grouping_particles = paraRdr->getVal("grouping_particles");
+    // sort particles according to their mass; bubble-sorting
+    if (grouping_particles) {
+        for (int m = 0; m < number_of_chosen_particles; m++) {
+            for (int n = 0; n < number_of_chosen_particles-m-1; n++)
+                if (particles[chosen_particles_sampling_table[n]].mass 
+                    > particles[chosen_particles_sampling_table[n+1]].mass) {
+                // swap them
+                int particle_idx = chosen_particles_sampling_table[n+1];
+                chosen_particles_sampling_table[n+1] = (
+                                            chosen_particles_sampling_table[n]);
+                chosen_particles_sampling_table[n] = particle_idx;
+            }
+        }
+    }
 
-  samples_filename = "results/samples_%d.dat";
-  samples_control_filename = "results/samples_control_%d.dat";
-  samples_format_filename = "results/samples_format.dat";
+    // for flow calculation
+    flow_differential_filename_old = "results/v2data.dat";
+    flow_integrated_filename_old = "results/v2data-inte.dat";
+    flow_differential_filename = "results/thermal_%d_vndata.dat";
+    flow_integrated_filename = "results/thermal_%d_integrated_vndata.dat";
+    last_particle_idx = -1;
 
-  dN_dtau_filename = "results/dN_dtau_%d.dat";
-  dN_dphi_filename = "results/dN_dphi_%d.dat";
-  dN_deta_filename = "results/dN_deta_%d.dat";
-  dN_dxt_filename = "results/dN_dxt_%d.dat";
-  dN_dx_filename = "results/dN_dx_%d.dat";
+    // pre-calculate variables
+    //cout << "Caching trig(phi) tables... ";
+    trig_phi_table = new double*[phi_tab_length];
+    for (int j = 0; j < phi_tab_length; j++) {
+        trig_phi_table[j] = new double[2]; // 2: 0,1-> cos,sin
+        double phi = phi_tab->get(1, j+1);
+        trig_phi_table[j][0] = cos(phi);
+        trig_phi_table[j][1] = sin(phi);
+    }
+    //cout << "done" << endl;
 
-  OSCAR_header_filename = "OSCAR_header.txt";
-  OSCAR_output_filename = "OSCAR.DAT";
+    //cout << "Caching hyperbolictrig(y-y_minus_eta_s) tables... ";
+    hypertrig_y_minus_eta_table = new double*[y_minus_eta_tab_length];
+    double y_minus_eta_smallest = 100;
+    double y_minus_eta_min_index = 0;
+    for (int k = 0; k < y_minus_eta_tab_length; k++) {
+        hypertrig_y_minus_eta_table[k] = new double[2]; // 2: 0,1-> cosh,sinh
 
-  dN_dxtdy_4all = new double*[FO_length];
-  for (long l=0; l<FO_length; l++)
-      dN_dxtdy_4all[l] = new double[number_of_chosen_particles];
-  //sorted_FZ = new long[FO_length];
+        // relative to particle_y
+        double y_minus_eta_s = y_minus_eta_tab->get(1, k+1);
+        // "y_minus_eta_s" here is actually y-y_minus_eta_s
+        hypertrig_y_minus_eta_table[k][0] = cosh(-y_minus_eta_s);
+        hypertrig_y_minus_eta_table[k][1] = sinh(-y_minus_eta_s);
 
-  // for interpolation for the third way of sampling
-  // generate new set of pT and phi table to be interpolated onto
-  pT_tab4Sampling.loadTableFromFile("tables/pT_table_for_sampling.dat");
-  pT_tab4Sampling_length = pT_tab4Sampling.getNumberOfRows();
-  phi_tab4Sampling.loadTableFromFile("tables/phi_table_for_sampling.dat");
-  phi_tab4Sampling_length = phi_tab4Sampling.getNumberOfRows();
-  // extend pT_tab and phi_tab in order to extract index info for given 
-  // pT or phi
-  for (int i=0; i<pT_tab_length; i++)
-      pT_tab->set(3, i+1, i+1);
-  for (int j=0; j<phi_tab_length; j++)
-      phi_tab->set(3, j+1, j+1);
-  // get the index info of pT's and phi's specified in pT_tab4Sampling 
-  // or phi_tab4Sampling in terms of pT_tab or phi_tab; indecies starts with 1.
-  for (int i=0; i<pT_tab4Sampling_length; i++)
-  {
-      double pT = pT_tab4Sampling.get(1, i+1);
-      pT_tab4Sampling.set(3, i+1, pT_tab->interp(1,3,pT,2,true));
-  }
-  for (int j=0; j<phi_tab4Sampling_length; j++)
-  {
-      double phi = phi_tab4Sampling.get(1, j+1);
-      phi_tab4Sampling.set(3, j+1, phi_tab->interp(1,3,phi,2,true));
-  }
-  // create trig caches
-  trig_phi_tab4Sampling = new double*[phi_tab4Sampling_length];
-  for (int j=0; j<phi_tab4Sampling_length; j++)
-  {
-    trig_phi_tab4Sampling[j] = new double[2]; // 2: 0,1-> cos,sin
-    double phi = phi_tab4Sampling.get(1,j+1);
-    trig_phi_tab4Sampling[j][0] = cos(phi);
-    trig_phi_tab4Sampling[j][1] = sin(phi);
-  }
+        if (y_minus_eta_s >= 0.0 && y_minus_eta_s < y_minus_eta_smallest) {
+            y_minus_eta_smallest = y_minus_eta_s;
+            y_minus_eta_min_index = k;
+        }
+    }
+    //cout << "done" << endl;
 
-  gsl_rng_env_setup();
-  gsl_type_random_number = gsl_rng_default;
-  gsl_random_r = gsl_rng_alloc(gsl_type_random_number);
+    samples_filename = "results/samples_%d.dat";
+    samples_control_filename = "results/samples_control_%d.dat";
+    samples_format_filename = "results/samples_format.dat";
 
-  // arrays for bulk delta f coefficients
-  if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0)
-  {
-      bulkdf_coeff = (
+    dN_dtau_filename = "results/dN_dtau_%d.dat";
+    dN_dphi_filename = "results/dN_dphi_%d.dat";
+    dN_deta_filename = "results/dN_deta_%d.dat";
+    dN_dxt_filename = "results/dN_dxt_%d.dat";
+    dN_dx_filename = "results/dN_dx_%d.dat";
+
+    OSCAR_header_filename = "OSCAR_header.txt";
+    OSCAR_output_filename = "OSCAR.DAT";
+
+    dN_dxtdy_4all = new double*[FO_length];
+    for (long l=0; l<FO_length; l++)
+        dN_dxtdy_4all[l] = new double[number_of_chosen_particles];
+    //sorted_FZ = new long[FO_length];
+
+    // for interpolation for the third way of sampling
+    // generate new set of pT and phi table to be interpolated onto
+    pT_tab4Sampling.loadTableFromFile("tables/pT_table_for_sampling.dat");
+    pT_tab4Sampling_length = pT_tab4Sampling.getNumberOfRows();
+    phi_tab4Sampling.loadTableFromFile("tables/phi_table_for_sampling.dat");
+    phi_tab4Sampling_length = phi_tab4Sampling.getNumberOfRows();
+    // extend pT_tab and phi_tab in order to extract index info for given
+    // pT or phi
+    for (int i = 0; i < pT_tab_length; i++)
+        pT_tab->set(3, i+1, i+1);
+    for (int j = 0; j < phi_tab_length; j++)
+        phi_tab->set(3, j+1, j+1);
+    // get the index info of pT's and phi's specified in pT_tab4Sampling 
+    // or phi_tab4Sampling in terms of pT_tab or phi_tab; indecies starts with 1.
+    for (int i = 0; i < pT_tab4Sampling_length; i++) {
+        double pT = pT_tab4Sampling.get(1, i+1);
+        pT_tab4Sampling.set(3, i+1, pT_tab->interp(1, 3, pT, 2, true));
+    }
+    for (int j = 0; j < phi_tab4Sampling_length; j++) {
+        double phi = phi_tab4Sampling.get(1, j+1);
+        phi_tab4Sampling.set(3, j+1, phi_tab->interp(1, 3, phi, 2, true));
+    }
+    // create trig caches
+    trig_phi_tab4Sampling = new double*[phi_tab4Sampling_length];
+    for (int j = 0; j < phi_tab4Sampling_length; j++) {
+        trig_phi_tab4Sampling[j] = new double[2];  // 2: 0,1-> cos,sin
+        double phi = phi_tab4Sampling.get(1, j+1);
+        trig_phi_tab4Sampling[j][0] = cos(phi);
+        trig_phi_tab4Sampling[j][1] = sin(phi);
+    }
+
+    gsl_rng_env_setup();
+    gsl_type_random_number = gsl_rng_default;
+    gsl_random_r = gsl_rng_alloc(gsl_type_random_number);
+
+    // arrays for bulk delta f coefficients
+    if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0) {
+        bulkdf_coeff = (
             new Table ("tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat"));
-  }
+    }
 
-  // load table for diffusion delta f coeffient
-  if(INCLUDE_DIFFUSION_DELTAF == 1)
-  {
-      load_deltaf_qmu_coeff_table("tables/Coefficients_RTA_diffusion.dat");
-  }
+    // load table for diffusion delta f coeffient
+    if (INCLUDE_DIFFUSION_DELTAF == 1) {
+        load_deltaf_qmu_coeff_table("tables/Coefficients_RTA_diffusion.dat");
+    }
 
-  // create arrays for special functions who are needed to compute 
-  // particle yields
-  initialize_special_function_arrays();
+    // create arrays for special functions who are needed to compute 
+    // particle yields
+    initialize_special_function_arrays();
   
 }
 //***************************************************************************
@@ -405,77 +390,77 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
     phi_tab_weight[j] = phi_tab->get(2, j+1);
   }
 
-  //---------------------------
-  // THE main summation loop
-  //---------------------------
-  //cout << "------------------------------------- " << endl;
-  //cout << "Performing the main summation loop... " << endl;
-  double progress_total = FO_length;
-  if (AMOUNT_OF_OUTPUT>0) print_progressbar(-1);
-  for (long l=0; l<FO_length; l++)
-  {
-      surf = &FOsurf_ptr[l];
+    //---------------------------
+    // THE main summation loop
+    //---------------------------
+    //cout << "------------------------------------- " << endl;
+    //cout << "Performing the main summation loop... " << endl;
+    double progress_total = FO_length;
+    if (AMOUNT_OF_OUTPUT > 0) print_progressbar(-1);
+    for (long l = 0; l < FO_length; l++) {
+        surf = &FOsurf_ptr[l];
 
-      double Tdec = surf->Tdec;
-      double Pdec = surf->Pdec;
-      double Edec = surf->Edec;
+        double Tdec = surf->Tdec;
+        double Pdec = surf->Pdec;
+        double Edec = surf->Edec;
 
-      double tau = surf->tau;
+        double tau = surf->tau;
 
-      double gammaT = surf->u0;
-      double ux = surf->u1;
-      double uy = surf->u2;
+        double gammaT = surf->u0;
+        double ux = surf->u1;
+        double uy = surf->u2;
 
-      double mu =  surf->particle_mu_PCE[particle_idx];
+        double mu = baryon*surf->muB;
+        if (flag_PCE == 1) {
+            double mu_PCE =  surf->particle_mu_PCE[particle_idx];
+            mu += mu_PCE;
+        }
 
-      double da0 = surf->da0;
-      double da1 = surf->da1;
-      double da2 = surf->da2;
-      double pi00 = surf->pi00;
-      double pi01 = surf->pi01;
-      double pi02 = surf->pi02;
-      double pi11 = surf->pi11;
-      double pi12 = surf->pi12;
-      double pi22 = surf->pi22;
-      double pi33 = surf->pi33;
-      double deltaf_prefactor = 0.0;
-      if(INCLUDE_DELTAF == 1)
-          deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
-      
-      // bulk delta f
-      double bulkPi = 0.0;
-      if(INCLUDE_BULK_DELTAF == 1)
-      {
-          if(bulk_deltaf_kind == 0)
-              bulkPi = surf->bulkPi;
-          else
-              bulkPi = surf->bulkPi/hbarC; // unit in fm^-4 
-          getbulkvisCoefficients(Tdec, bulkvisCoefficients);
-      }
+        double da0 = surf->da0;
+        double da1 = surf->da1;
+        double da2 = surf->da2;
+        double pi00 = surf->pi00;
+        double pi01 = surf->pi01;
+        double pi02 = surf->pi02;
+        double pi11 = surf->pi11;
+        double pi12 = surf->pi12;
+        double pi22 = surf->pi22;
+        double pi33 = surf->pi33;
+        double deltaf_prefactor = 0.0;
+        if (INCLUDE_DELTAF == 1)
+            deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
 
-      // diffusion delta f
-      double qmu0 = 0.0;
-      double qmu1 = 0.0;
-      double qmu2 = 0.0;
-      double qmu3 = 0.0;
-      double deltaf_qmu_coeff = 1.0;
-      double prefactor_qmu = 0.0;
-      if(INCLUDE_DIFFUSION_DELTAF == 1)
-      {
-          qmu0 = surf->qmu0;
-          qmu1 = surf->qmu1;
-          qmu2 = surf->qmu2;
-          qmu3 = surf->qmu3;
-          
-          double mu_B = surf->muB;
-          deltaf_qmu_coeff = get_deltaf_qmu_coeff(Tdec, mu_B);
-          
-          double rho_B = surf->Bn;
-          prefactor_qmu = rho_B/(Edec + Pdec);  // 1/GeV
-      }
+        // bulk delta f
+        double bulkPi = 0.0;
+        if (INCLUDE_BULK_DELTAF == 1) {
+            if (bulk_deltaf_kind == 0)
+                bulkPi = surf->bulkPi;
+            else
+                bulkPi = surf->bulkPi/hbarC; // unit in fm^-4 
+            getbulkvisCoefficients(Tdec, bulkvisCoefficients);
+        }
 
-      for (int k=0; k<y_minus_eta_tab_length; k++)
-      {
+        // diffusion delta f
+        double qmu0 = 0.0;
+        double qmu1 = 0.0;
+        double qmu2 = 0.0;
+        double qmu3 = 0.0;
+        double deltaf_qmu_coeff = 1.0;
+        double prefactor_qmu = 0.0;
+        if (INCLUDE_DIFFUSION_DELTAF == 1) {
+            qmu0 = surf->qmu0;
+            qmu1 = surf->qmu1;
+            qmu2 = surf->qmu2;
+            qmu3 = surf->qmu3;
+
+            double mu_B = surf->muB;
+            deltaf_qmu_coeff = get_deltaf_qmu_coeff(Tdec, mu_B);
+
+            double rho_B = surf->Bn;
+            prefactor_qmu = rho_B/(Edec + Pdec);  // 1/GeV
+        }
+
+        for (int k = 0; k < y_minus_eta_tab_length; k++) {
           // use local variables to speed up
           double dN_dxtdetady_tmp = 0.0;
           double dN_dxtdetady_pT_max_tmp = 0.0;
@@ -701,7 +686,11 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
               double ux = surf->u1;
               double uy = surf->u2;
 
-              double mu = surf->particle_mu_PCE[particle_idx];
+              double mu = baryon*surf->muB;
+              if (flag_PCE == 1) {
+                double mu_PCE = surf->particle_mu_PCE[particle_idx];
+                mu += mu_PCE;
+              }
 
               double da0 = surf->da0;
               double da1 = surf->da1;
@@ -1426,7 +1415,11 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             double ux = surf->u1;
             double uy = surf->u2;
 
-            double mu = surf->particle_mu_PCE[last_particle_idx];
+            double mu = baryon*surf->muB;
+            if (flag_PCE == 1) {
+                double mu_PCE = surf->particle_mu_PCE[last_particle_idx];
+                mu += mu_PCE;
+            }
 
             double da0 = surf->da0;
             double da1 = surf->da1;
@@ -1928,7 +1921,11 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                 double ux = surf->u1;
                 double uy = surf->u2;
 
-                double mu = surf->particle_mu_PCE[last_particle_idx];
+                double mu = baryon*surf->muB;
+                if (flag_PCE == 1) {
+                    double mu_PCE = surf->particle_mu_PCE[last_particle_idx];
+                    mu += mu_PCE;
+                }
 
                 double da0 = surf->da0;
                 double da1 = surf->da1;
@@ -2698,23 +2695,24 @@ void EmissionFunctionArray::calculate_dN_dxt_using_dN_dxtdetady()
 //***************************************************************************
 bool EmissionFunctionArray::particles_are_the_same(int idx1, int idx2)
 {
-    if (particles[idx1].sign!=particles[idx2].sign)
+    if (particles[idx1].sign != particles[idx2].sign)
         return false;
-    if (particles[idx1].gspin!=particles[idx2].gspin)
+    if (particles[idx1].gspin != particles[idx2].gspin)
+        return false;
+    if (particles[idx1].baryon != particles[idx2].baryon)
         return false;
     double tolerance = paraRdr->getVal("grouping_tolerance");
     if (abs((particles[idx1].mass-particles[idx2].mass)
             /(particles[idx2].mass+1e-30)) > tolerance)
         return false;
-    for (long l=0; l<FO_length; l++)
-    {
-        double chem1 = FOsurf_ptr[l].particle_mu_PCE[idx1];
-        double chem2 = FOsurf_ptr[l].particle_mu_PCE[idx2];
-        if (abs((chem1-chem2)/(chem2+1e-30)) > tolerance)
-        {
-          return false;
+    if (flag_PCE == 1) {
+        for (long l = 0; l < FO_length; l++) {
+            double chem1 = FOsurf_ptr[l].particle_mu_PCE[idx1];
+            double chem2 = FOsurf_ptr[l].particle_mu_PCE[idx2];
+            if (abs((chem1-chem2)/(chem2+1e-30)) > tolerance) {
+                return false;
+            }
         }
-
     }
     return true;
 }
@@ -2974,7 +2972,11 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
             int degen = particle->gspin;
             double mass = particle->mass;
             int baryon = particle->baryon;
-            double mu = surf->particle_mu_PCE[real_particle_idx];
+            double mu = baryon*surf->muB;
+            if (flag_PCE == 1) {
+                double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
+                mu += mu_PCE;
+            }
 
             double prefactor = degen/(2.*M_PI*M_PI);
 
@@ -3060,8 +3062,8 @@ void EmissionFunctionArray::calculate_dN_analytic(
     double N_eq = 0.0;                  // equilibrium contribution
     double deltaN_bulk_term1 = 0.0;     // contribution from bulk delta f
     double deltaN_bulk_term2 = 0.0;     // contribution from bulk delta f
-    double deltaN_qmu_term1 = 0.0;      // contribution from baryon diffusion 
-    double deltaN_qmu_term2 = 0.0;      // contribution from baryon diffusion 
+    double deltaN_qmu_term1 = 0.0;      // contribution from baryon diffusion
+    double deltaN_qmu_term2 = 0.0;      // contribution from baryon diffusion
 
     int truncate_order = 10;            // truncation order in taylor expansion
 
@@ -3090,7 +3092,7 @@ void EmissionFunctionArray::calculate_dN_analytic(
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
             deltaN_qmu_term1 += theta/n*fugacity*K_2;
 
-            double *sf_expint_En_ptr = new double [sf_expint_truncate_order-1];
+            double *sf_expint_En_ptr = new double[sf_expint_truncate_order-1];
             get_special_function_En(arg, sf_expint_En_ptr);
 
             double mbeta = mass*beta;
@@ -3175,7 +3177,7 @@ double EmissionFunctionArray::calculate_total_FZ_energy_flux() {
         double pi01 = surf->pi01;
         double pi02 = surf->pi02;
 
-        total_energy += ((e*u0*u0 + pi00)*da0 
+        total_energy += ((e*u0*u0 + pi00)*da0
                 + ((e+p)*u0*u1 + pi01)*da1 + ((e+p)*u0*u2 + pi02)*da2);
     }
 
@@ -3322,7 +3324,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                 print_progressbar(-1);
 
             for (long repeated_sampling_idx = 1; 
-                 repeated_sampling_idx <= number_of_repeated_sampling; 
+                 repeated_sampling_idx <= number_of_repeated_sampling;
                  repeated_sampling_idx++) {
                 long number_to_sample = determine_number_to_sample(
                     dN, sampling_model, sampling_para1, sampling_para2, 
@@ -3365,7 +3367,12 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     double u2 = surf->u2;
                     double u3 = surf->u3;
 
-                    double mu = surf->particle_mu_PCE[real_particle_idx];
+                    double mu = baryon*surf->muB;
+                    if (flag_PCE == 1) {
+                        double mu_PCE = (
+                                    surf->particle_mu_PCE[real_particle_idx]);
+                        mu += mu_PCE;
+                    }
 
                     double da0 = surf->da0;
                     double da1 = surf->da1;

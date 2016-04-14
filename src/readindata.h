@@ -61,6 +61,7 @@ class read_FOdata {
     read_FOdata(ParameterReader* paraRdr_in, string path);
     ~read_FOdata();
     int get_number_of_freezeout_cells();
+    int get_flag_PCE() {return(flag_PCE);}
     void read_in_freeze_out_data(int length, FO_surf* surf_ptr);
     int read_in_chemical_potentials(string path, int FO_length,
                                     FO_surf* surf_ptr,
