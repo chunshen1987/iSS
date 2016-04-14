@@ -426,7 +426,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
       double ux = surf->u1;
       double uy = surf->u2;
 
-      double mu =  surf->particle_mu[particle_idx];
+      double mu =  surf->particle_mu_PCE[particle_idx];
 
       double da0 = surf->da0;
       double da1 = surf->da1;
@@ -701,7 +701,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
               double ux = surf->u1;
               double uy = surf->u2;
 
-              double mu = surf->particle_mu[particle_idx];
+              double mu = surf->particle_mu_PCE[particle_idx];
 
               double da0 = surf->da0;
               double da1 = surf->da1;
@@ -1426,7 +1426,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             double ux = surf->u1;
             double uy = surf->u2;
 
-            double mu = surf->particle_mu[last_particle_idx];
+            double mu = surf->particle_mu_PCE[last_particle_idx];
 
             double da0 = surf->da0;
             double da1 = surf->da1;
@@ -1928,7 +1928,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                 double ux = surf->u1;
                 double uy = surf->u2;
 
-                double mu = surf->particle_mu[last_particle_idx];
+                double mu = surf->particle_mu_PCE[last_particle_idx];
 
                 double da0 = surf->da0;
                 double da1 = surf->da1;
@@ -2708,8 +2708,8 @@ bool EmissionFunctionArray::particles_are_the_same(int idx1, int idx2)
         return false;
     for (long l=0; l<FO_length; l++)
     {
-        double chem1 = FOsurf_ptr[l].particle_mu[idx1];
-        double chem2 = FOsurf_ptr[l].particle_mu[idx2];
+        double chem1 = FOsurf_ptr[l].particle_mu_PCE[idx1];
+        double chem2 = FOsurf_ptr[l].particle_mu_PCE[idx2];
         if (abs((chem1-chem2)/(chem2+1e-30)) > tolerance)
         {
           return false;
@@ -2974,7 +2974,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
             int degen = particle->gspin;
             double mass = particle->mass;
             int baryon = particle->baryon;
-            double mu = surf->particle_mu[real_particle_idx];
+            double mu = surf->particle_mu_PCE[real_particle_idx];
 
             double prefactor = degen/(2.*M_PI*M_PI);
 
@@ -3365,7 +3365,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                     double u2 = surf->u2;
                     double u3 = surf->u3;
 
-                    double mu = surf->particle_mu[real_particle_idx];
+                    double mu = surf->particle_mu_PCE[real_particle_idx];
 
                     double da0 = surf->da0;
                     double da1 = surf->da1;

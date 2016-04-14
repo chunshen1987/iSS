@@ -52,25 +52,18 @@ int main(int argc, char** argv)
    // Chun's input reading process
    string path="results";
 
-   //load freeze out information
+   // load freeze out information
    read_FOdata freeze_out_data(paraRdr, path);
-
    int FO_length = 0;
    FO_length = freeze_out_data.get_number_of_freezeout_cells();
    cout <<"total number of cells: " <<  FO_length << endl;
 
    FO_surf* FOsurf_ptr = new FO_surf[FO_length];
-   for(int i=0; i<FO_length; i++)
-     for(int j=0; j<Maxparticle; j++)
-         FOsurf_ptr[i].particle_mu[j] = 0.0e0;
-   
    freeze_out_data.read_in_freeze_out_data(FO_length, FOsurf_ptr);
-   
-   //read the chemical potential on the freeze out surface
+   // read the chemical potential on the freeze out surface
    particle_info *particle = new particle_info [Maxparticle];
    int Nparticle = freeze_out_data.read_in_chemical_potentials(
                                         path, FO_length, FOsurf_ptr, particle);
-   
    cout << endl << " -- Read in data finished!" << endl << endl;
 
    // Next, Zhi's turn...
