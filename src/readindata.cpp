@@ -352,7 +352,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
         ss >> dummy;
         surf_ptr[idx].pi23 = 0.0*hbarC;
         ss >> dummy;
-        surf_ptr[idx].pi33 = 0.0*hbarC;
+        surf_ptr[idx].pi33 = dummy*hbarC;
         if (turn_on_bulk == 1) {
             ss >> dummy;
             surf_ptr[idx].bulkPi = dummy*hbarC;  // GeV/fm^3

@@ -1,16 +1,16 @@
-hydro_mode = 2           # mode for reading in freeze out information 
+hydro_mode = 1           # mode for reading in freeze out information 
                          # 0: reads outputs from VISH2+1
                          # 1: reads outputs from MUSIC assuming 
                          #    boost-invariant
                          # 2: reads outputs from MUSIC full (3+1)-d
 
 turn_on_shear = 1        # read in shear stress tensor
-turn_on_bulk = 0         # read in bulk viscous pressure
-turn_on_rhob = 1         # read in net baryon chemical potential
+turn_on_bulk = 1         # read in bulk viscous pressure
+turn_on_rhob = 0         # read in net baryon chemical potential
 turn_on_diff = 0         # read in baryon diffusion current
 
 include_deltaf_shear = 1      # include delta f contribution from shear
-include_deltaf_bulk = 0       # include delta f contribution from bulk
+include_deltaf_bulk = 1       # include delta f contribution from bulk
 include_deltaf_diffusion = 0  # include delta f contribution from diffusion
 
 bulk_deltaf_kind = 1     # 0 : 14-momentum approximation
@@ -20,11 +20,11 @@ f0_is_not_small = 1      # include (1 \pm f_0) factor in delta f
 
 use_OSCAR_format = 1     # output results in OSCAR format
 
-calculate_vn = 0         # 1/0: whether to calculate the 
+calculate_vn = 1         # 1/0: whether to calculate the 
                          # dN/(pt dpt dphi dy) and v_n flows 
                          # (they not required for MC-sampling)
 
-MC_sampling = 2          # 0/1/2/3: whether to perform Monte-Carlo sampling
+MC_sampling = 0          # 0/1/2/3: whether to perform Monte-Carlo sampling
                          # (not required for spectra calculation). 
                          # 0: No sampling. 
                          # 1: use dN_dxtdetady to sample. 
