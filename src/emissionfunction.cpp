@@ -176,7 +176,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     //cout << "Caching hyperbolictrig(y-y_minus_eta_s) tables... ";
     hypertrig_y_minus_eta_table = new double*[y_minus_eta_tab_length];
     double y_minus_eta_smallest = 100;
-    double y_minus_eta_min_index = 0;
+    y_minus_eta_min_index = 0;
     for (int k = 0; k < y_minus_eta_tab_length; k++) {
         hypertrig_y_minus_eta_table[k] = new double[2]; // 2: 0,1-> cosh,sinh
 
