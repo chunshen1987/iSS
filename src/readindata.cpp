@@ -30,6 +30,11 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
         ostringstream config_file;
         config_file << path << "/music_input";
         ifstream configuration(config_file.str().c_str());
+        if (!configuration.is_open()) {
+            cout << "read_FOdata::read_FOdata: can not find configuration file"
+                 << " " << config_file.str() << endl;
+            exit(1);
+        }
         string temp1;
         string temp_name;
         while (!configuration.eof()) {
