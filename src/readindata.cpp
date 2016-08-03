@@ -589,40 +589,36 @@ void read_FOdata::read_decdat_mu(int FO_length, int N_stable,
 }
 
 void read_FOdata::read_chemical_potentials_music(
-        int FO_length, FO_surf* FOsurf_ptr, int N_stable, double** particle_mu)
-{
-  cout << " -- Interpolating chemical potentials for stable particles "
-       << "(MUSIC IEOS = " << IEOS_music << ") ...";
+    int FO_length, FO_surf* FOsurf_ptr, int N_stable, double** particle_mu) {
+    cout << " -- Interpolating chemical potentials for stable particles "
+         << "(MUSIC IEOS = " << IEOS_music << ") ...";
 
-  Table mu_table;
-  if(IEOS_music == 3)
-      mu_table.loadTableFromFile("EOS/EOS_tables/s95p-v1-PCE150/EOS_Mu.dat");
-  else if (IEOS_music == 4)
-      mu_table.loadTableFromFile("EOS/EOS_tables/s95p-v1-PCE155/EOS_Mu.dat");
-  else if (IEOS_music == 5)
-      mu_table.loadTableFromFile("EOS/EOS_tables/s95p-v1-PCE160/EOS_Mu.dat");
-  else if (IEOS_music == 6)
-      mu_table.loadTableFromFile("EOS/EOS_tables/s95p-v1-PCE165/EOS_Mu.dat");
+    Table mu_table;
+    if (IEOS_music == 3)
+        mu_table.loadTableFromFile("EOS/EOS_tables/s95p-v1-PCE150/EOS_Mu.dat");
+    else if (IEOS_music == 4)
+        mu_table.loadTableFromFile("EOS/EOS_tables/s95p-v1-PCE155/EOS_Mu.dat");
+    else if (IEOS_music == 5)
+        mu_table.loadTableFromFile("EOS/EOS_tables/s95p-v1-PCE160/EOS_Mu.dat");
+    else if (IEOS_music == 6)
+        mu_table.loadTableFromFile("EOS/EOS_tables/s95p-v1-PCE165/EOS_Mu.dat");
 
-  double edec_pre = 0.0e0;
-  for(int j = 0; j < FO_length; j++)
-  {
-    double edec = FOsurf_ptr[j].Edec;
-    if(fabs(edec - edec_pre) > 1e-15)
-    {
-       edec_pre = edec;
-       for(int i = 0; i < N_stable; i++)
-          particle_mu[i][j] = mu_table.interp(1, i+2, edec);
+    double edec_pre = 0.0e0;
+    for (int j = 0; j < FO_length; j++) {
+        double edec = FOsurf_ptr[j].Edec;
+        if (fabs(edec - edec_pre) > 1e-15) {
+            edec_pre = edec;
+            for (int i = 0; i < N_stable; i++) {
+                particle_mu[i][j] = mu_table.interp(1, i+2, edec);
+            }
+        } else {
+            for (int i = 0; i < N_stable; i++)
+                particle_mu[i][j] = particle_mu[i][j-1];
+        }
     }
-    else
-    {
-       for(int i = 0; i < N_stable; i++)
-          particle_mu[i][j] = particle_mu[i][j-1];
-    }
-  }
 
-  cout<<"done" << endl;
-  return;
+    cout << "done" << endl;
+    return;
 }
 
 int read_FOdata::read_resonances_list(particle_info* particle)
@@ -779,8 +775,11 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle, FO_surf* FOsurf_ptr,
     }
     particletable.close();
 
-    for (int k=0; k < FO_length; k++) {
+    for (int k = 0; k < FO_length; k++) {
         FOsurf_ptr[k].particle_mu_PCE = new double[Nparticle];
+        for (int ii = 0; ii < Nparticle; ii++) {
+            FOsurf_ptr[k].particle_mu_PCE[ii] = 0.0;
+        }
     }
 
     // assign chemical potentials for stable particles
