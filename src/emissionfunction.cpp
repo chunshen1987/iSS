@@ -409,6 +409,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
         double gammaT = surf->u0;
         double ux = surf->u1;
         double uy = surf->u2;
+        double tau_ueta = surf->u3;
 
         double mu = baryon*surf->muB;
         if (flag_PCE == 1) {
@@ -419,12 +420,16 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
         double da0 = surf->da0;
         double da1 = surf->da1;
         double da2 = surf->da2;
+        double da3 = surf->da3;
         double pi00 = surf->pi00;
         double pi01 = surf->pi01;
         double pi02 = surf->pi02;
+        double pi03 = surf->pi03;
         double pi11 = surf->pi11;
         double pi12 = surf->pi12;
+        double pi13 = surf->pi13;
         double pi22 = surf->pi22;
+        double pi23 = surf->pi23;
         double pi33 = surf->pi33;
         double deltaf_prefactor = 0.0;
         if (INCLUDE_DELTAF == 1)
@@ -484,12 +489,12 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
                   double pT_phi_inte_weight = pT*pT_weight*phi_weight;
 
 
-                  double pdotu = pt*gammaT - px*ux - py*uy;
+                  double pdotu = pt*gammaT - px*ux - py*uy - pz*tau_ueta;
                   double expon = (pdotu - mu) / Tdec;
                   // thermal equilibrium distributions
                   double f0 = 1./(exp(expon)+sign);
 
-                  double pdsigma = pt*da0 + px*da1 + py*da2;
+                  double pdsigma = pt*da0 + px*da1 + py*da2 + pz*da3/tau;
 
                   //viscous corrections
                   double delta_f_shear = 0.0;
@@ -497,7 +502,9 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
                   {
                       double Wfactor = (
                           pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 
-                          + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 
+                          - 2.0*pt*pz*pi03
+                          + px*px*pi11 + 2.0*px*py*pi12 + 2.0*px*pz*pi13
+                          + py*py*pi22 + 2.0*py*pz*pi23
                           + pz*pz*pi33);
                       delta_f_shear = (
                           (1 - F0_IS_NOT_SMALL*sign*f0)*Wfactor
@@ -685,6 +692,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
               double gammaT = surf->u0;
               double ux = surf->u1;
               double uy = surf->u2;
+              double tau_ueta = surf->u3;
 
               double mu = baryon*surf->muB;
               if (flag_PCE == 1) {
@@ -695,20 +703,23 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
               double da0 = surf->da0;
               double da1 = surf->da1;
               double da2 = surf->da2;
+              double da3 = surf->da3;
               double pi00 = surf->pi00;
               double pi01 = surf->pi01;
               double pi02 = surf->pi02;
+              double pi03 = surf->pi03;
               double pi11 = surf->pi11;
               double pi12 = surf->pi12;
+              double pi13 = surf->pi13;
               double pi22 = surf->pi22;
+              double pi23 = surf->pi23;
               double pi33 = surf->pi33;
               double bulkPi = 0.0;
               double deltaf_prefactor = 0.0;
-              if(INCLUDE_DELTAF)
+              if (INCLUDE_DELTAF)
                   deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
-              if(INCLUDE_BULK_DELTAF == 1)
-              {
-                  if(bulk_deltaf_kind == 0)
+              if (INCLUDE_BULK_DELTAF == 1) {
+                  if (bulk_deltaf_kind == 0)
                       bulkPi = surf->bulkPi;
                   else 
                       bulkPi = surf->bulkPi/hbarC;   // unit in fm^-4 
@@ -743,19 +754,21 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
                   double pt = mT*hypertrig_y_minus_eta_table[k][0];
                   double pz = mT*hypertrig_y_minus_eta_table[k][1];
 
-                  double pdotu = pt*gammaT - px*ux - py*uy;
+                  double pdotu = pt*gammaT - px*ux - py*uy - pz*tau_ueta;
                   double expon = (pdotu - mu) / Tdec;
                   double f0 = 1./(exp(expon)+sign);
 
-                  double pdsigma = pt*da0 + px*da1 + py*da2;
+                  double pdsigma = pt*da0 + px*da1 + py*da2 + pz*da3/tau;
 
                   //viscous corrections
                   double delta_f_shear = 0.0;
-                  if(INCLUDE_DELTAF)
+                  if (INCLUDE_DELTAF)
                   {
                       double Wfactor = (
                           pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 
-                          + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 
+                          - 2.0*pt*pz*pi03
+                          + px*px*pi11 + 2.0*px*py*pi12 + 2.0*px*pz*pi13
+                          + py*py*pi22 + 2.0*py*pz*pi23
                           + pz*pz*pi33);
                       delta_f_shear = (
                           (1 - F0_IS_NOT_SMALL*sign*f0)
@@ -1414,6 +1427,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             double gammaT = surf->u0;
             double ux = surf->u1;
             double uy = surf->u2;
+            double tau_ueta = surf->u3;
 
             double mu = baryon*surf->muB;
             if (flag_PCE == 1) {
@@ -1424,12 +1438,16 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
             double da0 = surf->da0;
             double da1 = surf->da1;
             double da2 = surf->da2;
+            double da3 = surf->da3;
             double pi00 = surf->pi00;
             double pi01 = surf->pi01;
             double pi02 = surf->pi02;
+            double pi03 = surf->pi03;
             double pi11 = surf->pi11;
             double pi12 = surf->pi12;
+            double pi13 = surf->pi13;
             double pi22 = surf->pi22;
+            double pi23 = surf->pi23;
             double pi33 = surf->pi33;
             double bulkPi = 0.0;
             double deltaf_prefactor = 0.0;
@@ -1487,18 +1505,20 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
                 px = pT*cos(phi);
                 py = pT*sin(phi);
 
-                double pdotu = pt*gammaT - px*ux - py*uy;
+                double pdotu = pt*gammaT - px*ux - py*uy - pz*tau_ueta;
                 double expon = (pdotu - mu) * inv_Tdec;
                 double f0 = 1./(exp(expon)+sign);
 
-                double pdsigma = pt*da0 + px*da1 + py*da2;
+                double pdsigma = pt*da0 + px*da1 + py*da2 + pz*da3/tau;
                   
                 double delta_f_shear = 0.0;
                 if(INCLUDE_DELTAF)
                 {
                     double Wfactor = (
-                        pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02 
-                        + px*px*pi11 + 2.0*px*py*pi12 + py*py*pi22 
+                        pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02
+                        - 2.0*pt*pz*pi03
+                        + px*px*pi11 + 2.0*px*py*pi12 + 2.0*px*pz*pi13
+                        + py*py*pi22 + 2.0*py*pz*pi23
                         + pz*pz*pi33);
                     delta_f_shear = (
                         (1. - F0_IS_NOT_SMALL*sign*f0)

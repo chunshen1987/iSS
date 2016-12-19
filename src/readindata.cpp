@@ -324,7 +324,6 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
         ss >> surf_ptr[idx].u1;
         ss >> surf_ptr[idx].u2;
         ss >> surf_ptr[idx].u3;
-        surf_ptr[idx].u3 = 0.0;
 
         // thermodynamic quantities at freeze out
         ss >> dummy;
@@ -345,17 +344,17 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
         ss >> dummy;
         surf_ptr[idx].pi02 = dummy*hbarC;
         ss >> dummy;
-        surf_ptr[idx].pi03 = 0.0*hbarC;
+        surf_ptr[idx].pi03 = dummy*hbarC;
         ss >> dummy;
         surf_ptr[idx].pi11 = dummy*hbarC;
         ss >> dummy;
         surf_ptr[idx].pi12 = dummy*hbarC;
         ss >> dummy;
-        surf_ptr[idx].pi13 = 0.0*hbarC;
+        surf_ptr[idx].pi13 = dummy*hbarC;
         ss >> dummy;
         surf_ptr[idx].pi22 = dummy*hbarC;
         ss >> dummy;
-        surf_ptr[idx].pi23 = 0.0*hbarC;
+        surf_ptr[idx].pi23 = dummy*hbarC;
         ss >> dummy;
         surf_ptr[idx].pi33 = dummy*hbarC;
         if (turn_on_bulk == 1) {
