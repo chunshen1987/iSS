@@ -76,6 +76,8 @@ EmissionFunctionArray::EmissionFunctionArray(
     INCLUDE_DIFFUSION_DELTAF = paraRdr->getVal("include_deltaf_diffusion");
 
     turn_on_rhob = paraRdr->getVal("turn_on_rhob");
+    flag_restrict_deltaf = paraRdr->getVal("restrict_deltaf");
+    deltaf_max_ratio = paraRdr->getVal("deltaf_max_ratio");
 
     // allocate internal buffer
     dN_pTdpTdphidy = new Table(pT_tab_length, phi_tab_length);
@@ -568,12 +570,14 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
                   }
 
                   double result;
-                  // restrict the size of delta f to be smaller than f_0
-                  double ratio_max = 1.0;
-                  double deltaf_size = fabs(delta_f_shear + delta_f_bulk 
-                                            + delta_f_qmu);
-                  double resize_factor = min(1., 
-                                             ratio_max/(deltaf_size + 1e-10));
+                  double resize_factor = 1.0;
+                  if (flag_restrict_deltaf) {
+                      // restrict the size of delta f to be smaller than f_0
+                      double ratio_max = deltaf_max_ratio;
+                      double deltaf_size = fabs(delta_f_shear + delta_f_bulk 
+                                                + delta_f_qmu);
+                      resize_factor = min(1., ratio_max/(deltaf_size + 1e-10));
+                  }
                   result = (prefactor*degen*f0*pdsigma*tau
                          *(1. + (delta_f_shear + delta_f_bulk + delta_f_qmu)
                                 *resize_factor));
@@ -831,12 +835,14 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx)
                   }
                   
                   double result;
-                  // restrict the size of delta f to be smaller than f_0
-                  double ratio_max = 1.0;
-                  double deltaf_size = fabs(delta_f_shear + delta_f_bulk
-                                            + delta_f_qmu);
-                  double resize_factor = min(1., 
-                                             ratio_max/(deltaf_size + 1e-10));
+                  double resize_factor = 1.0;
+                  if (flag_restrict_deltaf == 1) {
+                      // restrict the size of delta f to be smaller than f_0
+                      double ratio_max = deltaf_max_ratio;
+                      double deltaf_size = fabs(delta_f_shear + delta_f_bulk
+                                                + delta_f_qmu);
+                      resize_factor = min(1., ratio_max/(deltaf_size + 1e-10));
+                  }
                   result = (prefactor*degen*f0*pdsigma*tau
                          *(1. + (delta_f_shear + delta_f_bulk + delta_f_qmu)
                                  *resize_factor));
@@ -1581,15 +1587,17 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
                 }
             
                 double result;
-                // restrict the size of delta f to be smaller than f_0
-                double ratio_max = 1.0;
-                double deltaf_size = fabs(delta_f_shear + delta_f_bulk
-                                          + delta_f_qmu);
-                double resize_factor = min(1., 
-                                           ratio_max/(deltaf_size + 1e-10));
+                double resize_factor = 1.0;
+                if (flag_restrict_deltaf == 1) {
+                    // restrict the size of delta f to be smaller than f_0
+                    double ratio_max = deltaf_max_ratio;
+                    double deltaf_size = fabs(delta_f_shear + delta_f_bulk
+                                              + delta_f_qmu);
+                    resize_factor = min(1., ratio_max/(deltaf_size + 1e-10));
+                }
                 result = (prefactor*degen*f0*pdsigma*tau
-                       *(1. + (delta_f_shear + delta_f_bulk + delta_f_qmu)
-                               *resize_factor));
+                          *(1. + (delta_f_shear + delta_f_bulk + delta_f_qmu)
+                                 *resize_factor));
 
                 // Note that the factor 1.0 used here assumes that the maximum 
                 // on the discrete lattice is the same as the maximum of the 
@@ -2186,23 +2194,24 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy()
                     }
 
                     double result;
-                    // restrict the size of delta f to be smaller than f_0
-                    double ratio_max = 1.0;
-                    double deltaf_size = fabs(delta_f_shear + delta_f_bulk
-                                              + delta_f_qmu);
-                    double resize_factor = min(1., 
-                                              ratio_max/(deltaf_size + 1e-10));
+                    double resize_factor = 1.0;
+                    if (flag_restrict_deltaf == 1) {
+                        // restrict the size of delta f to be smaller than f_0
+                        double ratio_max = deltaf_max_ratio;
+                        double deltaf_size = fabs(delta_f_shear + delta_f_bulk
+                                                  + delta_f_qmu);
+                        resize_factor = min(1.,
+                                            ratio_max/(deltaf_size + 1e-10));
+                    }
                     result = (prefactor*degen*f0*pdsigma*tau*(1. 
                               + (delta_f_shear + delta_f_bulk + delta_f_qmu)
                                 *resize_factor));
 
-                    if ( result/results_max > (1.0+1e-6))
-                    {
+                    if (result/results_max > (1.0+1e-6)) {
                         total_violation++;
                     } 
                     
-                    if (drand48()<result/results_max)
-                    {
+                    if (drand48()<result/results_max) {
                         found_sample=true; 
                         break;
                     } // accept sample! 
@@ -3768,12 +3777,17 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                         }
 
                         double result;
-                        // restrict the size of delta f to be smaller than f_0
-                        double ratio_max = 1.0 - 1e-6;
-                        double deltaf_size = fabs(delta_f_shear + delta_f_bulk 
-                                                  + delta_f_qmu);
-                        double resize_factor = (
-                            min(1., ratio_max/(deltaf_size + 1e-10)));
+                        double resize_factor = 1.0;
+                        if (flag_restrict_deltaf == 1) {
+                            // restrict the size of delta f to be smaller
+                            // than f_0
+                            double ratio_max = deltaf_max_ratio;
+                            double deltaf_size = fabs(delta_f_shear
+                                                      + delta_f_bulk 
+                                                      + delta_f_qmu);
+                            resize_factor = (
+                                min(1., ratio_max/(deltaf_size + 1e-10)));
+                        }
                         result = (prefactor*degen*f0*pdsigma*tau
                                   *(1. + (delta_f_shear + delta_f_bulk 
                                           + delta_f_qmu)*resize_factor));
@@ -3781,8 +3795,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                         double accept_prob = (
                             result/(actual_adjusted_maximum_factor
                                     *maximum_guess));
-                        if (AMOUNT_OF_OUTPUT > 5)
-                        {
+                        if (AMOUNT_OF_OUTPUT > 5) {
                             if(accept_prob > accept_prob_max)
                                 accept_prob_max = accept_prob;
                         }
@@ -3793,11 +3806,12 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
                                 maximum_ratio = accept_prob;
 
                         // for debugging
-                        if (accept_prob > 1 && AMOUNT_OF_OUTPUT > 1)
+                        if (accept_prob > 1 && AMOUNT_OF_OUTPUT > 1) {
                             cout << "EmissionFunctionArray::"
                                  << "sample_using_dN_dxtdy_4all_particles "
                                  << "warning: emission function is bigger "
                                  << "than 1: " << accept_prob << endl;
+                        }
 
                         if (drand48() < accept_prob)
                             break; // accept sample!

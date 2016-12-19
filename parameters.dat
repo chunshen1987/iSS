@@ -16,6 +16,9 @@ include_deltaf_diffusion = 0  # include delta f contribution from diffusion
 bulk_deltaf_kind = 1     # 0 : 14-momentum approximation
                          # 1 : relaxation time approximation
 
+restrict_deltaf = 0      # flag to apply restriction on the size of delta f
+deltaf_max_ratio = 1.0   # the maximum allowed size of delta f w.r.t f0
+
 f0_is_not_small = 1      # include (1 \pm f_0) factor in delta f
 
 use_OSCAR_format = 1     # output results in OSCAR format

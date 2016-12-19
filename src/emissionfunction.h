@@ -24,6 +24,8 @@ class EmissionFunctionArray {
  private:
     int hydro_mode;   // switch for (2+1)-d or (3+1)-d hypersurface
     int flag_PCE;
+    int flag_restrict_deltaf;
+    double deltaf_max_ratio;
 
     Table *pT_tab, *phi_tab, *y_minus_eta_tab;
     int pT_tab_length, phi_tab_length;
