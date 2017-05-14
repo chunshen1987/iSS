@@ -5,11 +5,11 @@ hydro_mode = 1           # mode for reading in freeze out information
                          # 2: reads outputs from MUSIC full (3+1)-d
 
 turn_on_shear = 1        # read in shear stress tensor
-turn_on_bulk = 0         # read in bulk viscous pressure
+turn_on_bulk = 1         # read in bulk viscous pressure
 turn_on_rhob = 0         # read in net baryon chemical potential
 turn_on_diff = 0         # read in baryon diffusion current
 
-include_deltaf_shear = 1      # include delta f contribution from shear
+include_deltaf_shear = 0      # include delta f contribution from shear
 include_deltaf_bulk = 0       # include delta f contribution from bulk
 include_deltaf_diffusion = 0  # include delta f contribution from diffusion
 
@@ -23,7 +23,7 @@ f0_is_not_small = 1      # include (1 \pm f_0) factor in delta f
 
 use_OSCAR_format = 1     # output results in OSCAR format
 
-calculate_vn = 1         # 1/0: whether to calculate the 
+calculate_vn = 0         # 1/0: whether to calculate the 
                          # dN/(pt dpt dphi dy) and v_n flows 
                          # (they not required for MC-sampling)
 
@@ -77,9 +77,9 @@ dN_dy_sampling_para3 = 0     # Additional parameters for dN/dy sampling.
 dN_dy_sampling_para4 = 0     # Additional parameters for dN/dy sampling. 
 dN_dy_sampling_para5 = 0     # Additional parameters for dN/dy sampling. 
 
-y_LB = -2.5                  # lower bound for y-sampling; 
+y_LB = -5.0                  # lower bound for y-sampling; 
                              # used in "conventional" sampling
-y_RB = 2.5                   # upper bound for y-sampling; used in 
+y_RB = 5.0                   # upper bound for y-sampling; used in 
                              # "conventional" sampling
 
 eta_s_LB = -0.5              # lower bound for eta_s sampling; used only when 
@@ -123,7 +123,7 @@ use_historic_flow_output_format = 0    # 1/0: The "historical flow format"
 
 calculate_vn_to_order = 9              # v_n's are calculated up to this order
 
-number_of_repeated_sampling = 200     # How many times should the sampling be 
+number_of_repeated_sampling = 100000    # How many times should the sampling be 
                                        # repeated.
 
 sample_pT_up_to = -1                   # Up to this value will pT be sampled; 
