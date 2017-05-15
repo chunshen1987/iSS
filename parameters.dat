@@ -9,8 +9,8 @@ turn_on_bulk = 1         # read in bulk viscous pressure
 turn_on_rhob = 0         # read in net baryon chemical potential
 turn_on_diff = 0         # read in baryon diffusion current
 
-include_deltaf_shear = 0      # include delta f contribution from shear
-include_deltaf_bulk = 0       # include delta f contribution from bulk
+include_deltaf_shear = 1      # include delta f contribution from shear
+include_deltaf_bulk = 1       # include delta f contribution from bulk
 include_deltaf_diffusion = 0  # include delta f contribution from diffusion
 
 bulk_deltaf_kind = 1     # 0 : 14-momentum approximation
@@ -123,7 +123,7 @@ use_historic_flow_output_format = 0    # 1/0: The "historical flow format"
 
 calculate_vn_to_order = 9              # v_n's are calculated up to this order
 
-number_of_repeated_sampling = 100000    # How many times should the sampling be 
+number_of_repeated_sampling = 100000   # How many times should the sampling be 
                                        # repeated.
 
 sample_pT_up_to = -1                   # Up to this value will pT be sampled; 

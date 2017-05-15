@@ -281,7 +281,7 @@ double Table::invert(long colX, long colY, double yy, int mode, bool allowExtrap
 
 
 //----------------------------------------------------------------------
-double Table::interp2(double col_idx, double row_idx, int mode)
+double Table::interp2(double col_idx, double row_idx, int mode) {
 // Return the intepolated value at fractional column col_idx and row row_idx.
 // The parameter mode is used to determine how the interpolation is done.
 // -- mode: 1: bilinear
@@ -289,55 +289,71 @@ double Table::interp2(double col_idx, double row_idx, int mode)
 //          3: bi-cubic interpolation + extrapolation (closest 4*4 points used)
 //             Note that for this method to work the lattice should be at least
 //             4x4 large, which is not checked.
-//          4: logarithmic bilinear interpolation + extrapolation (closest 4 points used)
-//             requires all values are positive
-{
+//          4: logarithmic bilinear interpolation + extrapolation
+//             (closest 4 points used) requires all values are positive
     // boundary safty control
-    if (col_idx<=1) col_idx += 1e-10;
-    if (col_idx>=numberOfCols) col_idx -= 1e-10;
-    if (row_idx<=1) row_idx += 1e-10;
-    if (row_idx>=numberOfRows) row_idx -= 1e-10;
+    if (col_idx <= 1)
+        col_idx += 1e-10;
+    if (col_idx >= numberOfCols)
+        col_idx -= 1e-10;
+    if (row_idx <= 1)
+        row_idx += 1e-10;
+    if (row_idx >= numberOfRows)
+        row_idx -= 1e-10;
     // get integer parts:
     long col_idx_int = floor(col_idx);
     long row_idx_int = floor(row_idx);
 
-    switch (mode)
-    {
+    switch (mode) {
         case 1:
-            if (col_idx_int>=numberOfCols || col_idx_int<1 || row_idx_int>=numberOfRows || row_idx_int<1)
-            {
-                cout << "Table::interp2 error: the (col,row) index (" <<  col_idx << "," << row_idx << ") is out-of-bounds." << endl;
+            if (col_idx_int>=numberOfCols || col_idx_int<1
+                    || row_idx_int>=numberOfRows || row_idx_int<1) {
+                cout << "Table::interp2 error: the (col,row) index ("
+                     <<  col_idx << "," << row_idx << ") is out-of-bounds."
+                     << endl;
                 exit(-1);
             }
             break;
         case 2:
-            if (col_idx_int<1) col_idx_int=1;
-            if (col_idx_int>=numberOfCols) col_idx_int=numberOfCols-1;
-            if (row_idx_int<1) row_idx_int=1;
-            if (row_idx_int>=numberOfRows) row_idx_int=numberOfRows-1;
+            if (col_idx_int < 1)
+                col_idx_int=1;
+            if (col_idx_int >= numberOfCols)
+                col_idx_int = numberOfCols - 1;
+            if (row_idx_int < 1)
+                row_idx_int = 1;
+            if (row_idx_int >= numberOfRows)
+                row_idx_int = numberOfRows - 1;
             break;
         case 3:
-            if (col_idx_int<1) col_idx_int=1;
-            if (col_idx_int>=numberOfCols-3) col_idx_int=numberOfCols-3; // need 4 points
-            if (row_idx_int<1) row_idx_int=1;
-            if (row_idx_int>=numberOfRows-3) row_idx_int=numberOfRows-3; // need 4 points
+            if (col_idx_int < 1)
+                col_idx_int = 1;
+            if (col_idx_int >= numberOfCols - 3)
+                col_idx_int = numberOfCols - 3; // need 4 points
+            if (row_idx_int < 1)
+                row_idx_int = 1;
+            if (row_idx_int >= numberOfRows - 3)
+                row_idx_int=numberOfRows - 3; // need 4 points
             break;
         case 4:
-            if (col_idx_int<1) col_idx_int=1;
-            if (col_idx_int>=numberOfCols) col_idx_int=numberOfCols-1;
-            if (row_idx_int<1) row_idx_int=1;
-            if (row_idx_int>=numberOfRows) row_idx_int=numberOfRows-1;
+            if (col_idx_int < 1)
+                col_idx_int = 1;
+            if (col_idx_int >= numberOfCols)
+                col_idx_int = numberOfCols - 1;
+            if (row_idx_int < 1)
+                row_idx_int = 1;
+            if (row_idx_int >= numberOfRows)
+                row_idx_int = numberOfRows - 1;
             break;
         default:
-            cout << "Table::interp2 error: desired mode=" << mode << " is not supported." << endl;
+            cout << "Table::interp2 error: desired mode=" << mode 
+                 << " is not supported." << endl;
             exit(-1);
     }
 
     double col_idx_fraction = col_idx - col_idx_int;
     double row_idx_fraction = row_idx - row_idx_int;
     
-    if (mode==1 || mode==2)
-    {
+    if (mode == 1 || mode == 2) {
         double f00,f01,f10,f11;
         f00 = get(col_idx_int, row_idx_int);
         f01 = get(col_idx_int, row_idx_int+1);
@@ -348,17 +364,31 @@ double Table::interp2(double col_idx, double row_idx, int mode)
                 + f10*col_idx_fraction*(1-row_idx_fraction)
                 + f11*col_idx_fraction*row_idx_fraction;
     }
-    if (mode==3)
-    {
+    if (mode == 3) {
         // row interpolation + extrapolation first
-        double A0 = interpCubic4Points(get(col_idx_int,row_idx_int), get(col_idx_int,row_idx_int+1), get(col_idx_int,row_idx_int+2), get(col_idx_int,row_idx_int+3), 1, row_idx_fraction);
-        double A1 = interpCubic4Points(get(col_idx_int+1,row_idx_int), get(col_idx_int+1,row_idx_int+1), get(col_idx_int+1,row_idx_int+2), get(col_idx_int+1,row_idx_int+3), 1, row_idx_fraction);
-        double A2 = interpCubic4Points(get(col_idx_int+2,row_idx_int), get(col_idx_int+2,row_idx_int+1), get(col_idx_int+2,row_idx_int+2), get(col_idx_int+2,row_idx_int+3), 1, row_idx_fraction);
-        double A3 = interpCubic4Points(get(col_idx_int+3,row_idx_int), get(col_idx_int+3,row_idx_int+1), get(col_idx_int+3,row_idx_int+2), get(col_idx_int+3,row_idx_int+3), 1, row_idx_fraction);
-        return interpCubic4Points(A0,A1,A2,A3,1, col_idx_fraction);
+        double A0 = interpCubic4Points(get(col_idx_int,row_idx_int),
+                                       get(col_idx_int,row_idx_int + 1),
+                                       get(col_idx_int,row_idx_int + 2),
+                                       get(col_idx_int,row_idx_int + 3),
+                                       1, row_idx_fraction);
+        double A1 = interpCubic4Points(get(col_idx_int+1,row_idx_int),
+                                       get(col_idx_int+1,row_idx_int+1),
+                                       get(col_idx_int+1,row_idx_int+2),
+                                       get(col_idx_int+1,row_idx_int+3),
+                                       1, row_idx_fraction);
+        double A2 = interpCubic4Points(get(col_idx_int+2,row_idx_int), 
+                                       get(col_idx_int+2,row_idx_int+1),
+                                       get(col_idx_int+2,row_idx_int+2),
+                                       get(col_idx_int+2,row_idx_int+3),
+                                       1, row_idx_fraction);
+        double A3 = interpCubic4Points(get(col_idx_int+3,row_idx_int),
+                                       get(col_idx_int+3,row_idx_int+1),
+                                       get(col_idx_int+3,row_idx_int+2),
+                                       get(col_idx_int+3,row_idx_int+3),
+                                       1, row_idx_fraction);
+        return interpCubic4Points(A0, A1, A2, A3, 1, col_idx_fraction);
     }
-    if (mode == 4)
-    {
+    if (mode == 4) {
         double f00,f01,f10,f11;
         double eps = 1e-15;
         f00 = log(max(eps, get(col_idx_int, row_idx_int)));
