@@ -324,6 +324,9 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
         ss >> surf_ptr[idx].u1;
         ss >> surf_ptr[idx].u2;
         ss >> surf_ptr[idx].u3;
+        surf_ptr[idx].u0 = sqrt(1. + surf_ptr[idx].u1*surf_ptr[idx].u1
+                                   + surf_ptr[idx].u2*surf_ptr[idx].u2
+                                   + surf_ptr[idx].u3*surf_ptr[idx].u3);
 
         // thermodynamic quantities at freeze out
         ss >> dummy;
@@ -357,6 +360,52 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
         surf_ptr[idx].pi23 = dummy*hbarC;
         ss >> dummy;
         surf_ptr[idx].pi33 = dummy*hbarC;
+        double **pi_init = new double* [4];
+        double **pi_reg = new double* [4];
+        double *u_flow = new double[4];
+        for (int ii = 0; ii < 4; ii++) {
+            pi_init[ii] = new double[4];
+            pi_reg[ii] = new double[4];
+        }
+        pi_init[0][0] = surf_ptr[idx].pi00;
+        pi_init[0][1] = surf_ptr[idx].pi01;
+        pi_init[0][2] = surf_ptr[idx].pi02;
+        pi_init[0][3] = surf_ptr[idx].pi03;
+        pi_init[1][0] = surf_ptr[idx].pi01;
+        pi_init[1][1] = surf_ptr[idx].pi11;
+        pi_init[1][2] = surf_ptr[idx].pi12;
+        pi_init[1][3] = surf_ptr[idx].pi13;
+        pi_init[2][0] = surf_ptr[idx].pi02;
+        pi_init[2][1] = surf_ptr[idx].pi12;
+        pi_init[2][2] = surf_ptr[idx].pi22;
+        pi_init[2][3] = surf_ptr[idx].pi23;
+        pi_init[3][0] = surf_ptr[idx].pi03;
+        pi_init[3][1] = surf_ptr[idx].pi13;
+        pi_init[3][2] = surf_ptr[idx].pi23;
+        pi_init[3][3] = surf_ptr[idx].pi33;
+        u_flow[0] = surf_ptr[idx].u0;
+        u_flow[1] = surf_ptr[idx].u1;
+        u_flow[2] = surf_ptr[idx].u2;
+        u_flow[3] = surf_ptr[idx].u3;
+        regulate_Wmunu(u_flow, pi_init, pi_reg);
+        surf_ptr[idx].pi00 = pi_reg[0][0];
+        surf_ptr[idx].pi01 = pi_reg[0][1];
+        surf_ptr[idx].pi02 = pi_reg[0][2];
+        surf_ptr[idx].pi03 = pi_reg[0][3];
+        surf_ptr[idx].pi11 = pi_reg[1][1];
+        surf_ptr[idx].pi12 = pi_reg[1][2];
+        surf_ptr[idx].pi13 = pi_reg[1][3];
+        surf_ptr[idx].pi22 = pi_reg[2][2];
+        surf_ptr[idx].pi23 = pi_reg[2][3];
+        surf_ptr[idx].pi33 = pi_reg[3][3];
+        for (int ii = 0; ii < 4; ii++) {
+            delete[] pi_init[ii];
+            delete[] pi_reg[ii];
+        }
+        delete[] pi_init;
+        delete[] pi_reg;
+        delete[] u_flow;
+
         if (turn_on_bulk == 1) {
             ss >> dummy;
             surf_ptr[idx].bulkPi = dummy*hbarC;  // GeV/fm^3
@@ -818,4 +867,36 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle, FO_surf* FOsurf_ptr,
         print_progressbar(static_cast<double>(i)/Nparticle);
     }
     print_progressbar(1);
+}
+
+void read_FOdata::regulate_Wmunu(double* u, double** Wmunu,
+                                 double** Wmunu_regulated) {
+    double gmunu[4][4] = {
+        {-1, 0, 0, 0},
+        { 0, 1, 0, 0},
+        { 0, 0, 1, 0},
+        { 0, 0, 0, 1}
+    };
+    double u_dot_pi[4];
+    double u_mu[4];
+    for (int i = 0; i < 4; i++) {
+        u_dot_pi[i] = (- u[0]*Wmunu[0][i] + u[1]*Wmunu[1][i] 
+                       + u[2]*Wmunu[2][i] + u[3]*Wmunu[3][i]);
+        u_mu[i] = gmunu[i][i]*u[i];
+    }
+    double tr_pi = - Wmunu[0][0] + Wmunu[1][1] + Wmunu[2][2] + Wmunu[3][3];
+    double u_dot_pi_dot_u = 0.0;
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            u_dot_pi_dot_u += u_mu[i]*Wmunu[i][j]*u_mu[j];
+        }
+    }
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            Wmunu_regulated[i][j] = (
+                Wmunu[i][j] + u[i]*u_dot_pi[j] + u[j]*u_dot_pi[i] 
+                + u[i]*u[j]*u_dot_pi_dot_u 
+                - 1./3.*(gmunu[i][j] + u[i]*u[j])*(tr_pi + u_dot_pi_dot_u));
+        }
+    }
 }

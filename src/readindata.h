@@ -81,6 +81,7 @@ class read_FOdata {
     void calculate_particle_mu_PCE(int Nparticle, FO_surf* FOsurf_ptr,
                                    int FO_length, particle_info* particle,
                                    double** particle_mu);
+    void regulate_Wmunu(double* u, double** Wmunu, double** Wmunu_regulated);
 };
 
 #endif  // SRC_READINDATA_H_
