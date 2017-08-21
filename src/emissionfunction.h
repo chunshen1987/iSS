@@ -27,13 +27,14 @@ class EmissionFunctionArray {
     int flag_restrict_deltaf;
     double deltaf_max_ratio;
 
+    int MC_sampling;
+
     Table *pT_tab, *phi_tab, *y_minus_eta_tab;
     int pT_tab_length, phi_tab_length;
 
     // the y_minus_eta_min_index holds the index 
     // to the smallest positive y-eta_s value
     int y_minus_eta_tab_length, y_minus_eta_min_index; 
-
     // true if y_minus_eta_tab has only positive part
     bool positive_y_minus_eta_table_only; 
 
@@ -57,6 +58,9 @@ class EmissionFunctionArray {
     // for each eta and FO-cell.
     double **dN_dxtdetady_pT_max; 
     double **dN_dxtdy_4all;  // dN / (dxt dy) for all particles
+    
+    // dN/(dxt dy) for one particle species
+    double *dN_dxtdy_for_one_particle_species; 
 
     int number_of_chosen_particles;
     // used in spectra and flow calculations; 
@@ -192,6 +196,8 @@ class EmissionFunctionArray {
     // the following variables need to be set first in order to 
     // call this function
     void calculate_dN_dxtdy_4all_particles(); 
+
+    void calculate_dN_dxtdy_for_one_particle_species(int particle_idx);
 
     double calculate_total_FZ_energy_flux();
     // to be used after calculate_dN_dxtdy_4all_particles

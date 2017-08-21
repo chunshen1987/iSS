@@ -78,19 +78,23 @@ EmissionFunctionArray::EmissionFunctionArray(
     turn_on_rhob = paraRdr->getVal("turn_on_rhob");
     flag_restrict_deltaf = paraRdr->getVal("restrict_deltaf");
     deltaf_max_ratio = paraRdr->getVal("deltaf_max_ratio");
+    
+    MC_sampling = paraRdr->getVal("MC_sampling");
 
     // allocate internal buffer
     dN_pTdpTdphidy = new Table(pT_tab_length, phi_tab_length);
     dN_pTdpTdphidy_max = new Table(pT_tab_length, phi_tab_length);
     dN_pTdpTdphidy_filename = "results/dN_pTdpTdphidy.dat";
   
-    dN_dxtdetady = new double*[y_minus_eta_tab_length];
-    for (int k = 0; k < y_minus_eta_tab_length; k++) 
-        dN_dxtdetady[k] = new double[FO_length];
+    if (MC_sampling == 1) {
+        dN_dxtdetady = new double*[y_minus_eta_tab_length];
+        for (int k = 0; k < y_minus_eta_tab_length; k++) 
+            dN_dxtdetady[k] = new double[FO_length];
 
-    dN_dxtdetady_pT_max = new double*[y_minus_eta_tab_length];
-    for (int k = 0; k < y_minus_eta_tab_length; k++)
-        dN_dxtdetady_pT_max[k] = new double[FO_length];
+        dN_dxtdetady_pT_max = new double*[y_minus_eta_tab_length];
+        for (int k = 0; k < y_minus_eta_tab_length; k++)
+            dN_dxtdetady_pT_max[k] = new double[FO_length];
+    }
 
     dN_dxtdetady_filename = "results/dN_dxdetady.dat";
 
@@ -208,9 +212,13 @@ EmissionFunctionArray::EmissionFunctionArray(
     OSCAR_header_filename = "OSCAR_header.txt";
     OSCAR_output_filename = "OSCAR.DAT";
 
-    dN_dxtdy_4all = new double*[FO_length];
-    for (long l=0; l<FO_length; l++)
-        dN_dxtdy_4all[l] = new double[number_of_chosen_particles];
+    if (MC_sampling == 2) {
+        //dN_dxtdy_4all = new double* [FO_length];
+        //for (long l=0; l<FO_length; l++) {
+        //    dN_dxtdy_4all[l] = new double[number_of_chosen_particles];
+        //}
+        dN_dxtdy_for_one_particle_species = new double[FO_length];
+    }
     //sorted_FZ = new long[FO_length];
 
     // for interpolation for the third way of sampling
@@ -276,14 +284,15 @@ EmissionFunctionArray::~EmissionFunctionArray()
   delete dN_pTdpTdphidy;
   delete dN_pTdpTdphidy_max;
 
-  for (int k=0; k<y_minus_eta_tab_length; k++) 
-      delete[] dN_dxtdetady[k];
-  delete[] dN_dxtdetady;
+  if (MC_sampling == 1) {
+    for (int k=0; k<y_minus_eta_tab_length; k++) 
+        delete[] dN_dxtdetady[k];
+    delete[] dN_dxtdetady;
 
-  for (int k=0; k<y_minus_eta_tab_length; k++)
-      delete[] dN_dxtdetady_pT_max[k];
-  delete[] dN_dxtdetady_pT_max;
-
+    for (int k=0; k<y_minus_eta_tab_length; k++)
+        delete[] dN_dxtdetady_pT_max[k];
+    delete[] dN_dxtdetady_pT_max;
+  }
 
   delete[] chosen_particles_01_table;
   delete[] chosen_particles_sampling_table;
@@ -297,9 +306,12 @@ EmissionFunctionArray::~EmissionFunctionArray()
       delete[] hypertrig_y_minus_eta_table[k];
   delete[] hypertrig_y_minus_eta_table;
 
-  for (long l=0; l<FO_length; l++)
-      delete[] dN_dxtdy_4all[l];
-  delete[] dN_dxtdy_4all;
+  if (MC_sampling == 2) {
+    //for (long l=0; l<FO_length; l++)
+    //    delete[] dN_dxtdy_4all[l];
+    //delete[] dN_dxtdy_4all;
+    delete[] dN_dxtdy_for_one_particle_species;
+  }
 
   //delete[] sorted_FZ;
 
@@ -2725,7 +2737,6 @@ void EmissionFunctionArray::shell() {
     // read in parameters
     int calculate_vn = paraRdr->getVal("calculate_vn");
     int historic_format = paraRdr->getVal("use_historic_flow_output_format");
-    int MC_sampling = paraRdr->getVal("MC_sampling");
 
     int perform_sampling_during_calculation = 0;
     if (MC_sampling == 3) {
@@ -2747,7 +2758,7 @@ void EmissionFunctionArray::shell() {
         if (USE_OSCAR_FORMAT)
             combine_samples_to_OSCAR();
     } else if (MC_sampling == 2) {
-        calculate_dN_dxtdy_4all_particles();
+        //calculate_dN_dxtdy_4all_particles();
         sample_using_dN_dxtdy_4all_particles_conventional();
         if (USE_OSCAR_FORMAT)
             combine_samples_to_OSCAR();
@@ -2870,7 +2881,6 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
 // The following functions are added starting from Ver 2.0
 //
 //--------------------------------------------------------------------------
-
 
 //***************************************************************************
 void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
@@ -3052,6 +3062,140 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
 
     sw.toc();
     cout << endl << " -- Calculate_dN_dxtdy_4all_particles finished in "
+         << sw.takeTime() << " seconds." << endl;
+}
+
+
+//***************************************************************************
+void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
+                                                            int particle_idx) {
+/*
+   The p_integral_table is a table stores results for the integral
+     int( p^2 / ( exp(sqrt(p^2+m^2)-mu) + 1), p=0..inf)
+   and m_integral_table is a table stores results for the integral
+     int( p^2 / ( exp(sqrt(p^2+m^2)-mu) - 1), p=0..inf)
+   for different m and mu values.
+   The m values changes with row indices and it starts with
+   integral_table_m0 with step integral_table_dm.
+   The m-mu values changes with column indices and it starts with
+   integral_table_m_minus_mu0 with step integral_table_dm_minus_mu.
+   Note that here m and mu represent in fact m/T and mu/T so they are
+   unitless.
+*/
+    Stopwatch sw;
+    sw.tic();
+
+    double *bulkvisCoefficients;
+    if (INCLUDE_BULK_DELTAF == 1) {
+        if (bulk_deltaf_kind == 0)
+            bulkvisCoefficients = new double[3];
+        else
+            bulkvisCoefficients = new double[2];
+    }
+
+    // now loop over all freeze-out cells and particles
+    FO_surf *surf; particle_info* particle;
+    double unit_factor = 1.0/pow(hbarC, 3);  // unit: convert to unitless
+
+    // loop over all the fluid cells
+    for (long l = 0; l < FO_length; l++) {
+        surf = &FOsurf_ptr[l];
+        double temp = surf->Tdec;
+        double tau = surf->tau;
+
+        double gammaT = surf->u0;
+        double ux = surf->u1;
+        double uy = surf->u2;
+        double uz = surf->u3;   // uz = tau*u^\eta
+
+        double da0 = surf->da0;
+        double da1 = surf->da1;
+        double da2 = surf->da2;
+        double da3 = surf->da3;
+
+        double dsigma_dot_u = tau*(da0*gammaT + ux*da1 + uy*da2 + uz*da3/tau);
+
+        // bulk delta f contribution
+        double bulkPi = 0.0;
+        if (INCLUDE_BULK_DELTAF == 1) {
+            if (bulk_deltaf_kind == 0)
+                bulkPi = surf->bulkPi;
+            else
+                bulkPi = surf->bulkPi/hbarC;  // unit in fm^-4
+            getbulkvisCoefficients(temp, bulkvisCoefficients);
+        }
+
+        // diffusion delta f
+        double dsigma_dot_q = 0.0;
+        double deltaf_qmu_coeff = 1.0;
+        double prefactor_qmu = 0.0;
+        if (INCLUDE_DIFFUSION_DELTAF == 1) {
+            double qmu0 = surf->qmu0;
+            double qmu1 = surf->qmu1;
+            double qmu2 = surf->qmu2;
+            double qmu3 = surf->qmu3;
+            dsigma_dot_q = tau*(da0*qmu0 + da1*qmu1 + da2*qmu2 + da3*qmu3/tau);
+
+            double mu_B = surf->muB;
+            deltaf_qmu_coeff = get_deltaf_qmu_coeff(temp, mu_B);
+
+            double rho_B = surf->Bn;
+            double Edec = surf->Edec;
+            double Pdec = surf->Pdec;
+            prefactor_qmu = rho_B/(Edec + Pdec);  // 1/GeV
+        }
+
+        // calculate dN / (dxt dy) for all particles
+        double total_N = 0;
+        int real_particle_idx = chosen_particles_sampling_table[particle_idx];
+        particle = &particles[real_particle_idx];
+
+        int sign = particle->sign;
+        int degen = particle->gspin;
+        double mass = particle->mass;
+        int baryon = particle->baryon;
+        double mu = baryon*surf->muB;
+        if (flag_PCE == 1) {
+            double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
+            mu += mu_PCE;
+        }
+
+        double prefactor = degen/(2.*M_PI*M_PI);
+        
+        // calculate dN / (dxt dy)
+        double* results_ptr = new double[5];
+        calculate_dN_analytic(particle, mu, temp, results_ptr);
+
+        double N_eq = unit_factor*prefactor*dsigma_dot_u*results_ptr[0];
+
+        double deltaN_bulk = 0.0;
+        if (INCLUDE_BULK_DELTAF == 1) {
+            deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u
+                           *(- bulkPi*bulkvisCoefficients[0])
+                           *(- bulkvisCoefficients[1]*results_ptr[1]
+                             + results_ptr[2]));
+        }
+
+        double deltaN_qmu = 0.0;
+        if (INCLUDE_DIFFUSION_DELTAF == 1) {
+            deltaN_qmu = (unit_factor*prefactor
+                          *dsigma_dot_q/deltaf_qmu_coeff
+                          *(- prefactor_qmu*results_ptr[3]
+                            - baryon*results_ptr[4]));
+        }
+
+        total_N = N_eq + deltaN_bulk + deltaN_qmu;
+
+        delete [] results_ptr;
+        dN_dxtdy_for_one_particle_species[l] = total_N;
+    }
+
+    if (INCLUDE_BULK_DELTAF == 1)
+        delete [] bulkvisCoefficients;
+
+    sw.toc();
+    cout << endl
+         << " -- calculate_dN_dxtdy_for_one_particle_species finished in "
          << sw.takeTime() << " seconds." << endl;
 }
 
@@ -3245,6 +3389,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
             << "sample_using_dN_dxtdy_4all_particles function."
             << endl << endl;
         for (int n = 0; n < number_of_chosen_particles; n++) {
+            calculate_dN_dxtdy_for_one_particle_species(n);
             int real_particle_idx = chosen_particles_sampling_table[n];
             particle = &particles[real_particle_idx];
             double mass = particle->mass;
@@ -3281,7 +3426,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
 
             // prepare the inverse CDF
             for (long l=0; l<FO_length; l++) {
-                dN_dxtdy_single_particle[l] = dN_dxtdy_4all[l][n];
+                //dN_dxtdy_single_particle[l] = dN_dxtdy_4all[l][n];
+                dN_dxtdy_single_particle[l] = (
+                                        dN_dxtdy_for_one_particle_species[l]);
             }
             RandomVariable1DArray rand1D(&dN_dxtdy_single_particle, 0);
 

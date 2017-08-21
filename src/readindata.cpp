@@ -86,10 +86,16 @@ int read_FOdata::get_number_of_freezeout_cells() {
         number_of_cells = num_temp;
         n_eta_skip = block_file.getNumberOfRows()/number_of_cells;
     } else if (mode == 2) {  // outputs from MUSIC full (3+1)-d
-        ostringstream surface_file;
-        surface_file << path << "/surface.dat";
-        Table block_file(surface_file.str().c_str());
-        number_of_cells = block_file.getNumberOfRows();
+        int number_of_lines = 0;
+        ostringstream surface_filename;
+        surface_filename << path << "/surface.dat";
+        std::string temp_line;
+        std::ifstream surface_file(surface_filename.str().c_str());
+        while (std::getline(surface_file, temp_line)) {
+            ++number_of_lines;
+        }
+        surface_file.close();
+        number_of_cells = number_of_lines;
     } else if (mode == 10) {  // outputs from hydro analysis
         ostringstream surface_file;
         surface_file << path << "/hyper_surface_2+1d.dat";
