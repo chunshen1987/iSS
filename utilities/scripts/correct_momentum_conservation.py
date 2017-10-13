@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import sys
 
@@ -14,6 +14,8 @@ OSCAR_file_path = str(sys.argv[1])
 
 OSCAR_file = open(OSCAR_file_path, 'r')
 output_file = open('OSCAR_w_GMC.DAT', 'w')
+
+a = 2  # w_i = pT^a/<pT^a>
 
 line_count = 0
 Nparticle = 0
@@ -41,19 +43,27 @@ for temp_line in OSCAR_file:
         CM_Px = sum(event_data[:, 2])
         CM_Py = sum(event_data[:, 3])
         CM_Pz = sum(event_data[:, 4])
+        mean_Px = CM_Px/Nparticle
+        mean_Py = CM_Py/Nparticle
+        mean_Pz = CM_Pz/Nparticle
+        pT_array = sqrt(event_data[:, 2]**2. + event_data[:, 3]**2.)
+        mean_pT = mean(pT_array)
+        mean_pTsq = mean(pT_array**2.)
+        weight = (pT_array**a)/mean(pT_array**a)
         total_E = sum(event_data[:, 5])
         print("total energy = %g GeV" % total_E)
-        print("correction per particle: delta_px = %g GeV, "
-              "delta_py = %g GeV, delta_pz = %g GeV"
-              % (CM_Px/Nparticle, CM_Py/Nparticle, CM_Pz/Nparticle))
-        event_data[:, 2] -= CM_Px/Nparticle
-        event_data[:, 3] -= CM_Py/Nparticle
-        event_data[:, 4] -= CM_Pz/Nparticle
+        print("<px> = %g GeV, <py> = %g GeV, <pz> = %g GeV"
+              % (mean_Px, mean_Py, mean_Pz))
+        print("<pT> = %g GeV, <pT^2> = %g GeV^2"
+              % (mean_pT, mean_pTsq))
+        event_data[:, 2] -= mean_Px*weight
+        event_data[:, 3] -= mean_Py*weight
+        event_data[:, 4] -= mean_Pz*weight
         event_data[:, 5] = sqrt(event_data[:, 2]**2. + event_data[:, 3]**2.
                                 + event_data[:, 4]**2. + event_data[:, 6]**2.)
         for iline in range(Nparticle):
             output_file.write(
-                "%d  %d  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e  %.16e\n"
+                "%10d  %10d  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n"
                 % (event_data[iline, 0], event_data[iline, 1],
                    event_data[iline, 2], event_data[iline, 3],
                    event_data[iline, 4], event_data[iline, 5],
