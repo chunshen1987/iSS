@@ -3150,9 +3150,9 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
         int real_particle_idx = chosen_particles_sampling_table[particle_idx];
         particle = &particles[real_particle_idx];
 
-        int sign = particle->sign;
+        //int sign = particle->sign;
         int degen = particle->gspin;
-        double mass = particle->mass;
+        //double mass = particle->mass;
         int baryon = particle->baryon;
         double mu = baryon*surf->muB;
         if (flag_PCE == 1) {
