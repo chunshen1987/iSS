@@ -1,4 +1,4 @@
-hydro_mode = 2           # mode for reading in freeze out information 
+hydro_mode = 1           # mode for reading in freeze out information 
                          # 0: reads outputs from VISH2+1
                          # 1: reads outputs from MUSIC assuming 
                          #    boost-invariant
