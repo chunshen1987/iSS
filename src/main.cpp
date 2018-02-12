@@ -24,10 +24,12 @@
 
 #include "./main.h"
 #include "./ParameterReader.h"
-#include "./Table.h"
-#include "./readindata.h"
-#include "./emissionfunction.h"
+#include "./iSS.h"
 #include "./arsenal.h"
+//#include "./Table.h"
+//#include "./readindata.h"
+//#include "./emissionfunction.h"
+
 
 using namespace std;
 
@@ -48,46 +50,49 @@ int main(int argc, char** argv) {
     paraRdr->readFromArguments(argc, argv);
     paraRdr->echo();
 
-    // Chun's input reading process
-    string path = "results";
+    iSS iSsampler(paraRdr);
+    iSsampler.shell();
 
-    // load freeze out information
-    read_FOdata freeze_out_data(paraRdr, path);
-    int FO_length = 0;
-    FO_length = freeze_out_data.get_number_of_freezeout_cells();
-    cout <<"total number of cells: " <<  FO_length << endl;
+    //// Chun's input reading process
+    //string path = "results";
 
-    FO_surf* FOsurf_ptr = new FO_surf[FO_length];
-    freeze_out_data.read_in_freeze_out_data(FO_length, FOsurf_ptr);
-    // read the chemical potential on the freeze out surface
-    particle_info *particle = new particle_info[Maxparticle];
-    int Nparticle = freeze_out_data.read_in_chemical_potentials(
-                                         path, FO_length, FOsurf_ptr, particle);
-    int flag_PCE = freeze_out_data.get_flag_PCE();
-    cout << endl << " -- Read in data finished!" << endl << endl;
+    //// load freeze out information
+    //read_FOdata freeze_out_data(paraRdr, path);
+    //int FO_length = 0;
+    //FO_length = freeze_out_data.get_number_of_freezeout_cells();
+    //cout <<"total number of cells: " <<  FO_length << endl;
 
-    // Next, Zhi's turn...
-    // init random seed from system time
-    timeval a;
-    gettimeofday(&a, 0);
-    long randomSeed = paraRdr->getVal("randomSeed");
-    // randomSeed<0 means to use CPU clock
-    if (randomSeed < 0)
-        randomSeed = a.tv_usec;
-    srand48(randomSeed);
+    //FO_surf* FOsurf_ptr = new FO_surf[FO_length];
+    //freeze_out_data.read_in_freeze_out_data(FO_length, FOsurf_ptr);
+    //// read the chemical potential on the freeze out surface
+    //particle_info *particle = new particle_info[Maxparticle];
+    //int Nparticle = freeze_out_data.read_in_chemical_potentials(
+    //                                     path, FO_length, FOsurf_ptr, particle);
+    //int flag_PCE = freeze_out_data.get_flag_PCE();
+    //cout << endl << " -- Read in data finished!" << endl << endl;
 
-    // skip others except for these particle
-    Table chosen_particles("EOS/chosen_particles.dat");
+    //// Next, Zhi's turn...
+    //// init random seed from system time
+    //timeval a;
+    //gettimeofday(&a, 0);
+    //long randomSeed = paraRdr->getVal("randomSeed");
+    //// randomSeed<0 means to use CPU clock
+    //if (randomSeed < 0)
+    //    randomSeed = a.tv_usec;
+    //srand48(randomSeed);
 
-    Table pT_tab("tables/pT_gauss_table.dat");    // pt tables
-    Table phi_tab("tables/phi_gauss_table.dat");  // phi tables
-    // eta uniform dist table
-    Table eta_tab("tables/eta_uni_table.dat");
-    // Table eta_tab("tables/eta_gauss_table_30_full.dat");
+    //// skip others except for these particle
+    //Table chosen_particles("EOS/chosen_particles.dat");
 
-    EmissionFunctionArray efa(&chosen_particles, &pT_tab, &phi_tab, &eta_tab,
-                              particle, Nparticle, FOsurf_ptr, FO_length,
-                              flag_PCE, paraRdr);
+    //Table pT_tab("tables/pT_gauss_table.dat");    // pt tables
+    //Table phi_tab("tables/phi_gauss_table.dat");  // phi tables
+    //// eta uniform dist table
+    //Table eta_tab("tables/eta_uni_table.dat");
+    //// Table eta_tab("tables/eta_gauss_table_30_full.dat");
 
-    efa.shell();
+    //EmissionFunctionArray efa(&chosen_particles, &pT_tab, &phi_tab, &eta_tab,
+    //                          particle, Nparticle, FOsurf_ptr, FO_length,
+    //                          flag_PCE, paraRdr);
+
+    //efa.shell();
 }

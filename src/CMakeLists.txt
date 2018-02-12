@@ -1,5 +1,6 @@
 add_executable (iSS.e
   main.cpp 
+  iSS.cpp
   arsenal.cpp
   ParameterReader.cpp
   RandomVariable1DArray.cpp
