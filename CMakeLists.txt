@@ -1,6 +1,9 @@
 cmake_minimum_required (VERSION 2.6)
 project (iSS)
 
+#for MacOSX
+cmake_policy(SET CMP0042 NEW)
+
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_HOME_DIRECTORY}")
 
 find_package (GSL REQUIRED)
