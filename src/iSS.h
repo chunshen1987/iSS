@@ -19,6 +19,8 @@ class iSS {
     int Nparticle;
     int flag_PCE;
 
+    long randomSeed;
+
     particle_info *particle;
 
  public:
@@ -26,6 +28,9 @@ class iSS {
     ~iSS();
 
     ParameterReader *paraRdr_ptr;
+
+    void set_random_seed();
+    void set_random_seed(int randomSeed_in);
 
     int shell();
     int read_in_FO_surface();

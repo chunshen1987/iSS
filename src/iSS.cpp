@@ -48,16 +48,22 @@ int iSS::read_in_FO_surface() {
     return(0);
 }
 
-int iSS::generate_samples() {
-    timeval a;
-    gettimeofday(&a, 0);
-    long randomSeed = paraRdr_ptr->getVal("randomSeed");
-    // randomSeed<0 means to use CPU clock
+void iSS::set_random_seed(int randomSeed_in) {
+    randomSeed = randomSeed_in;
+    srand48(randomSeed);
+}
+
+void iSS::set_random_seed() {
+    randomSeed = paraRdr_ptr->getVal("randomSeed");
     if (randomSeed < 0) {
+        timeval a;
+        gettimeofday(&a, 0);
         randomSeed = a.tv_usec;
     }
     srand48(randomSeed);
-    
+}
+
+int iSS::generate_samples() {
     // skip others except for these particle
     Table chosen_particles("EOS/chosen_particles.dat");
 
