@@ -6,15 +6,16 @@
 
 using namespace std;
 
-iSS::iSS(ParameterReader *paraRdr_in) {
+iSS::iSS() {
     path = "results";
     FO_length = 0;
-    paraRdr_ptr = paraRdr_in;
     Nparticle = 0;
     flag_PCE = 0;
 
     FOsurf_ptr = NULL;
     particle = NULL;
+
+    paraRdr_ptr = new ParameterReader;
 }
 
 iSS::~iSS() {

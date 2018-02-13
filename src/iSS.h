@@ -1,6 +1,8 @@
 #ifndef ISS_H
 #define ISS_H
 
+#include <string>
+
 #include "./ParameterReader.h"
 #include "./readindata.h"
 #include "./emissionfunction.h"
@@ -11,7 +13,6 @@ class iSS {
  private:
     string path;
     
-    ParameterReader *paraRdr_ptr;
     int FO_length;
     FO_surf* FOsurf_ptr;
 
@@ -21,8 +22,10 @@ class iSS {
     particle_info *particle;
 
  public:
-    iSS(ParameterReader *paraRdr_in);
+    iSS();
     ~iSS();
+
+    ParameterReader *paraRdr_ptr;
 
     int shell();
     int read_in_FO_surface();

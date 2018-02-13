@@ -44,13 +44,12 @@ int main(int argc, char** argv) {
     cout << endl << "**********************************************************"
          << endl << endl;
 
+    iSS iSsampler;
     // read in parameters
-    ParameterReader *paraRdr = new ParameterReader;
-    paraRdr->readFromFile("parameters.dat");
-    paraRdr->readFromArguments(argc, argv);
-    paraRdr->echo();
+    iSsampler.paraRdr_ptr->readFromFile("parameters.dat");
+    iSsampler.paraRdr_ptr->readFromArguments(argc, argv);
+    iSsampler.paraRdr_ptr->echo();
 
-    iSS iSsampler(paraRdr);
     iSsampler.shell();
 
     //// Chun's input reading process
