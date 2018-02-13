@@ -209,7 +209,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     dN_dxt_filename = "results/dN_dxt_%d.dat";
     dN_dx_filename = "results/dN_dx_%d.dat";
 
-    OSCAR_header_filename = "OSCAR_header.txt";
+    OSCAR_header_filename = "iSS_tables/OSCAR_header.txt";
     OSCAR_output_filename = "OSCAR.DAT";
 
     if (MC_sampling == 2) {
@@ -223,9 +223,11 @@ EmissionFunctionArray::EmissionFunctionArray(
 
     // for interpolation for the third way of sampling
     // generate new set of pT and phi table to be interpolated onto
-    pT_tab4Sampling.loadTableFromFile("tables/pT_table_for_sampling.dat");
+    pT_tab4Sampling.loadTableFromFile(
+                    "iSS_tables/bin_tables/pT_table_for_sampling.dat");
     pT_tab4Sampling_length = pT_tab4Sampling.getNumberOfRows();
-    phi_tab4Sampling.loadTableFromFile("tables/phi_table_for_sampling.dat");
+    phi_tab4Sampling.loadTableFromFile(
+                    "iSS_tables/bin_tables/phi_table_for_sampling.dat");
     phi_tab4Sampling_length = phi_tab4Sampling.getNumberOfRows();
     // extend pT_tab and phi_tab in order to extract index info for given
     // pT or phi
@@ -258,13 +260,14 @@ EmissionFunctionArray::EmissionFunctionArray(
 
     // arrays for bulk delta f coefficients
     if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0) {
-        bulkdf_coeff = (
-            new Table ("tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat"));
+        bulkdf_coeff = new Table (
+            "iSS_tables/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat");
     }
 
     // load table for diffusion delta f coeffient
     if (INCLUDE_DIFFUSION_DELTAF == 1) {
-        load_deltaf_qmu_coeff_table("tables/Coefficients_RTA_diffusion.dat");
+        load_deltaf_qmu_coeff_table(
+            "iSS_tables/deltaf_tables/Coefficients_RTA_diffusion.dat");
     }
 
     // create arrays for special functions who are needed to compute 
@@ -285,12 +288,14 @@ EmissionFunctionArray::~EmissionFunctionArray()
   delete dN_pTdpTdphidy_max;
 
   if (MC_sampling == 1) {
-    for (int k=0; k<y_minus_eta_tab_length; k++) 
+    for (int k=0; k<y_minus_eta_tab_length; k++) {
         delete[] dN_dxtdetady[k];
+    }
     delete[] dN_dxtdetady;
 
-    for (int k=0; k<y_minus_eta_tab_length; k++)
+    for (int k=0; k<y_minus_eta_tab_length; k++) {
         delete[] dN_dxtdetady_pT_max[k];
+    }
     delete[] dN_dxtdetady_pT_max;
   }
 
@@ -298,12 +303,14 @@ EmissionFunctionArray::~EmissionFunctionArray()
   delete[] chosen_particles_sampling_table;
   delete[] unidentifiedPid_table;
 
-  for (int j=0; j<phi_tab_length; j++)
+  for (int j=0; j<phi_tab_length; j++) {
       delete[] trig_phi_table[j];
+  }
   delete[] trig_phi_table;
 
-  for (int k=0; k<y_minus_eta_tab_length; k++)
+  for (int k=0; k<y_minus_eta_tab_length; k++) {
       delete[] hypertrig_y_minus_eta_table[k];
+  }
   delete[] hypertrig_y_minus_eta_table;
 
   if (MC_sampling == 2) {
@@ -315,17 +322,17 @@ EmissionFunctionArray::~EmissionFunctionArray()
 
   //delete[] sorted_FZ;
 
-  for (int j=0; j<phi_tab4Sampling_length; j++)
+  for (int j=0; j<phi_tab4Sampling_length; j++) {
       delete[] trig_phi_tab4Sampling[j];
+  }
   delete[] trig_phi_tab4Sampling;
 
-  if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0)
+  if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0) {
       delete bulkdf_coeff;
+  }
 
-  if(INCLUDE_DIFFUSION_DELTAF == 1)
-  {
-      for(int i = 0; i < deltaf_qmu_coeff_table_length_T; i++)
-      {
+  if(INCLUDE_DIFFUSION_DELTAF == 1) {
+      for (int i = 0; i < deltaf_qmu_coeff_table_length_T; i++) {
           delete [] deltaf_qmu_coeff_tb[i];
       }
       delete [] deltaf_qmu_coeff_tb;
@@ -334,15 +341,16 @@ EmissionFunctionArray::~EmissionFunctionArray()
   gsl_rng_free(gsl_random_r);
 
   // clean arrays for special functions
-  for(int i = 0; i < sf_tb_length; i++)
-  {
+  for (int i = 0; i < sf_tb_length; i++) {
       delete [] sf_bessel_Kn[i];
-      if(INCLUDE_DIFFUSION_DELTAF == 1)
+      if (INCLUDE_DIFFUSION_DELTAF == 1) {
           delete [] sf_expint_En[i];
+      }
   }
   delete [] sf_bessel_Kn;
-  if(INCLUDE_DIFFUSION_DELTAF == 1)
+  if (INCLUDE_DIFFUSION_DELTAF == 1) {
       delete [] sf_expint_En;
+  }
   delete [] lambert_W;
 }
 //***************************************************************************
@@ -3361,7 +3369,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
 
     // load pre-calculated table
     // (x,y) that y*exp(-y) = x; y<=1
-    TableFunction z_exp_m_z("tables/z_exp_m_z.dat");
+    TableFunction z_exp_m_z("iSS_tables/z_exp_m_z.dat");
     z_exp_m_z.interpolation_model = 5;
 
     // control variables
