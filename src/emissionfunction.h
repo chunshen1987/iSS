@@ -27,6 +27,8 @@ class EmissionFunctionArray {
     int flag_restrict_deltaf;
     double deltaf_max_ratio;
 
+    string path;
+
     int MC_sampling;
 
     Table *pT_tab, *phi_tab, *y_minus_eta_tab;
@@ -135,7 +137,8 @@ class EmissionFunctionArray {
                           Table* phi_tab_in, Table* eta_tab_in,
                           particle_info* particles_in, int Nparticles,
                           FO_surf* FOsurf_ptr_in, long FO_length_in,
-                          int flag_PCE_in, ParameterReader* paraRdr_in);
+                          int flag_PCE_in, ParameterReader* paraRdr_in,
+                          string path_in);
     ~EmissionFunctionArray();
 
     void initialize_special_function_arrays();

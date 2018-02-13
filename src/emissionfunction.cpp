@@ -41,7 +41,9 @@ EmissionFunctionArray::EmissionFunctionArray(
     Table* chosen_particles_in, Table* pt_tab_in, Table* phi_tab_in,
     Table* y_minus_eta_tab_in, particle_info* particles_in, int Nparticles_in,
     FO_surf* FOsurf_ptr_in, long FO_length_in, int flag_PCE_in,
-    ParameterReader* paraRdr_in) {
+    ParameterReader* paraRdr_in, string path_in) {
+
+    path = path_in;
     // get info
     flag_PCE = flag_PCE_in;
     pT_tab = pt_tab_in;
@@ -52,10 +54,11 @@ EmissionFunctionArray::EmissionFunctionArray(
     y_minus_eta_tab = y_minus_eta_tab_in;
     y_minus_eta_tab_length = y_minus_eta_tab->getNumberOfRows();
 
-    if (y_minus_eta_tab->get(1,1)>-1e-15)
+    if (y_minus_eta_tab->get(1,1)>-1e-15) {
         positive_y_minus_eta_table_only = true;
-    else 
+    } else {
         positive_y_minus_eta_table_only = false;
+    }
 
     particles = particles_in;
     Nparticles = Nparticles_in;
@@ -84,7 +87,8 @@ EmissionFunctionArray::EmissionFunctionArray(
     // allocate internal buffer
     dN_pTdpTdphidy = new Table(pT_tab_length, phi_tab_length);
     dN_pTdpTdphidy_max = new Table(pT_tab_length, phi_tab_length);
-    dN_pTdpTdphidy_filename = "results/dN_pTdpTdphidy.dat";
+    ostringstream filename_stream;
+    dN_pTdpTdphidy_filename = path + "/dN_pTdpTdphidy.dat";
   
     if (MC_sampling == 1) {
         dN_dxtdetady = new double*[y_minus_eta_tab_length];
@@ -96,7 +100,7 @@ EmissionFunctionArray::EmissionFunctionArray(
             dN_dxtdetady_pT_max[k] = new double[FO_length];
     }
 
-    dN_dxtdetady_filename = "results/dN_dxdetady.dat";
+    dN_dxtdetady_filename = path + "/dN_dxdetady.dat";
 
     // deal with chosen_particle_xxx tables
     number_of_chosen_particles = chosen_particles_in->getNumberOfRows();
@@ -162,10 +166,10 @@ EmissionFunctionArray::EmissionFunctionArray(
     }
 
     // for flow calculation
-    flow_differential_filename_old = "results/v2data.dat";
-    flow_integrated_filename_old = "results/v2data-inte.dat";
-    flow_differential_filename = "results/thermal_%d_vndata.dat";
-    flow_integrated_filename = "results/thermal_%d_integrated_vndata.dat";
+    flow_differential_filename_old = path + "/v2data.dat";
+    flow_integrated_filename_old = path + "/v2data-inte.dat";
+    flow_differential_filename = path + "/thermal_%d_vndata.dat";
+    flow_integrated_filename = path + "/thermal_%d_integrated_vndata.dat";
     last_particle_idx = -1;
 
     // pre-calculate variables
@@ -199,15 +203,15 @@ EmissionFunctionArray::EmissionFunctionArray(
     }
     //cout << "done" << endl;
 
-    samples_filename = "results/samples_%d.dat";
-    samples_control_filename = "results/samples_control_%d.dat";
-    samples_format_filename = "results/samples_format.dat";
+    samples_filename = path + "/samples_%d.dat";
+    samples_control_filename = path + "/samples_control_%d.dat";
+    samples_format_filename = path + "/samples_format.dat";
 
-    dN_dtau_filename = "results/dN_dtau_%d.dat";
-    dN_dphi_filename = "results/dN_dphi_%d.dat";
-    dN_deta_filename = "results/dN_deta_%d.dat";
-    dN_dxt_filename = "results/dN_dxt_%d.dat";
-    dN_dx_filename = "results/dN_dx_%d.dat";
+    dN_dtau_filename = path + "/dN_dtau_%d.dat";
+    dN_dphi_filename = path + "/dN_dphi_%d.dat";
+    dN_deta_filename = path + "/dN_deta_%d.dat";
+    dN_dxt_filename = path + "/dN_dxt_%d.dat";
+    dN_dx_filename = path + "/dN_dx_%d.dat";
 
     OSCAR_header_filename = "iSS_tables/OSCAR_header.txt";
     OSCAR_output_filename = "OSCAR.DAT";

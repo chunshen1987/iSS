@@ -84,7 +84,7 @@ int iSS::generate_samples() {
 
     EmissionFunctionArray efa(&chosen_particles, &pT_tab, &phi_tab, &eta_tab,
                               particle, Nparticle, FOsurf_ptr, FO_length,
-                              flag_PCE, paraRdr_ptr);
+                              flag_PCE, paraRdr_ptr, path);
     efa.shell();
     return(0);
 }
