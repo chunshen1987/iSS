@@ -29,8 +29,17 @@ iSS::~iSS() {
 }
 
 int iSS::shell() {
-    read_in_FO_surface();
-    generate_samples();
+    int status = read_in_FO_surface();
+    if (status != 0) {
+        cout << "Some errors happened in reading in the hyper-surface" << endl;
+        exit(-1);
+    }
+    set_random_seed();
+    status = generate_samples();
+    if (status != 0) {
+        cout << "Some errors happened in generating particle samples" << endl;
+        exit(-1);
+    }
     return(0);
 }
 

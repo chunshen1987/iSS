@@ -50,7 +50,10 @@ int main(int argc, char** argv) {
     iSsampler.paraRdr_ptr->readFromArguments(argc, argv);
     iSsampler.paraRdr_ptr->echo();
 
-    iSsampler.shell();
+    int status = iSsampler.shell();
+    if (status == 0) {
+        cout << "Program executed normally." << endl;
+    }
 
     //// Chun's input reading process
     //string path = "results";
