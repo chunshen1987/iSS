@@ -84,6 +84,8 @@ EmissionFunctionArray::EmissionFunctionArray(
     
     MC_sampling = paraRdr->getVal("MC_sampling");
 
+    flag_output_samples_into_files = (
+                            paraRdr->getVal("output_samples_into_files"));
     flag_store_samples_in_memory = paraRdr->getVal("store_samples_in_memory");
     if (MC_sampling != 2) {
         cout << "[Warning]: store_samples_in_memory is only supported for "
@@ -690,19 +692,24 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
     // for intermedia results
     //cout << "initializing intermedia variables... ";
     double dN_pTdpTdphidy_tab[pT_tab_length][phi_tab_length];
-    for (int i=0; i<pT_tab_length; i++)
-        for (int j=0; j<phi_tab_length; j++)
+    for (int i=0; i<pT_tab_length; i++) {
+        for (int j=0; j<phi_tab_length; j++) {
             dN_pTdpTdphidy_tab[i][j] = 0.0;
+        }
+    }
     double dN_pTdpTdphidy_max_tab[pT_tab_length][phi_tab_length];
-    for (int i=0; i<pT_tab_length; i++)
-        for (int j=0; j<phi_tab_length; j++)
+    for (int i=0; i<pT_tab_length; i++) {
+        for (int j=0; j<phi_tab_length; j++) {
             dN_pTdpTdphidy_max_tab[i][j] = 0.0;
+        }
+    }
 
 
     // create local cache
     double delta_y_minus_eta_tab[y_minus_eta_tab_length];
-    for (int k=0; k<y_minus_eta_tab_length; k++)
+    for (int k=0; k<y_minus_eta_tab_length; k++) {
         delta_y_minus_eta_tab[k] = y_minus_eta_tab->get(2,k+1);
+    }
 
     //---------------------------
     // THE main summation loop
@@ -1298,7 +1305,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(
 
 
 //***************************************************************************
-void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
+void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
 // This version give smooth distribution in pT and phi.
 // Sample according to the dN_dxtdetady and dN_dxtdetady_pT_max array. These
 // arrays are asssumed to be already cacluated.
@@ -1321,13 +1328,13 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
 // -- model parameter:
 //    1): The fractional part of dN_dy is used as a probability to determine
 //       whether we have 0 or 1 more particle.
-{
     Stopwatch sw;
     sw.tic();
 
     double pT_to = paraRdr->getVal("sample_pT_up_to");
-    if (pT_to < 0.)
-        pT_to = pT_tab->getLast(1); // use table to determine pT range
+    if (pT_to < 0.) {
+        pT_to = pT_tab->getLast(1);  // use table to determine pT range
+    }
     
     // If dN/(dx_t deta dy) is evaluated to be smaller than this value, 
     // then it is replaced by this value.
@@ -1347,12 +1354,12 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
     FO_surf* surf = &FOsurf_ptr[0];
   
     double *bulkvisCoefficients;
-    if(INCLUDE_BULK_DELTAF == 1)
-    {
-        if(bulk_deltaf_kind == 0)
+    if (INCLUDE_BULK_DELTAF == 1) {
+        if (bulk_deltaf_kind == 0) {
             bulkvisCoefficients = new double [3];
-        else
+        } else {
             bulkvisCoefficients = new double [2];
+        }
     }
 
     // create local cache
@@ -2791,10 +2798,10 @@ void EmissionFunctionArray::shell() {
     } else if (MC_sampling == 2) {
         //calculate_dN_dxtdy_4all_particles();
         sample_using_dN_dxtdy_4all_particles_conventional();
-        if (flag_store_samples_in_memory == 1) {
-            //check_samples_in_memory();
+        if (flag_output_samples_into_files == 1 && USE_OSCAR_FORMAT) {
+            combine_samples_to_OSCAR();
         }
-        if (USE_OSCAR_FORMAT) {
+        if (flag_store_samples_in_memory == 1 && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
         }
     } else if (MC_sampling == 3) {
@@ -2884,7 +2891,8 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
             // now copy each line from samples file to OSCAR file
             long ipart = 1;
             for (int m = 0; m < number_of_chosen_particles; m++) {
-                int monval = particles[chosen_particles_sampling_table[m]].monval;
+                int monval = (
+                        particles[chosen_particles_sampling_table[m]].monval);
                 for (long ii = 1; ii <= number_of_particles[m]; ii++) {
                     oscar << setw(10) << ipart << "  " 
                           << setw(10) << monval << "  ";
@@ -3473,14 +3481,22 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         sprintf(samples_control_filename_buffer,
                 samples_control_filename.c_str(), particle->monval);
         remove(samples_control_filename_buffer);
-        ofstream of_control(samples_control_filename_buffer);
+        ofstream of_control;
+        if (flag_output_samples_into_files == 1) {
+            of_control.open(samples_control_filename_buffer,
+                            std::ofstream::out | std::ofstream::app);
+        }
 
         // the sample file contains the actual samples
         char samples_filename_buffer[300];
         sprintf(samples_filename_buffer, samples_filename.c_str(),
                 particle->monval);
         remove(samples_filename_buffer);
-        ofstream of_sample(samples_filename_buffer);
+        ofstream of_sample;
+        if (flag_output_samples_into_files == 1) {
+            of_sample.open(samples_filename_buffer,
+                           std::ofstream::out | std::ofstream::app);
+        }
 
         // buffers are used to speed up the output process
         char line_buffer[500];            // only used in text mode
@@ -3553,12 +3569,19 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 dN, sampling_model, sampling_para1, sampling_para2, 
                 sampling_para3, sampling_para4, sampling_para5);
 
-            // write to control file
-            sprintf(line_buffer, "%lu\n", number_to_sample);
-            control_str_buffer << line_buffer;
             control_writing_signal++;
+            if (flag_output_samples_into_files == 1) {
+                // write to control file
+                sprintf(line_buffer, "%lu\n", number_to_sample);
+                control_str_buffer << line_buffer;
+                if (control_writing_signal == NUMBER_OF_LINES_TO_WRITE) {
+                    of_control << control_str_buffer.str();
+                    control_str_buffer.str("");
+                    control_writing_signal = 0;
+                }
+            }
+            
             if (control_writing_signal == NUMBER_OF_LINES_TO_WRITE) {
-                of_control << control_str_buffer.str();
                 if (use_dynamic_maximum && !has_adjusted_maximum) {
                     if (number_of_tries > adjust_maximum_after) {
                         // adjust maximum
@@ -3567,8 +3590,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                         has_adjusted_maximum = true;
                     }
                 }
-                control_str_buffer.str("");
-                control_writing_signal = 0;
             }
 
             long sample_idx = 1;
@@ -4026,12 +4047,14 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                             px, py, p_z, E, mass, surf->xpt, 
                             surf->ypt, z, t);
                 }
-                sample_str_buffer << line_buffer;
-                sample_writing_signal++;
-                if (sample_writing_signal==NUMBER_OF_LINES_TO_WRITE) {
-                    of_sample << sample_str_buffer.str();
-                    sample_str_buffer.str("");
-                    sample_writing_signal=0;
+                if (flag_output_samples_into_files == 1) {
+                    sample_str_buffer << line_buffer;
+                    sample_writing_signal++;
+                    if (sample_writing_signal == NUMBER_OF_LINES_TO_WRITE) {
+                        of_sample << sample_str_buffer.str();
+                        sample_str_buffer.str("");
+                        sample_writing_signal=0;
+                    }
                 }
 
                 if (flag_store_samples_in_memory == 1) {
@@ -4068,18 +4091,20 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
             }
         }
         // flushing buffers
-        if (control_writing_signal != 0) {
+        if (flag_output_samples_into_files == 1
+                && control_writing_signal != 0) {
             of_control << control_str_buffer.str();
             control_str_buffer.str("");
             control_writing_signal = 0;
+            of_control.close();
         }
-        of_control.close();
-        if (sample_writing_signal != 0) {
+        if (flag_output_samples_into_files == 1
+                && sample_writing_signal != 0) {
             of_sample << sample_str_buffer.str();
             sample_str_buffer.str("");
             sample_writing_signal = 0;
+            of_sample.close();
         }
-        of_sample.close();
         if (AMOUNT_OF_OUTPUT > 0) print_progressbar(1);
 
         if (AMOUNT_OF_OUTPUT > 3) {
@@ -4096,44 +4121,46 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
 
     } // n; particle loop
 
-    ofstream of_sample_format(samples_format_filename.c_str());
-    // Be careful that ParameterReader class convert all strings to lower 
-    // case so do NOT use variable names that differ only by cases!
-    if (!USE_OSCAR_FORMAT) {
-        of_sample_format
-        << "Total_number_of_columns = " << 18 << endl
-        << "FZ_cell_idx = " << 1 << endl
-        << "tau = " << 2 << endl
-        << "FZ_x = " << 3 << endl
-        << "FZ_y = " << 4 << endl
-        << "y_minus_eta_s = " << 5 << endl
-        << "pT = " << 6 << endl
-        << "phi = " << 7 << endl
-        << "surf_da0 = " << 8 << endl
-        << "surf_da1 = " << 9 << endl
-        << "surf_da2 = " << 10 << endl
-        << "surf_vx = " << 11 << endl
-        << "surf_vy = " << 12 << endl
-        << "y = " << 13 << endl
-        << "eta_s = " << 14 << endl
-        << "E = " << 15 << endl
-        << "p_z = " << 16 << endl
-        << "t = " << 17 << endl
-        << "z = " << 18 << endl;
-    } else {
-        of_sample_format
-        << "Total_number_of_columns = " << 9 << endl
-        << "t = " << 9 << endl
-        << "FZ_x = " << 6 << endl
-        << "FZ_y = " << 7 << endl
-        << "z = " << 8 << endl
-        << "E = " << 4 << endl
-        << "px = " << 1 << endl
-        << "py = " << 2 << endl
-        << "p_z = " << 3 << endl
-        << "mass =" << 5 << endl;
+    if (flag_output_samples_into_files == 1) {
+        ofstream of_sample_format(samples_format_filename.c_str());
+        // Be careful that ParameterReader class convert all strings to lower 
+        // case so do NOT use variable names that differ only by cases!
+        if (!USE_OSCAR_FORMAT) {
+            of_sample_format
+            << "Total_number_of_columns = " << 18 << endl
+            << "FZ_cell_idx = " << 1 << endl
+            << "tau = " << 2 << endl
+            << "FZ_x = " << 3 << endl
+            << "FZ_y = " << 4 << endl
+            << "y_minus_eta_s = " << 5 << endl
+            << "pT = " << 6 << endl
+            << "phi = " << 7 << endl
+            << "surf_da0 = " << 8 << endl
+            << "surf_da1 = " << 9 << endl
+            << "surf_da2 = " << 10 << endl
+            << "surf_vx = " << 11 << endl
+            << "surf_vy = " << 12 << endl
+            << "y = " << 13 << endl
+            << "eta_s = " << 14 << endl
+            << "E = " << 15 << endl
+            << "p_z = " << 16 << endl
+            << "t = " << 17 << endl
+            << "z = " << 18 << endl;
+        } else {
+            of_sample_format
+            << "Total_number_of_columns = " << 9 << endl
+            << "t = " << 9 << endl
+            << "FZ_x = " << 6 << endl
+            << "FZ_y = " << 7 << endl
+            << "z = " << 8 << endl
+            << "E = " << 4 << endl
+            << "px = " << 1 << endl
+            << "py = " << 2 << endl
+            << "p_z = " << 3 << endl
+            << "mass =" << 5 << endl;
+        }
+        of_sample_format.close();
     }
-    of_sample_format.close();
     
     if (INCLUDE_BULK_DELTAF == 1) {
         delete [] bulkvisCoefficients;

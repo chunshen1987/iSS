@@ -21,6 +21,7 @@ deltaf_max_ratio = 1.0   # the maximum allowed size of delta f w.r.t f0
 
 f0_is_not_small = 1      # include (1 \pm f_0) factor in delta f
 
+output_samples_into_files = 0
 use_OSCAR_format = 1     # output results in OSCAR format
 store_samples_in_memory = 1
 
@@ -124,7 +125,7 @@ use_historic_flow_output_format = 0    # 1/0: The "historical flow format"
 
 calculate_vn_to_order = 9              # v_n's are calculated up to this order
 
-number_of_repeated_sampling = 10       # How many times should the sampling be 
+number_of_repeated_sampling = 500      # How many times should the sampling be 
                                        # repeated.
 
 sample_pT_up_to = -1                   # Up to this value will pT be sampled; 

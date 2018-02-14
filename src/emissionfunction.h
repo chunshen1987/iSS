@@ -138,7 +138,8 @@ class EmissionFunctionArray {
     double lambert_x_min, lambert_x_max, lambert_dx;
     int lambert_tb_length;
     double *lambert_W;
-
+    
+    int flag_output_samples_into_files;
     int flag_store_samples_in_memory;
 
  public:
