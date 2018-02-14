@@ -12,19 +12,24 @@ iSS::iSS() {
     Nparticle = 0;
     flag_PCE = 0;
 
-    FOsurf_ptr = NULL;
-    particle = NULL;
+    FOsurf_ptr = nullptr;
+    particle = nullptr;
+    efa = nullptr;
 
     paraRdr_ptr = new ParameterReader;
 }
 
 iSS::~iSS() {
-    if (FOsurf_ptr != NULL) {
+    if (FOsurf_ptr != nullptr) {
         delete[] FOsurf_ptr;
     }
 
-    if (particle != NULL) {
+    if (particle != nullptr) {
         delete[] particle;
+    }
+
+    if (efa != nullptr) {
+        delete[] efa;
     }
 }
 
@@ -82,9 +87,12 @@ int iSS::generate_samples() {
     Table eta_tab("iSS_tables/bin_tables/eta_uni_table.dat");
     // Table eta_tab("tables/eta_gauss_table_30_full.dat");
 
-    EmissionFunctionArray efa(&chosen_particles, &pT_tab, &phi_tab, &eta_tab,
-                              particle, Nparticle, FOsurf_ptr, FO_length,
-                              flag_PCE, paraRdr_ptr, path);
-    efa.shell();
+    efa = new EmissionFunctionArray(
+            &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
+            particle, Nparticle, FOsurf_ptr, FO_length,
+            flag_PCE, paraRdr_ptr, path);
+    efa->shell();
+
     return(0);
 }
+

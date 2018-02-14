@@ -22,6 +22,8 @@ class iSS {
     long randomSeed;
 
     particle_info *particle;
+    
+    EmissionFunctionArray *efa;
 
  public:
     iSS();
@@ -35,6 +37,18 @@ class iSS {
     int shell();
     int read_in_FO_surface();
     int generate_samples();
+
+    int get_number_of_sampled_events() {
+        return(efa->get_number_of_sampled_events());
+    };
+
+    int get_number_of_particles(int iev) {
+        return(efa->get_number_of_particles(iev));
+    };
+
+    Hadron get_hadron(int iev, int ipart) {
+        return(efa->get_hadron(iev, ipart));
+    };
 };
 
 
