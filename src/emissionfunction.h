@@ -228,6 +228,13 @@ class EmissionFunctionArray {
     double get_deltaf_qmu_coeff(double T, double muB);
 
     void check_samples_in_memory();
+    int get_number_of_sampled_events() {return(Hadron_list->size());};
+    int get_number_of_particles(int iev) {
+        return((*Hadron_list)[iev]->size());
+    };
+    Hadron get_hadron(int iev, int ipart) {
+        return((*(*Hadron_list)[iev])[ipart]);
+    };
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_
