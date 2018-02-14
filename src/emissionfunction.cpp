@@ -2782,8 +2782,7 @@ void EmissionFunctionArray::shell() {
 
 
 //***************************************************************************
-void EmissionFunctionArray::combine_samples_to_OSCAR()
-{
+void EmissionFunctionArray::combine_samples_to_OSCAR() {
     Stopwatch sw;
     sw.tic();
     cout << " -- Now combine sample files to OSCAR file..." << endl;
@@ -2796,15 +2795,13 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
 
     // write header first
     ifstream header(OSCAR_header_filename.c_str());
-    if (!header.is_open())
-    {
+    if (!header.is_open()) {
         cout << endl 
             << "combine_samples_to_OSCAR error: OSCAR header file " 
             << OSCAR_header_filename.c_str() << " not found." << endl;
         exit(-1);
     }
-    while (true)
-    {
+    while (true) {
         header.getline(line_buffer, 500);
         if (!header.eof()) oscar << line_buffer << endl;
         else break;
@@ -2814,16 +2811,14 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
     // open control and sample files
     vector<ifstream*> controls(number_of_chosen_particles); // control files
     vector<ifstream*> samples(number_of_chosen_particles); // sample files
-    for (int m=0; m<number_of_chosen_particles; m++)
-    {
+    for (int m = 0; m < number_of_chosen_particles; m++) {
         char filename_buffer[300];
         int monval = particles[chosen_particles_sampling_table[m]].monval;
         // control files first
         sprintf(filename_buffer, samples_control_filename.c_str(), monval);
         controls[m] = new ifstream ;
         controls[m]->open(filename_buffer);
-        if (!controls[m]->is_open())
-        {
+        if (!controls[m]->is_open()) {
             cout << endl 
                  << "combine_samples_to_OSCAR error: control file " 
                  << filename_buffer << " not found." << endl;
@@ -2832,8 +2827,7 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
         sprintf(filename_buffer, samples_filename.c_str(), monval);
         samples[m] = new ifstream ;
         samples[m]->open(filename_buffer);
-        if (!samples[m]->is_open())
-        {
+        if (!samples[m]->is_open()) {
             cout << endl 
                  << "combine_samples_to_OSCAR error: sample file " 
                  << filename_buffer << " not found." << endl;
@@ -2842,17 +2836,15 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
     }
 
     // big loop for generating OSCAR
-    if (AMOUNT_OF_OUTPUT>0) print_progressbar(-1);
+    if (AMOUNT_OF_OUTPUT > 0) print_progressbar(-1);
     long number_of_repeated_sampling = paraRdr->getVal(
                     "number_of_repeated_sampling");
     for (long sample_idx=1; sample_idx<=number_of_repeated_sampling; 
-         sample_idx++)
-    {
+         sample_idx++) {
         // read-in number of particles for each species
         int number_of_particles[number_of_chosen_particles];
         long total_number_of_particles = 0;
-        for (int m=0; m<number_of_chosen_particles; m++)
-        {
+        for (int m=0; m<number_of_chosen_particles; m++) {
             (*controls[m]) >> number_of_particles[m];
             total_number_of_particles += number_of_particles[m];
         }
@@ -2863,11 +2855,9 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
 
         // now copy each line from samples file to OSCAR file
         long ipart = 1;
-        for (int m=0; m<number_of_chosen_particles; m++)
-        {
+        for (int m = 0; m < number_of_chosen_particles; m++) {
             int monval = particles[chosen_particles_sampling_table[m]].monval;
-            for (long ii=1; ii<=number_of_particles[m]; ii++)
-            {
+            for (long ii = 1; ii <= number_of_particles[m]; ii++) {
                 oscar << setw(10) << ipart << "  " 
                       << setw(10) << monval << "  ";
                 samples[m]->getline(line_buffer, 500);
@@ -2875,8 +2865,10 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
                 ipart ++;
             }
         }
-        if (AMOUNT_OF_OUTPUT>0)
-            print_progressbar((double)sample_idx/number_of_repeated_sampling);
+        if (AMOUNT_OF_OUTPUT > 0) {
+            print_progressbar(
+                static_cast<double>(sample_idx/number_of_repeated_sampling));
+        }
     }
 
     sw.toc();
@@ -2884,7 +2876,6 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
          << " -- combine_samples_to_OSCAR samples finishes " 
          << sw.takeTime() << " seconds."
          << endl;
-
 }
 
 

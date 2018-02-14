@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
 
     iSS iSsampler;
     // read in parameters
-    iSsampler.paraRdr_ptr->readFromFile("parameters.dat");
+    iSsampler.paraRdr_ptr->readFromFile("iSS_parameters.dat");
     iSsampler.paraRdr_ptr->readFromArguments(argc, argv);
     iSsampler.paraRdr_ptr->echo();
 
