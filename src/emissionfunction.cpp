@@ -2800,8 +2800,7 @@ void EmissionFunctionArray::shell() {
         sample_using_dN_dxtdy_4all_particles_conventional();
         if (flag_output_samples_into_files == 1 && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
-        }
-        if (flag_store_samples_in_memory == 1 && USE_OSCAR_FORMAT) {
+        } else if (flag_store_samples_in_memory == 1 && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
         }
     } else if (MC_sampling == 3) {
