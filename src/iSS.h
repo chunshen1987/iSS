@@ -46,7 +46,7 @@ class iSS {
         return(efa->get_number_of_particles(iev));
     };
 
-    Hadron get_hadron(int iev, int ipart) {
+    iSS_Hadron get_hadron(int iev, int ipart) {
         return(efa->get_hadron(iev, ipart));
     };
 };

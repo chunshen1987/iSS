@@ -20,7 +20,7 @@
 
 using namespace std;
 
-struct Hadron {
+struct iSS_Hadron {
      int pid;
      double mass;
      double E, px, py, pz;
@@ -151,7 +151,7 @@ class EmissionFunctionArray {
                           string path_in);
     ~EmissionFunctionArray();
 
-    vector< vector<Hadron>* >* Hadron_list;
+    vector< vector<iSS_Hadron>* >* Hadron_list;
 
     void initialize_special_function_arrays();
     double get_special_function_K1(double arg);
@@ -233,7 +233,7 @@ class EmissionFunctionArray {
     int get_number_of_particles(int iev) {
         return((*Hadron_list)[iev]->size());
     };
-    Hadron get_hadron(int iev, int ipart) {
+    iSS_Hadron get_hadron(int iev, int ipart) {
         return((*(*Hadron_list)[iev])[ipart]);
     };
 };

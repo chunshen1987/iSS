@@ -94,7 +94,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     }
 
     if (flag_store_samples_in_memory == 1) {
-        Hadron_list = new vector< vector<Hadron>* >;
+        Hadron_list = new vector< vector<iSS_Hadron>* >;
     }
 
     // allocate internal buffer
@@ -3451,7 +3451,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     if (flag_store_samples_in_memory == 1) {
         for (int isample = 0; isample < number_of_repeated_sampling;
                 isample++) {
-            Hadron_list->push_back(new vector<Hadron> );
+            Hadron_list->push_back(new vector<iSS_Hadron> );
         }
     }
 
@@ -4057,7 +4057,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 }
 
                 if (flag_store_samples_in_memory == 1) {
-                    Hadron *temp_hadron = new Hadron;
+                    iSS_Hadron *temp_hadron = new iSS_Hadron;
                     temp_hadron->pid = particle->monval;
                     temp_hadron->mass = mass;
                     temp_hadron->E = E;
