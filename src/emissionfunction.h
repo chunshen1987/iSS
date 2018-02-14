@@ -20,6 +20,13 @@
 
 using namespace std;
 
+struct Hadron {
+     int pid;
+     double mass;
+     double E, px, py, pz;
+     double t, x, y, z;
+};
+
 class EmissionFunctionArray {
  private:
     int hydro_mode;   // switch for (2+1)-d or (3+1)-d hypersurface
@@ -132,6 +139,8 @@ class EmissionFunctionArray {
     int lambert_tb_length;
     double *lambert_W;
 
+    int flag_store_samples_in_memory;
+
  public:
     EmissionFunctionArray(Table* chosen_particle, Table* pt_tab_in,
                           Table* phi_tab_in, Table* eta_tab_in,
@@ -140,6 +149,8 @@ class EmissionFunctionArray {
                           int flag_PCE_in, ParameterReader* paraRdr_in,
                           string path_in);
     ~EmissionFunctionArray();
+
+    vector< vector<Hadron>* >* Hadron_list;
 
     void initialize_special_function_arrays();
     double get_special_function_K1(double arg);
@@ -215,6 +226,8 @@ class EmissionFunctionArray {
     void getbulkvisCoefficients(double Tdec, double* bulkvisCoefficients);
     void load_deltaf_qmu_coeff_table(string filename);
     double get_deltaf_qmu_coeff(double T, double muB);
+
+    void check_samples_in_memory();
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_
