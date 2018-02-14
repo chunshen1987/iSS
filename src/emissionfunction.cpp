@@ -2827,71 +2827,98 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
     }
     while (true) {
         header.getline(line_buffer, 500);
-        if (!header.eof()) oscar << line_buffer << endl;
-        else break;
+        if (!header.eof()) {
+            oscar << line_buffer << endl;
+        } else {
+            break;
+        }
     }
     header.close();
 
-    // open control and sample files
-    vector<ifstream*> controls(number_of_chosen_particles); // control files
-    vector<ifstream*> samples(number_of_chosen_particles); // sample files
-    for (int m = 0; m < number_of_chosen_particles; m++) {
-        char filename_buffer[300];
-        int monval = particles[chosen_particles_sampling_table[m]].monval;
-        // control files first
-        sprintf(filename_buffer, samples_control_filename.c_str(), monval);
-        controls[m] = new ifstream ;
-        controls[m]->open(filename_buffer);
-        if (!controls[m]->is_open()) {
-            cout << endl 
-                 << "combine_samples_to_OSCAR error: control file " 
-                 << filename_buffer << " not found." << endl;
-            exit(-1);
-        }
-        sprintf(filename_buffer, samples_filename.c_str(), monval);
-        samples[m] = new ifstream ;
-        samples[m]->open(filename_buffer);
-        if (!samples[m]->is_open()) {
-            cout << endl 
-                 << "combine_samples_to_OSCAR error: sample file " 
-                 << filename_buffer << " not found." << endl;
-            exit(-1);
-        }
-    }
-
-    // big loop for generating OSCAR
-    if (AMOUNT_OF_OUTPUT > 0) print_progressbar(-1);
-    long number_of_repeated_sampling = paraRdr->getVal(
-                    "number_of_repeated_sampling");
-    for (long sample_idx=1; sample_idx<=number_of_repeated_sampling; 
-         sample_idx++) {
-        // read-in number of particles for each species
-        int number_of_particles[number_of_chosen_particles];
-        long total_number_of_particles = 0;
-        for (int m=0; m<number_of_chosen_particles; m++) {
-            (*controls[m]) >> number_of_particles[m];
-            total_number_of_particles += number_of_particles[m];
-        }
-        // sub-header for each event
-        oscar << setw(10) << sample_idx << "  " 
-              << setw(10) << total_number_of_particles << "  " 
-              << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
-
-        // now copy each line from samples file to OSCAR file
-        long ipart = 1;
+    if (flag_store_samples_in_memory == 0) {
+        // open control and sample files
+        vector<ifstream*> controls(number_of_chosen_particles);
+        vector<ifstream*> samples(number_of_chosen_particles);
         for (int m = 0; m < number_of_chosen_particles; m++) {
+            char filename_buffer[300];
             int monval = particles[chosen_particles_sampling_table[m]].monval;
-            for (long ii = 1; ii <= number_of_particles[m]; ii++) {
-                oscar << setw(10) << ipart << "  " 
-                      << setw(10) << monval << "  ";
-                samples[m]->getline(line_buffer, 500);
-                oscar << line_buffer << endl;
-                ipart ++;
+            // control files first
+            sprintf(filename_buffer, samples_control_filename.c_str(), monval);
+            controls[m] = new ifstream ;
+            controls[m]->open(filename_buffer);
+            if (!controls[m]->is_open()) {
+                cout << endl 
+                     << "combine_samples_to_OSCAR error: control file " 
+                     << filename_buffer << " not found." << endl;
+                exit(-1);
+            }
+            sprintf(filename_buffer, samples_filename.c_str(), monval);
+            samples[m] = new ifstream ;
+            samples[m]->open(filename_buffer);
+            if (!samples[m]->is_open()) {
+                cout << endl 
+                     << "combine_samples_to_OSCAR error: sample file " 
+                     << filename_buffer << " not found." << endl;
+                exit(-1);
             }
         }
-        if (AMOUNT_OF_OUTPUT > 0) {
-            print_progressbar(
-                static_cast<double>(sample_idx/number_of_repeated_sampling));
+
+        // big loop for generating OSCAR
+        if (AMOUNT_OF_OUTPUT > 0) print_progressbar(-1);
+        long number_of_repeated_sampling = paraRdr->getVal(
+                        "number_of_repeated_sampling");
+        for (long sample_idx=1; sample_idx<=number_of_repeated_sampling; 
+             sample_idx++) {
+            // read-in number of particles for each species
+            int number_of_particles[number_of_chosen_particles];
+            long total_number_of_particles = 0;
+            for (int m=0; m<number_of_chosen_particles; m++) {
+                (*controls[m]) >> number_of_particles[m];
+                total_number_of_particles += number_of_particles[m];
+            }
+            // sub-header for each event
+            oscar << setw(10) << sample_idx << "  " 
+                  << setw(10) << total_number_of_particles << "  " 
+                  << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
+
+            // now copy each line from samples file to OSCAR file
+            long ipart = 1;
+            for (int m = 0; m < number_of_chosen_particles; m++) {
+                int monval = particles[chosen_particles_sampling_table[m]].monval;
+                for (long ii = 1; ii <= number_of_particles[m]; ii++) {
+                    oscar << setw(10) << ipart << "  " 
+                          << setw(10) << monval << "  ";
+                    samples[m]->getline(line_buffer, 500);
+                    oscar << line_buffer << endl;
+                    ipart ++;
+                }
+            }
+            if (AMOUNT_OF_OUTPUT > 0) {
+                print_progressbar(static_cast<double>(
+                            sample_idx/number_of_repeated_sampling));
+            }
+        }
+    } else {
+        for (unsigned int iev = 0; iev < Hadron_list->size(); iev++) {
+            int total_number_of_particles = (*Hadron_list)[iev]->size();
+            // sub-header for each event
+            oscar << setw(10) << iev << "  " 
+                  << setw(10) << total_number_of_particles << "  " 
+                  << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
+            for (int ipart = 0; ipart < total_number_of_particles; ipart++) {
+                oscar << setw(10) << ipart + 1 << "  "
+                      << setw(10) << (*(*Hadron_list)[iev])[ipart].pid << "  ";
+                oscar << scientific << setw(24) << setprecision(16)
+                      << (*(*Hadron_list)[iev])[ipart].px << "  "
+                      << (*(*Hadron_list)[iev])[ipart].py << "  "
+                      << (*(*Hadron_list)[iev])[ipart].pz << "  "
+                      << (*(*Hadron_list)[iev])[ipart].E << "  "
+                      << (*(*Hadron_list)[iev])[ipart].mass << "  "
+                      << (*(*Hadron_list)[iev])[ipart].x << "  "
+                      << (*(*Hadron_list)[iev])[ipart].y << "  "
+                      << (*(*Hadron_list)[iev])[ipart].z << "  "
+                      << (*(*Hadron_list)[iev])[ipart].t << endl;
+            }
         }
     }
 
