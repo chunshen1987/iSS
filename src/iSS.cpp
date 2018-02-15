@@ -29,7 +29,7 @@ iSS::~iSS() {
     }
 
     if (efa != nullptr) {
-        delete[] efa;
+        delete efa;
     }
 }
 
