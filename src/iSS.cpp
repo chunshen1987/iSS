@@ -6,8 +6,8 @@
 
 using namespace std;
 
-iSS::iSS() {
-    path = "results";
+iSS::iSS(string path_in) {
+    path = path_in;
     FO_length = 0;
     Nparticle = 0;
     flag_PCE = 0;

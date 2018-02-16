@@ -26,7 +26,7 @@ class iSS {
     EmissionFunctionArray *efa;
 
  public:
-    iSS();
+    iSS(string path_in);
     ~iSS();
 
     ParameterReader *paraRdr_ptr;

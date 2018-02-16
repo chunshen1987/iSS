@@ -44,7 +44,8 @@ int main(int argc, char** argv) {
     cout << endl << "**********************************************************"
          << endl << endl;
 
-    iSS iSsampler;
+    string path = "results";
+    iSS iSsampler(path);
     // read in parameters
     iSsampler.paraRdr_ptr->readFromFile("iSS_parameters.dat");
     iSsampler.paraRdr_ptr->readFromArguments(argc, argv);
