@@ -17,7 +17,7 @@ set (SOURCES
 
 add_library(iSS_lib SHARED ${SOURCES})
 add_executable(iSS.e ${SOURCES})
-target_link_libraries (iSS_lib ${LIBS})
-target_link_libraries (iSS.e ${LIBS})
+target_link_libraries (iSS_lib ${LIBS} ${ZLIB_LIBRARIES})
+target_link_libraries (iSS.e ${LIBS} ${ZLIB_LIBRARIES})
 
 install(TARGETS iSS.e DESTINATION ${CMAKE_HOME_DIRECTORY})

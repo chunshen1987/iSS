@@ -18,6 +18,7 @@
 #include <iomanip>
 #include <vector>
 
+#include "zlib.h"
 #include "./main.h"
 #include "./readindata.h"
 #include "./emissionfunction.h"
@@ -72,6 +73,7 @@ EmissionFunctionArray::EmissionFunctionArray(
 
     F0_IS_NOT_SMALL = paraRdr->getVal("f0_is_not_small");
     USE_OSCAR_FORMAT = paraRdr->getVal("use_OSCAR_format");
+    USE_GZIP_FORMAT = paraRdr->getVal("use_gzip_format");
     INCLUDE_DELTAF = paraRdr->getVal("include_deltaf_shear");
     INCLUDE_BULK_DELTAF = paraRdr->getVal("include_deltaf_bulk");
     bulk_deltaf_kind = paraRdr->getVal("bulk_deltaf_kind");
@@ -2816,6 +2818,8 @@ void EmissionFunctionArray::shell() {
             combine_samples_to_OSCAR();
         } else if (flag_store_samples_in_memory == 1 && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
+        } else if (flag_store_samples_in_memory == 1 && USE_GZIP_FORMAT) {
+            combine_samples_to_gzip_file();
         }
     } else if (MC_sampling == 3) {
         if (USE_OSCAR_FORMAT) {
@@ -2946,6 +2950,45 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
     sw.toc();
     cout << endl
          << " -- combine_samples_to_OSCAR samples finishes " 
+         << sw.takeTime() << " seconds."
+         << endl;
+}
+
+
+void EmissionFunctionArray::combine_samples_to_gzip_file() {
+    Stopwatch sw;
+    sw.tic();
+    cout << " -- Now combine sample files to a gzip file..." << endl;
+
+    // open file for output
+    string gzip_output_filename = "particle_samples.gz";
+    remove(gzip_output_filename.c_str());
+    gzFile fp_gz = gzopen(gzip_output_filename.c_str(), "wb");
+
+    if (flag_store_samples_in_memory == 1) {
+        for (unsigned int iev = 0; iev < Hadron_list->size(); iev++) {
+            int total_number_of_particles = (*Hadron_list)[iev]->size();
+            gzprintf(fp_gz, "%d \n", total_number_of_particles);
+            for (int ipart = 0; ipart < total_number_of_particles; ipart++) {
+                gzprintf(fp_gz, "%d ", (*(*Hadron_list)[iev])[ipart].pid);
+                gzprintf(fp_gz,
+                         "%.7e %.7e %.7e %.7e %.7e %.7e %.7e %.7e %.7e\n",
+                         (*(*Hadron_list)[iev])[ipart].mass,
+                         (*(*Hadron_list)[iev])[ipart].t,
+                         (*(*Hadron_list)[iev])[ipart].x,
+                         (*(*Hadron_list)[iev])[ipart].y,
+                         (*(*Hadron_list)[iev])[ipart].z,
+                         (*(*Hadron_list)[iev])[ipart].E,
+                         (*(*Hadron_list)[iev])[ipart].px,
+                         (*(*Hadron_list)[iev])[ipart].py,
+                         (*(*Hadron_list)[iev])[ipart].pz);
+            }
+        }
+    }
+
+    sw.toc();
+    cout << endl
+         << " -- combine_samples_to_gzip_file finishes " 
          << sw.takeTime() << " seconds."
          << endl;
 }
