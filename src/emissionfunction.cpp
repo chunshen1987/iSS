@@ -287,6 +287,8 @@ EmissionFunctionArray::EmissionFunctionArray(
             "iSS_tables/deltaf_tables/Coefficients_RTA_diffusion.dat");
     }
 
+    decayer_ptr = new particle_decay;
+
     // create arrays for special functions who are needed to compute 
     // particle yields
     initialize_special_function_arrays();
@@ -298,76 +300,76 @@ EmissionFunctionArray::EmissionFunctionArray(
 
 //***************************************************************************
 EmissionFunctionArray::~EmissionFunctionArray() {
-  // Total number of "new" in constructor should equal the total number of 
-  // "delete" in the destructor!
-  delete dN_pTdpTdphidy;
-  delete dN_pTdpTdphidy_max;
+    // Total number of "new" in constructor should equal the total number of 
+    // "delete" in the destructor!
+    delete dN_pTdpTdphidy;
+    delete dN_pTdpTdphidy_max;
 
-  if (MC_sampling == 1) {
-    for (int k=0; k<y_minus_eta_tab_length; k++) {
-        delete[] dN_dxtdetady[k];
+    if (MC_sampling == 1) {
+        for (int k=0; k<y_minus_eta_tab_length; k++) {
+            delete[] dN_dxtdetady[k];
+        }
+        delete[] dN_dxtdetady;
+
+        for (int k=0; k<y_minus_eta_tab_length; k++) {
+            delete[] dN_dxtdetady_pT_max[k];
+        }
+        delete[] dN_dxtdetady_pT_max;
     }
-    delete[] dN_dxtdetady;
+
+    delete[] chosen_particles_01_table;
+    delete[] chosen_particles_sampling_table;
+    delete[] unidentifiedPid_table;
+
+    for (int j=0; j<phi_tab_length; j++) {
+        delete[] trig_phi_table[j];
+    }
+    delete[] trig_phi_table;
 
     for (int k=0; k<y_minus_eta_tab_length; k++) {
-        delete[] dN_dxtdetady_pT_max[k];
+        delete[] hypertrig_y_minus_eta_table[k];
     }
-    delete[] dN_dxtdetady_pT_max;
-  }
+    delete[] hypertrig_y_minus_eta_table;
 
-  delete[] chosen_particles_01_table;
-  delete[] chosen_particles_sampling_table;
-  delete[] unidentifiedPid_table;
+    if (MC_sampling == 2) {
+        //for (long l=0; l<FO_length; l++)
+        //    delete[] dN_dxtdy_4all[l];
+        //delete[] dN_dxtdy_4all;
+        delete[] dN_dxtdy_for_one_particle_species;
+    }
 
-  for (int j=0; j<phi_tab_length; j++) {
-      delete[] trig_phi_table[j];
-  }
-  delete[] trig_phi_table;
+    //delete[] sorted_FZ;
 
-  for (int k=0; k<y_minus_eta_tab_length; k++) {
-      delete[] hypertrig_y_minus_eta_table[k];
-  }
-  delete[] hypertrig_y_minus_eta_table;
+    for (int j=0; j<phi_tab4Sampling_length; j++) {
+        delete[] trig_phi_tab4Sampling[j];
+    }
+    delete[] trig_phi_tab4Sampling;
 
-  if (MC_sampling == 2) {
-    //for (long l=0; l<FO_length; l++)
-    //    delete[] dN_dxtdy_4all[l];
-    //delete[] dN_dxtdy_4all;
-    delete[] dN_dxtdy_for_one_particle_species;
-  }
+    if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0) {
+        delete bulkdf_coeff;
+    }
 
-  //delete[] sorted_FZ;
+    if (INCLUDE_DIFFUSION_DELTAF == 1) {
+        for (int i = 0; i < deltaf_qmu_coeff_table_length_T; i++) {
+            delete [] deltaf_qmu_coeff_tb[i];
+        }
+        delete [] deltaf_qmu_coeff_tb;
+    }
 
-  for (int j=0; j<phi_tab4Sampling_length; j++) {
-      delete[] trig_phi_tab4Sampling[j];
-  }
-  delete[] trig_phi_tab4Sampling;
+    gsl_rng_free(gsl_random_r);
 
-  if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0) {
-      delete bulkdf_coeff;
-  }
-
-  if(INCLUDE_DIFFUSION_DELTAF == 1) {
-      for (int i = 0; i < deltaf_qmu_coeff_table_length_T; i++) {
-          delete [] deltaf_qmu_coeff_tb[i];
-      }
-      delete [] deltaf_qmu_coeff_tb;
-  }
-
-  gsl_rng_free(gsl_random_r);
-
-  // clean arrays for special functions
-  for (int i = 0; i < sf_tb_length; i++) {
-      delete [] sf_bessel_Kn[i];
-      if (INCLUDE_DIFFUSION_DELTAF == 1) {
-          delete [] sf_expint_En[i];
-      }
-  }
-  delete [] sf_bessel_Kn;
-  if (INCLUDE_DIFFUSION_DELTAF == 1) {
-      delete [] sf_expint_En;
-  }
-  delete [] lambert_W;
+    // clean arrays for special functions
+    for (int i = 0; i < sf_tb_length; i++) {
+        delete [] sf_bessel_Kn[i];
+        if (INCLUDE_DIFFUSION_DELTAF == 1) {
+            delete [] sf_expint_En[i];
+        }
+    }
+    delete [] sf_bessel_Kn;
+    if (INCLUDE_DIFFUSION_DELTAF == 1) {
+        delete [] sf_expint_En;
+    }
+    delete [] lambert_W;
 
     if (flag_store_samples_in_memory == 1) {
         for (unsigned int i = 0; i < Hadron_list->size(); i++) {
@@ -375,6 +377,7 @@ EmissionFunctionArray::~EmissionFunctionArray() {
         }
         Hadron_list->clear();
     }
+    delete decayer_ptr;
 }
 //***************************************************************************
 
@@ -2798,6 +2801,7 @@ void EmissionFunctionArray::shell() {
     } else if (MC_sampling == 2) {
         //calculate_dN_dxtdy_4all_particles();
         sample_using_dN_dxtdy_4all_particles_conventional();
+        perform_resonance_feed_down(Hadron_list);
         if (flag_output_samples_into_files == 1 && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
         } else if (flag_store_samples_in_memory == 1 && USE_OSCAR_FORMAT) {
@@ -4172,15 +4176,15 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
 }
 
 void EmissionFunctionArray::getbulkvisCoefficients(
-                double Tdec, double* bulkvisCoefficients)
-{
+                double Tdec, double* bulkvisCoefficients) {
    double Tdec_fm = Tdec/hbarC;  // [1/fm]
    double Tdec_fm_power[11];    // cache the polynomial power of Tdec_fm
    Tdec_fm_power[1] = Tdec_fm;
-   for(int ipower = 2; ipower < 11; ipower++)
+   for (int ipower = 2; ipower < 11; ipower++) {
        Tdec_fm_power[ipower] = Tdec_fm_power[ipower-1]*Tdec_fm;
-   if(bulk_deltaf_kind == 0)       // 14 moment expansion
-   {
+   }
+   if (bulk_deltaf_kind == 0) {
+       // 14 moment expansion
         // load from file
         
         //B0 [fm^3/GeV^3]
@@ -4205,9 +4209,7 @@ void EmissionFunctionArray::getbulkvisCoefficients(
         // E0 [fm^3/GeV^3]
         //bulkvisCoefficients[2] = (
         //            -exp(-14.45087586*Tdec_fm + 11.62716548)/pow(hbarC, 3));
-   }
-   else if(bulk_deltaf_kind == 1)  // relaxation type
-   {
+   } else if(bulk_deltaf_kind == 1) {  // relaxation type
        // parameterization from JF
        // A Polynomial fit to each coefficient -- X is the temperature in fm^-1
        // Both fits are reliable between T=100 -- 180 MeV, 
@@ -4235,9 +4237,7 @@ void EmissionFunctionArray::getbulkvisCoefficients(
                                  + 2593.45375240886*Tdec_fm_power[8] 
                                  - 853.908199724349*Tdec_fm_power[9]
                                  + 124.260460450113*Tdec_fm_power[10]);
-   }
-   else if (bulk_deltaf_kind == 2)
-   {
+   } else if (bulk_deltaf_kind == 2) {
        // A Polynomial fit to each coefficient -- X is the temperature in fm^-1
        // Both fits are reliable between T=100 -- 180 MeV
        // do not trust it beyond
@@ -4264,9 +4264,7 @@ void EmissionFunctionArray::getbulkvisCoefficients(
                                  + 2271692965.05568*Tdec_fm_power[8] 
                                  - 687164038.128814*Tdec_fm_power[9] 
                                  + 93308348.3137008*Tdec_fm_power[10]);
-   }
-   else if (bulk_deltaf_kind == 3)
-   {
+   } else if (bulk_deltaf_kind == 3) {
        bulkvisCoefficients[0] = (  160421664.93603
                                  - 2212807124.97991*Tdec_fm_power[1] 
                                  + 13707913981.1425*Tdec_fm_power[2]
@@ -4289,9 +4287,7 @@ void EmissionFunctionArray::getbulkvisCoefficients(
                                  + 18353035766.9323*Tdec_fm_power[8] 
                                  - 5504165325.05431*Tdec_fm_power[9] 
                                  + 740468257.784873*Tdec_fm_power[10]);
-   }
-   else if (bulk_deltaf_kind == 4)
-   {
+   } else if (bulk_deltaf_kind == 4) {
        bulkvisCoefficients[0] = (  1167272041.90731 
                                  - 16378866444.6842*Tdec_fm_power[1] 
                                  + 103037615761.617*Tdec_fm_power[2] 
@@ -4318,49 +4314,55 @@ void EmissionFunctionArray::getbulkvisCoefficients(
    return;
 }
 
-void EmissionFunctionArray::load_deltaf_qmu_coeff_table(string filename)
-{
-    ifstream table(filename.c_str());                                         
-    deltaf_qmu_coeff_table_length_T = 150;                                    
-    deltaf_qmu_coeff_table_length_mu = 100;                                   
-    delta_qmu_coeff_table_T0 = 0.05;                                          
-    delta_qmu_coeff_table_mu0 = 0.0;                                          
-    delta_qmu_coeff_table_dT = 0.001;                                         
-    delta_qmu_coeff_table_dmu = 0.007892;                                     
-    
-    deltaf_qmu_coeff_tb = new double* [deltaf_qmu_coeff_table_length_T];      
-    for(int i = 0; i < deltaf_qmu_coeff_table_length_T; i++)                  
+void EmissionFunctionArray::load_deltaf_qmu_coeff_table(string filename) {
+    ifstream table(filename.c_str());
+    deltaf_qmu_coeff_table_length_T = 150;
+    deltaf_qmu_coeff_table_length_mu = 100;
+    delta_qmu_coeff_table_T0 = 0.05;
+    delta_qmu_coeff_table_mu0 = 0.0;
+    delta_qmu_coeff_table_dT = 0.001;
+    delta_qmu_coeff_table_dmu = 0.007892;
+
+    deltaf_qmu_coeff_tb = new double* [deltaf_qmu_coeff_table_length_T];
+    for (int i = 0; i < deltaf_qmu_coeff_table_length_T; i++) {
         deltaf_qmu_coeff_tb[i] = new double [deltaf_qmu_coeff_table_length_mu];
+    }
 
     // load 2D table
     double dummy;                                                             
-    for(int j = 0; j < deltaf_qmu_coeff_table_length_mu; j++)
-        for(int i = 0; i < deltaf_qmu_coeff_table_length_T; i++)               
-            table >> dummy >> dummy >> deltaf_qmu_coeff_tb[i][j];               
-    table.close();                                                            
-}                                                                             
+    for (int j = 0; j < deltaf_qmu_coeff_table_length_mu; j++) {
+        for (int i = 0; i < deltaf_qmu_coeff_table_length_T; i++) {
+            table >> dummy >> dummy >> deltaf_qmu_coeff_tb[i][j];
+        }
+    }
+    table.close();
+}
 
-double EmissionFunctionArray::get_deltaf_qmu_coeff(double T, double muB)
-{
-    int idx_T = (int)((T - delta_qmu_coeff_table_T0)/delta_qmu_coeff_table_dT);
-    int idx_mu = (int)((muB - delta_qmu_coeff_table_mu0)
-                       /delta_qmu_coeff_table_dmu);
+double EmissionFunctionArray::get_deltaf_qmu_coeff(double T, double muB) {
+    int idx_T = static_cast<int>((T - delta_qmu_coeff_table_T0)
+                                 /delta_qmu_coeff_table_dT);
+    int idx_mu = static_cast<int>((muB - delta_qmu_coeff_table_mu0)
+                                  /delta_qmu_coeff_table_dmu);
     double x_fraction = ((T - delta_qmu_coeff_table_T0)
                          /delta_qmu_coeff_table_dT - idx_T);
     double y_fraction = ((muB - delta_qmu_coeff_table_mu0)
                          /delta_qmu_coeff_table_dmu - idx_mu); 
     
     //avoid overflow
-    if(idx_mu > deltaf_qmu_coeff_table_length_mu - 2)
+    if (idx_mu > deltaf_qmu_coeff_table_length_mu - 2) {
         return(1e30);
-    if(idx_T > deltaf_qmu_coeff_table_length_T - 2)
+    }
+    if (idx_T > deltaf_qmu_coeff_table_length_T - 2) {
         return(1e30);
+    }
     
     // avoid underflow
-    if(idx_mu < 0)
+    if (idx_mu < 0) {
         return(1e30);
-    if(idx_T < 0)
+    }
+    if (idx_T < 0) {
         return(1e30);
+    }
     
     double f1 = deltaf_qmu_coeff_tb[idx_T][idx_mu];
     double f2 = deltaf_qmu_coeff_tb[idx_T][idx_mu+1];
@@ -4373,8 +4375,7 @@ double EmissionFunctionArray::get_deltaf_qmu_coeff(double T, double muB)
     return(coeff*hbarC);
 }
 
-void EmissionFunctionArray::initialize_special_function_arrays()
-{
+void EmissionFunctionArray::initialize_special_function_arrays() {
     cout << "Initializing special function arrays ... ";
     sf_expint_truncate_order = 10;
     sf_x_min = 0.5;
@@ -4382,27 +4383,26 @@ void EmissionFunctionArray::initialize_special_function_arrays()
     sf_dx = 0.05;
     sf_tb_length = (int)((sf_x_max - sf_x_min)/sf_dx) + 1;
     sf_bessel_Kn = new double* [sf_tb_length];
-    if(INCLUDE_DIFFUSION_DELTAF == 1)
+    if (INCLUDE_DIFFUSION_DELTAF == 1) {
         sf_expint_En = new double* [sf_tb_length];
-    for(int i = 0; i < sf_tb_length; i++)
-    {
+    }
+    for (int i = 0; i < sf_tb_length; i++) {
         sf_bessel_Kn[i] = new double [2];
 
         double sf_x = sf_x_min + i*sf_dx;
 
-        if(INCLUDE_BULK_DELTAF == 1)
+        if (INCLUDE_BULK_DELTAF == 1) {
             sf_bessel_Kn[i][0] = gsl_sf_bessel_K1(sf_x);     // store K_1
-        else
+        } else {
             sf_bessel_Kn[i][0] = 0.0;
+        }
 
         sf_bessel_Kn[i][1] = gsl_sf_bessel_Kn(2, sf_x);  // store K_2
 
-        if(INCLUDE_DIFFUSION_DELTAF == 1)
-        {
+        if (INCLUDE_DIFFUSION_DELTAF == 1) {
             sf_expint_En[i] = new double [sf_expint_truncate_order-1];
             sf_expint_En[i][0] = gsl_sf_expint_E2(sf_x);     // store E_2
-            for(int k = 1; k < sf_expint_truncate_order-1; k++)
-            {
+            for (int k = 1; k < sf_expint_truncate_order-1; k++) {
                 sf_expint_En[i][k] = gsl_sf_expint_En(2*k+2, sf_x);
             }
         }
@@ -4415,8 +4415,7 @@ void EmissionFunctionArray::initialize_special_function_arrays()
     lambert_tb_length = (int)((lambert_x_max - lambert_x_min)/lambert_dx) + 1;
     lambert_W = new double [lambert_tb_length];
     //ofstream check("lambertw_function.dat");
-    for(int i = 0; i < lambert_tb_length; i++)
-    {
+    for (int i = 0; i < lambert_tb_length; i++) {
         double lambert_x_local = lambert_x_min + i*lambert_dx;
         lambert_W[i] = gsl_sf_lambert_W0(lambert_x_local);
         //check << scientific << setw(18) << setprecision(8)
@@ -4426,22 +4425,17 @@ void EmissionFunctionArray::initialize_special_function_arrays()
     cout << "done!" << endl;
 }
 
-double EmissionFunctionArray::get_special_function_K2(double arg)
-{
+double EmissionFunctionArray::get_special_function_K2(double arg) {
     double results;
-    if(arg < sf_x_min || arg > sf_x_max-sf_dx)
-    {
-        if(AMOUNT_OF_OUTPUT > 5)
-        {
+    if (arg < sf_x_min || arg > sf_x_max-sf_dx) {
+        if (AMOUNT_OF_OUTPUT > 5) {
             cout << "EmissionFunctionArray::get_special_function_K2: "
                  << "out of the table bound!" << endl;
             cout << "sf_x_min = " << sf_x_min << ", sf_x_max = " << sf_x_max
                  << ", arg = " << arg << endl;
         }
         results = gsl_sf_bessel_Kn(2, arg);
-    }
-    else
-    {
+    } else {
         int idx = (int)((arg - sf_x_min)/sf_dx);
         double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
         results = ((1. - fraction)*sf_bessel_Kn[idx][1] 
@@ -4450,22 +4444,17 @@ double EmissionFunctionArray::get_special_function_K2(double arg)
     return(results);
 }
 
-double EmissionFunctionArray::get_special_function_K1(double arg)
-{
+double EmissionFunctionArray::get_special_function_K1(double arg) {
     double results;
-    if(arg < sf_x_min || arg > sf_x_max-sf_dx)
-    {
-        if(AMOUNT_OF_OUTPUT > 5)
-        {
+    if (arg < sf_x_min || arg > sf_x_max-sf_dx) {
+        if (AMOUNT_OF_OUTPUT > 5) {
             cout << "EmissionFunctionArray::get_special_function_K1: "
                  << "out of the table bound!" << endl;
             cout << "sf_x_min = " << sf_x_min << ", sf_x_max = " << sf_x_max
                  << ", arg = " << arg << endl;
         }
         results = gsl_sf_bessel_K1(arg);
-    }
-    else
-    {
+    } else {
         int idx = (int)((arg - sf_x_min)/sf_dx);
         double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
         results = ((1. - fraction)*sf_bessel_Kn[idx][0] 
@@ -4475,29 +4464,22 @@ double EmissionFunctionArray::get_special_function_K1(double arg)
 }
 
 void EmissionFunctionArray::get_special_function_En(double arg, 
-                                                    double* results)
-{
-    if(arg < sf_x_min || arg > sf_x_max-sf_dx)
-    {
-        if(AMOUNT_OF_OUTPUT > 5)
-        {
+                                                    double* results) {
+    if (arg < sf_x_min || arg > sf_x_max-sf_dx) {
+        if (AMOUNT_OF_OUTPUT > 5) {
             cout << "EmissionFunctionArray::get_special_function_En: "
                  << "out of the table bound!" << endl;
             cout << "sf_x_min = " << sf_x_min << ", sf_x_max = " << sf_x_max
                  << ", arg = " << arg << endl;
         }
         results[0] = gsl_sf_expint_E2(arg);
-        for(int i = 1; i < sf_expint_truncate_order-1; i++)
-        {
+        for (int i = 1; i < sf_expint_truncate_order-1; i++) {
             results[i] = gsl_sf_expint_En(2*i+2, arg);
         }
-    }
-    else
-    {
+    } else {
         int idx = (int)((arg - sf_x_min)/sf_dx);
         double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
-        for(int i = 0; i < sf_expint_truncate_order-1; i++)
-        {
+        for (int i = 0; i < sf_expint_truncate_order-1; i++) {
             results[i] = ((1. - fraction)*sf_expint_En[idx][i] 
                           + fraction*sf_expint_En[idx+1][i]);
         }
@@ -4535,5 +4517,40 @@ void EmissionFunctionArray::check_samples_in_memory() {
                  << " mass = " << (*(*Hadron_list)[i])[j].mass
                  << endl;
         }
+    }
+}
+
+void EmissionFunctionArray::perform_resonance_feed_down(
+                    vector< vector<iSS_Hadron>* >* input_particle_list) {
+    cout << "perform resonance decays... " << endl;
+    // loop over events
+    unsigned int nev = input_particle_list->size();
+    for (unsigned int ievent = 0; ievent < nev; ievent++) {
+        // create a temporary particle list
+        vector<iSS_Hadron> temp_list;
+        // copy all particles into the temp list
+        unsigned int Npart = (*input_particle_list)[ievent]->size();
+        for (unsigned int ipart = 0; ipart < Npart; ipart++) {
+            temp_list.push_back((*(*input_particle_list)[ievent])[ipart]);
+        }
+        (*input_particle_list)[ievent]->clear();
+        // perform resonance decays
+        for (unsigned int ipart = 0; ipart < temp_list.size(); ipart++) {
+            vector<iSS_Hadron> *daughter_list = new vector<iSS_Hadron>;
+            decayer_ptr->perform_decays(&temp_list[ipart], daughter_list);
+            for (unsigned int idaughter = 0; idaughter < daughter_list->size();
+                    idaughter++) {
+                if (decayer_ptr->check_particle_stable(
+                                        &(*daughter_list)[idaughter]) == 1) {
+                    (*input_particle_list)[ievent]->push_back(
+                                            (*daughter_list)[idaughter]);
+                } else {
+                    temp_list.push_back((*daughter_list)[idaughter]);
+                }
+            }
+            daughter_list->clear();
+            delete daughter_list;
+        }
+        temp_list.clear();
     }
 }

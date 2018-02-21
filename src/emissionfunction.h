@@ -16,16 +16,11 @@
 #include "./NBD.h"
 #include "./Poisson.h"
 #include "./ParameterReader.h"
+#include "./iSS_hadron.h"
+#include "./particle_decay.h"
 #include "./main.h"
 
 using namespace std;
-
-struct iSS_Hadron {
-     int pid;
-     double mass;
-     double E, px, py, pz;
-     double t, x, y, z;
-};
 
 class EmissionFunctionArray {
  private:
@@ -141,6 +136,9 @@ class EmissionFunctionArray {
     
     int flag_output_samples_into_files;
     int flag_store_samples_in_memory;
+    
+    //! particle decay
+    particle_decay *decayer_ptr;
 
  public:
     EmissionFunctionArray(Table* chosen_particle, Table* pt_tab_in,
@@ -236,6 +234,8 @@ class EmissionFunctionArray {
     iSS_Hadron get_hadron(int iev, int ipart) {
         return((*(*Hadron_list)[iev])[ipart]);
     };
+    void perform_resonance_feed_down(
+                vector< vector<iSS_Hadron>* >* input_particle_list);
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_

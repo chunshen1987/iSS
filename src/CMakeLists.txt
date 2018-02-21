@@ -12,6 +12,7 @@ set (SOURCES
   readindata.cpp
   Poisson.cpp
   NBD.cpp
+  particle_decay.cpp
   )
 
 add_library(iSS_lib SHARED ${SOURCES})
