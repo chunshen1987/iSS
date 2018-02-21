@@ -11,7 +11,7 @@
 ##  
 
 CC := icpc
-CFLAGS= -O3 -Wall $(shell gsl-config --cflags)
+CFLAGS= -O3 -Wall $(shell gsl-config --cflags) -lz
 
 RM		=	rm -f
 O               =       .o
@@ -27,13 +27,14 @@ endif
 SRC		=	main.cpp arsenal.cpp ParameterReader.cpp \
 			RandomVariable1DArray.cpp RandomVariable2DArray.cpp \
 			RandomVariable.cpp NBD.cpp TableFunction.cpp Table.cpp \
-			emissionfunction.cpp readindata.cpp Poisson.cpp
+			emissionfunction.cpp readindata.cpp Poisson.cpp particle_decay.cpp \
+			iSS.cpp
 
 INC		= 	main.h arsenal.h ParameterReader.h \
 			RandomVariable1DArray.h RandomVariable2DArray.h \
 			RandomVariable.h NBD.h TableFunction.h Table.h \
 			emissionfunction.h readindata.h Stopwatch.h \
-                  Poisson.h
+            Poisson.h particle_decay.h iSS_hadron.h iSS.h
 
 # -------------------------------------------------
 

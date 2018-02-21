@@ -2933,16 +2933,18 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
             for (int ipart = 0; ipart < total_number_of_particles; ipart++) {
                 oscar << setw(10) << ipart + 1 << "  "
                       << setw(10) << (*(*Hadron_list)[iev])[ipart].pid << "  ";
-                oscar << scientific << setw(24) << setprecision(16)
-                      << (*(*Hadron_list)[iev])[ipart].px << "  "
-                      << (*(*Hadron_list)[iev])[ipart].py << "  "
-                      << (*(*Hadron_list)[iev])[ipart].pz << "  "
-                      << (*(*Hadron_list)[iev])[ipart].E << "  "
-                      << (*(*Hadron_list)[iev])[ipart].mass << "  "
-                      << (*(*Hadron_list)[iev])[ipart].x << "  "
-                      << (*(*Hadron_list)[iev])[ipart].y << "  "
-                      << (*(*Hadron_list)[iev])[ipart].z << "  "
-                      << (*(*Hadron_list)[iev])[ipart].t << endl;
+                sprintf(line_buffer, 
+                        "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e",
+                        (*(*Hadron_list)[iev])[ipart].px,
+                        (*(*Hadron_list)[iev])[ipart].py,
+                        (*(*Hadron_list)[iev])[ipart].pz,
+                        (*(*Hadron_list)[iev])[ipart].E,
+                        (*(*Hadron_list)[iev])[ipart].mass,
+                        (*(*Hadron_list)[iev])[ipart].x,
+                        (*(*Hadron_list)[iev])[ipart].y,
+                        (*(*Hadron_list)[iev])[ipart].z,
+                        (*(*Hadron_list)[iev])[ipart].t);
+                oscar << line_buffer << endl;
             }
         }
     }
