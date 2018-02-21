@@ -1,0 +1,29 @@
+28
+1     211         !Pion (+)           100000000.0     Stable  
+2     111         !Pion (0)           100000000.0     Stable  
+3    -211         !Pion (-)           100000000.0     Stable  
+4     321         !Kaon (+)           100000000.0     Stable  
+5    -321         !Kaon (-)           100000000.0     Stable  
+6     311         !Kaon (0)           100000000.0     Stable  
+7    -311         !Anti Kaon (0)      100000000.0     Stable  
+8     221         !eta                100000000.0     Stable  
+9    2212         !p                  100000000.0     Stable  
+10  -2212         !Anti p             100000000.0     Stable  
+11   2112         !n                  100000000.0     Stable  
+12  -2112         !Anti n             100000000.0     Stable  
+13    331         !eta prime (958)    986.5000610     ********
+14    333         !phi (1020)         46.31455612     ********
+15   3122         !Lambda             100000000.0     Stable  
+16  -3122         !Anti Lambda        100000000.0     Stable  
+17   3222         !Sigma (+)          100000000.0     Stable  
+18  -3222         !Anti Sigma (+)     100000000.0     Stable  
+19   3212         !Sigma (0)          100000000.0     Stable  
+20  -3212         !Anti Sigma (0)     100000000.0     Stable  
+21   3112         !Sigma (-)          100000000.0     Stable  
+22  -3112         !Anti Sigma (-)     100000000.0     Stable  
+23   3322         !Xsi (0)            100000000.0     Stable  
+24  -3322         !Anti Xsi (0)       100000000.0     Stable  
+25   3312         !Xsi (-)            100000000.0     Stable  
+26  -3312         !Anti Xsi (-)       100000000.0     Stable  
+27   3334         !Omega              100000000.0     Stable  
+28  -3334         !Anti Omega         100000000.0     Stable  

@@ -9,7 +9,8 @@ class RandomVariable1DArray
   private:
     vector<double>* invCDF;
     long data_size;
-    double data_zero, data_sum; // "tolerance zero value", max and sum
+    //double data_zero;
+    double data_sum; // "tolerance zero value", max and sum
   public:
     RandomVariable1DArray(vector<double>*, double=1e-30);
     ~RandomVariable1DArray();

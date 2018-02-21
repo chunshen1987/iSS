@@ -1,5 +1,6 @@
-add_executable (iSS.e
+set (SOURCES
   main.cpp 
+  iSS.cpp
   arsenal.cpp
   ParameterReader.cpp
   RandomVariable1DArray.cpp
@@ -12,6 +13,10 @@ add_executable (iSS.e
   Poisson.cpp
   NBD.cpp
   )
+
+add_library(iSS_lib SHARED ${SOURCES})
+add_executable(iSS.e ${SOURCES})
+target_link_libraries (iSS_lib ${LIBS})
 target_link_libraries (iSS.e ${LIBS})
 
 install(TARGETS iSS.e DESTINATION ${CMAKE_HOME_DIRECTORY})

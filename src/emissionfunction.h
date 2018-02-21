@@ -20,12 +20,21 @@
 
 using namespace std;
 
+struct iSS_Hadron {
+     int pid;
+     double mass;
+     double E, px, py, pz;
+     double t, x, y, z;
+};
+
 class EmissionFunctionArray {
  private:
     int hydro_mode;   // switch for (2+1)-d or (3+1)-d hypersurface
     int flag_PCE;
     int flag_restrict_deltaf;
     double deltaf_max_ratio;
+
+    string path;
 
     int MC_sampling;
 
@@ -129,14 +138,20 @@ class EmissionFunctionArray {
     double lambert_x_min, lambert_x_max, lambert_dx;
     int lambert_tb_length;
     double *lambert_W;
+    
+    int flag_output_samples_into_files;
+    int flag_store_samples_in_memory;
 
  public:
     EmissionFunctionArray(Table* chosen_particle, Table* pt_tab_in,
                           Table* phi_tab_in, Table* eta_tab_in,
                           particle_info* particles_in, int Nparticles,
                           FO_surf* FOsurf_ptr_in, long FO_length_in,
-                          int flag_PCE_in, ParameterReader* paraRdr_in);
+                          int flag_PCE_in, ParameterReader* paraRdr_in,
+                          string path_in);
     ~EmissionFunctionArray();
+
+    vector< vector<iSS_Hadron>* >* Hadron_list;
 
     void initialize_special_function_arrays();
     double get_special_function_K1(double arg);
@@ -212,6 +227,15 @@ class EmissionFunctionArray {
     void getbulkvisCoefficients(double Tdec, double* bulkvisCoefficients);
     void load_deltaf_qmu_coeff_table(string filename);
     double get_deltaf_qmu_coeff(double T, double muB);
+
+    void check_samples_in_memory();
+    int get_number_of_sampled_events() {return(Hadron_list->size());};
+    int get_number_of_particles(int iev) {
+        return((*Hadron_list)[iev]->size());
+    };
+    iSS_Hadron get_hadron(int iev, int ipart) {
+        return((*(*Hadron_list)[iev])[ipart]);
+    };
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_

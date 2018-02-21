@@ -124,7 +124,7 @@ int read_FOdata::read_in_chemical_potentials(string path, int FO_length,
     int N_stableparticle;
     Table mu_table;
     if (mode == 0) {      // VISH2+1 output
-        ifstream particletable("EOS/EOS_particletable.dat");
+        ifstream particletable("iSS_tables/EOS_particletable.dat");
         particletable >> N_stableparticle;
         particletable.close();
     } else if (mode == 1 || mode == 2) {   // music output
@@ -149,22 +149,22 @@ int read_FOdata::read_in_chemical_potentials(string path, int FO_length,
             N_stableparticle = 0;
         } else if (IEOS_music == 3) {  // s95p-v1-PCE150
             particletable.open(
-                         "EOS/EOS_tables/s95p-v1-PCE150/EOS_particletable.dat");
+                "iSS_tables/EOS_tables/s95p-v1-PCE150/EOS_particletable.dat");
             particletable >> N_stableparticle;
             particletable.close();
         } else if (IEOS_music == 4) {  // s95p-v1-PCE155
             particletable.open(
-                         "EOS/EOS_tables/s95p-v1-PCE155/EOS_particletable.dat");
+                "iSS_tables/EOS_tables/s95p-v1-PCE155/EOS_particletable.dat");
             particletable >> N_stableparticle;
             particletable.close();
         } else if (IEOS_music == 5) {  // s95p-v1-PCE160
             particletable.open(
-                         "EOS/EOS_tables/s95p-v1-PCE160/EOS_particletable.dat");
+                "iSS_tables/EOS_tables/s95p-v1-PCE160/EOS_particletable.dat");
             particletable >> N_stableparticle;
             particletable.close();
         } else if (IEOS_music == 6) {  // s95p-v0-PCE165
             particletable.open(
-                         "EOS/EOS_tables/s95p-v0-PCE165/EOS_particletable.dat");
+                "iSS_tables/EOS_tables/s95p-v0-PCE165/EOS_particletable.dat");
             particletable >> N_stableparticle;
             particletable.close();
         } else if (IEOS_music == 7) {        // s95p-v1.2 for UrQMD
@@ -177,7 +177,7 @@ int read_FOdata::read_in_chemical_potentials(string path, int FO_length,
         }
     }
     if (mode == 10) {     // hydro_analysis output
-        ifstream particletable("EOS/EOS_particletable.dat");
+        ifstream particletable("iSS_tables/EOS_particletable.dat");
         particletable >> N_stableparticle;
         particletable.close();
     }
@@ -648,14 +648,19 @@ void read_FOdata::read_chemical_potentials_music(
          << "(MUSIC IEOS = " << IEOS_music << ") ...";
 
     Table mu_table;
-    if (IEOS_music == 3)
-        mu_table.loadTableFromFile("EOS/EOS_tables/s95p-v1-PCE150/EOS_Mu.dat");
-    else if (IEOS_music == 4)
-        mu_table.loadTableFromFile("EOS/EOS_tables/s95p-v1-PCE155/EOS_Mu.dat");
-    else if (IEOS_music == 5)
-        mu_table.loadTableFromFile("EOS/EOS_tables/s95p-v1-PCE160/EOS_Mu.dat");
-    else if (IEOS_music == 6)
-        mu_table.loadTableFromFile("EOS/EOS_tables/s95p-v1-PCE165/EOS_Mu.dat");
+    if (IEOS_music == 3) {
+        mu_table.loadTableFromFile(
+                    "iSS_tables/EOS_tables/s95p-v1-PCE150/EOS_Mu.dat");
+    } else if (IEOS_music == 4) {
+        mu_table.loadTableFromFile(
+                    "iSS_tables/EOS_tables/s95p-v1-PCE155/EOS_Mu.dat");
+    } else if (IEOS_music == 5) {
+        mu_table.loadTableFromFile(
+                    "iSS_tables/EOS_tables/s95p-v1-PCE160/EOS_Mu.dat");
+    } else if (IEOS_music == 6) {
+        mu_table.loadTableFromFile(
+                    "iSS_tables/EOS_tables/s95p-v1-PCE165/EOS_Mu.dat");
+    }
 
     double edec_pre = 0.0e0;
     for (int j = 0; j < FO_length; j++) {
@@ -675,16 +680,14 @@ void read_FOdata::read_chemical_potentials_music(
     return;
 }
 
-int read_FOdata::read_resonances_list(particle_info* particle)
-{
+int read_FOdata::read_resonances_list(particle_info* particle) {
    double eps = 1e-15;
    int Nparticle=0;
    cout << " -- Read in particle resonance decay table...";
-   ifstream resofile("EOS/pdg.dat");
+   ifstream resofile("iSS_tables/pdg.dat");
    int local_i = 0;
    int dummy_int;
-   while (!resofile.eof())
-   {
+   while (!resofile.eof()) {
       resofile >> particle[local_i].monval;
       resofile >> particle[local_i].name;
       resofile >> particle[local_i].mass;
@@ -697,8 +700,7 @@ int read_FOdata::read_resonances_list(particle_info* particle)
       resofile >> particle[local_i].gisospin;     //isospin degeneracy
       resofile >> particle[local_i].charge;
       resofile >> particle[local_i].decays;
-      for (int j = 0; j < particle[local_i].decays; j++)
-      {
+      for (int j = 0; j < particle[local_i].decays; j++) {
          resofile >> dummy_int;
          resofile >> particle[local_i].decays_Npart[j];
          resofile >> particle[local_i].decays_branchratio[j];
@@ -710,14 +712,14 @@ int read_FOdata::read_resonances_list(particle_info* particle)
       }
 
       //decide whether particle is stable under strong interactions
-      if(particle[local_i].decays_Npart[0] == 1)
+      if (particle[local_i].decays_Npart[0] == 1) {
          particle[local_i].stable = 1;
-      else
+      } else {
          particle[local_i].stable = 0;
+      }
 
       //add anti-particle entry
-      if(particle[local_i].baryon == 1)
-      {
+      if (particle[local_i].baryon == 1) {
          local_i++;
          particle[local_i].monval = -particle[local_i-1].monval;
          ostringstream antiname;
@@ -734,41 +736,40 @@ int read_FOdata::read_resonances_list(particle_info* particle)
          particle[local_i].charge = -particle[local_i-1].charge;
          particle[local_i].decays = particle[local_i-1].decays;
          particle[local_i].stable = particle[local_i-1].stable;
-         for (int j = 0; j < particle[local_i].decays; j++)
-         {
+         for (int j = 0; j < particle[local_i].decays; j++) {
             particle[local_i].decays_Npart[j] = 
                                            particle[local_i-1].decays_Npart[j];
             particle[local_i].decays_branchratio[j] = 
                                      particle[local_i-1].decays_branchratio[j];
-            for (int k=0; k< Maxdecaypart; k++)
-            {
-               if(particle[local_i-1].decays_part[j][k] == 0)
+            for (int k = 0; k < Maxdecaypart; k++) {
+               if (particle[local_i-1].decays_part[j][k] == 0) {
                   particle[local_i].decays_part[j][k] = (
                                   particle[local_i-1].decays_part[j][k]);
-               else
-               {
+               } else {
                   int idx; 
                   // find the index for decay particle
-                  for(idx = 0; idx < local_i; idx++) 
-                     if(particle[idx].monval 
-                                     == particle[local_i-1].decays_part[j][k])
+                  for(idx = 0; idx < local_i; idx++) {
+                     if (particle[idx].monval 
+                            == particle[local_i-1].decays_part[j][k]) {
                         break;
-                  if(idx == local_i && particle[local_i-1].stable == 0 
-                     && particle[local_i-1].decays_branchratio[j] > eps)
-                  {
+                     }
+                  }
+                  if (idx == local_i && particle[local_i-1].stable == 0 
+                        && particle[local_i-1].decays_branchratio[j] > eps) {
                      cout << "Error: can not find decay particle index for "
                           << "anti-baryon!" << endl;
                      cout << "particle monval : " 
                           << particle[local_i-1].decays_part[j][k] << endl;
                      exit(1);
                   }
-                  if(particle[idx].baryon == 0 && particle[idx].charge == 0 
-                     && particle[idx].strange == 0)
+                  if (particle[idx].baryon == 0 && particle[idx].charge == 0 
+                      && particle[idx].strange == 0) {
                      particle[local_i].decays_part[j][k] = (
                                      particle[local_i-1].decays_part[j][k]);
-                  else
+                  } else {
                      particle[local_i].decays_part[j][k] = (
                                      - particle[local_i-1].decays_part[j][k]);
+                  }
                }
             }
          }
@@ -777,12 +778,12 @@ int read_FOdata::read_resonances_list(particle_info* particle)
    }
    resofile.close();
    Nparticle=local_i-1; //take account the final fake one
-   for(int i=0; i < Nparticle; i++)
-   {
-      if(particle[i].baryon==0)
-         particle[i].sign=-1;
-      else
+   for (int i=0; i < Nparticle; i++) {
+      if (particle[i].baryon==0) {
+         particle[i].sign = -1;
+      } else {
          particle[i].sign=1;
+      }
    }
    return(Nparticle);
 }
@@ -798,20 +799,20 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle, FO_surf* FOsurf_ptr,
          << "for particles..." << endl;
     ifstream particletable;
     if (mode == 0) {
-        particletable.open("EOS/EOS_particletable.dat");
+        particletable.open("iSS_tables/EOS_particletable.dat");
     } else if (mode == 1 || mode == 2) {
         if (IEOS_music == 3) {
             particletable.open(
-                    "EOS/EOS_tables/s95p-v1-PCE150/EOS_particletable.dat");
+                "iSS_tables/EOS_tables/s95p-v1-PCE150/EOS_particletable.dat");
         } else if (IEOS_music == 4) {
             particletable.open(
-                    "EOS/EOS_tables/s95p-v1-PCE155/EOS_particletable.dat");
+                "iSS_tables/EOS_tables/s95p-v1-PCE155/EOS_particletable.dat");
         } else if (IEOS_music == 5) {
             particletable.open(
-                    "EOS/EOS_tables/s95p-v1-PCE160/EOS_particletable.dat");
+                "iSS_tables/EOS_tables/s95p-v1-PCE160/EOS_particletable.dat");
         } else if (IEOS_music == 6) {
             particletable.open(
-                    "EOS/EOS_tables/s95p-v1-PCE165/EOS_particletable.dat");
+                "iSS_tables/EOS_tables/s95p-v1-PCE165/EOS_particletable.dat");
         } else {
             cout << "invalid EOS option for MUSIC: " << IEOS_music << endl;
             exit(-1);

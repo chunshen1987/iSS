@@ -41,7 +41,9 @@ EmissionFunctionArray::EmissionFunctionArray(
     Table* chosen_particles_in, Table* pt_tab_in, Table* phi_tab_in,
     Table* y_minus_eta_tab_in, particle_info* particles_in, int Nparticles_in,
     FO_surf* FOsurf_ptr_in, long FO_length_in, int flag_PCE_in,
-    ParameterReader* paraRdr_in) {
+    ParameterReader* paraRdr_in, string path_in) {
+
+    path = path_in;
     // get info
     flag_PCE = flag_PCE_in;
     pT_tab = pt_tab_in;
@@ -52,10 +54,11 @@ EmissionFunctionArray::EmissionFunctionArray(
     y_minus_eta_tab = y_minus_eta_tab_in;
     y_minus_eta_tab_length = y_minus_eta_tab->getNumberOfRows();
 
-    if (y_minus_eta_tab->get(1,1)>-1e-15)
+    if (y_minus_eta_tab->get(1,1)>-1e-15) {
         positive_y_minus_eta_table_only = true;
-    else 
+    } else {
         positive_y_minus_eta_table_only = false;
+    }
 
     particles = particles_in;
     Nparticles = Nparticles_in;
@@ -81,10 +84,24 @@ EmissionFunctionArray::EmissionFunctionArray(
     
     MC_sampling = paraRdr->getVal("MC_sampling");
 
+    flag_output_samples_into_files = (
+                            paraRdr->getVal("output_samples_into_files"));
+    flag_store_samples_in_memory = paraRdr->getVal("store_samples_in_memory");
+    if (MC_sampling != 2) {
+        cout << "[Warning]: store_samples_in_memory is only supported for "
+             << "MC_sample == 2!" << endl;
+        flag_store_samples_in_memory = 0;
+    }
+
+    if (flag_store_samples_in_memory == 1) {
+        Hadron_list = new vector< vector<iSS_Hadron>* >;
+    }
+
     // allocate internal buffer
     dN_pTdpTdphidy = new Table(pT_tab_length, phi_tab_length);
     dN_pTdpTdphidy_max = new Table(pT_tab_length, phi_tab_length);
-    dN_pTdpTdphidy_filename = "results/dN_pTdpTdphidy.dat";
+    ostringstream filename_stream;
+    dN_pTdpTdphidy_filename = path + "/dN_pTdpTdphidy.dat";
   
     if (MC_sampling == 1) {
         dN_dxtdetady = new double*[y_minus_eta_tab_length];
@@ -96,7 +113,7 @@ EmissionFunctionArray::EmissionFunctionArray(
             dN_dxtdetady_pT_max[k] = new double[FO_length];
     }
 
-    dN_dxtdetady_filename = "results/dN_dxdetady.dat";
+    dN_dxtdetady_filename = path + "/dN_dxdetady.dat";
 
     // deal with chosen_particle_xxx tables
     number_of_chosen_particles = chosen_particles_in->getNumberOfRows();
@@ -162,10 +179,10 @@ EmissionFunctionArray::EmissionFunctionArray(
     }
 
     // for flow calculation
-    flow_differential_filename_old = "results/v2data.dat";
-    flow_integrated_filename_old = "results/v2data-inte.dat";
-    flow_differential_filename = "results/thermal_%d_vndata.dat";
-    flow_integrated_filename = "results/thermal_%d_integrated_vndata.dat";
+    flow_differential_filename_old = path + "/v2data.dat";
+    flow_integrated_filename_old = path + "/v2data-inte.dat";
+    flow_differential_filename = path + "/thermal_%d_vndata.dat";
+    flow_integrated_filename = path + "/thermal_%d_integrated_vndata.dat";
     last_particle_idx = -1;
 
     // pre-calculate variables
@@ -199,17 +216,17 @@ EmissionFunctionArray::EmissionFunctionArray(
     }
     //cout << "done" << endl;
 
-    samples_filename = "results/samples_%d.dat";
-    samples_control_filename = "results/samples_control_%d.dat";
-    samples_format_filename = "results/samples_format.dat";
+    samples_filename = path + "/samples_%d.dat";
+    samples_control_filename = path + "/samples_control_%d.dat";
+    samples_format_filename = path + "/samples_format.dat";
 
-    dN_dtau_filename = "results/dN_dtau_%d.dat";
-    dN_dphi_filename = "results/dN_dphi_%d.dat";
-    dN_deta_filename = "results/dN_deta_%d.dat";
-    dN_dxt_filename = "results/dN_dxt_%d.dat";
-    dN_dx_filename = "results/dN_dx_%d.dat";
+    dN_dtau_filename = path + "/dN_dtau_%d.dat";
+    dN_dphi_filename = path + "/dN_dphi_%d.dat";
+    dN_deta_filename = path + "/dN_deta_%d.dat";
+    dN_dxt_filename = path + "/dN_dxt_%d.dat";
+    dN_dx_filename = path + "/dN_dx_%d.dat";
 
-    OSCAR_header_filename = "OSCAR_header.txt";
+    OSCAR_header_filename = "iSS_tables/OSCAR_header.txt";
     OSCAR_output_filename = "OSCAR.DAT";
 
     if (MC_sampling == 2) {
@@ -223,9 +240,11 @@ EmissionFunctionArray::EmissionFunctionArray(
 
     // for interpolation for the third way of sampling
     // generate new set of pT and phi table to be interpolated onto
-    pT_tab4Sampling.loadTableFromFile("tables/pT_table_for_sampling.dat");
+    pT_tab4Sampling.loadTableFromFile(
+                    "iSS_tables/bin_tables/pT_table_for_sampling.dat");
     pT_tab4Sampling_length = pT_tab4Sampling.getNumberOfRows();
-    phi_tab4Sampling.loadTableFromFile("tables/phi_table_for_sampling.dat");
+    phi_tab4Sampling.loadTableFromFile(
+                    "iSS_tables/bin_tables/phi_table_for_sampling.dat");
     phi_tab4Sampling_length = phi_tab4Sampling.getNumberOfRows();
     // extend pT_tab and phi_tab in order to extract index info for given
     // pT or phi
@@ -258,13 +277,14 @@ EmissionFunctionArray::EmissionFunctionArray(
 
     // arrays for bulk delta f coefficients
     if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0) {
-        bulkdf_coeff = (
-            new Table ("tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat"));
+        bulkdf_coeff = new Table (
+            "iSS_tables/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat");
     }
 
     // load table for diffusion delta f coeffient
     if (INCLUDE_DIFFUSION_DELTAF == 1) {
-        load_deltaf_qmu_coeff_table("tables/Coefficients_RTA_diffusion.dat");
+        load_deltaf_qmu_coeff_table(
+            "iSS_tables/deltaf_tables/Coefficients_RTA_diffusion.dat");
     }
 
     // create arrays for special functions who are needed to compute 
@@ -277,20 +297,21 @@ EmissionFunctionArray::EmissionFunctionArray(
 
 
 //***************************************************************************
-EmissionFunctionArray::~EmissionFunctionArray()
-{
+EmissionFunctionArray::~EmissionFunctionArray() {
   // Total number of "new" in constructor should equal the total number of 
   // "delete" in the destructor!
   delete dN_pTdpTdphidy;
   delete dN_pTdpTdphidy_max;
 
   if (MC_sampling == 1) {
-    for (int k=0; k<y_minus_eta_tab_length; k++) 
+    for (int k=0; k<y_minus_eta_tab_length; k++) {
         delete[] dN_dxtdetady[k];
+    }
     delete[] dN_dxtdetady;
 
-    for (int k=0; k<y_minus_eta_tab_length; k++)
+    for (int k=0; k<y_minus_eta_tab_length; k++) {
         delete[] dN_dxtdetady_pT_max[k];
+    }
     delete[] dN_dxtdetady_pT_max;
   }
 
@@ -298,12 +319,14 @@ EmissionFunctionArray::~EmissionFunctionArray()
   delete[] chosen_particles_sampling_table;
   delete[] unidentifiedPid_table;
 
-  for (int j=0; j<phi_tab_length; j++)
+  for (int j=0; j<phi_tab_length; j++) {
       delete[] trig_phi_table[j];
+  }
   delete[] trig_phi_table;
 
-  for (int k=0; k<y_minus_eta_tab_length; k++)
+  for (int k=0; k<y_minus_eta_tab_length; k++) {
       delete[] hypertrig_y_minus_eta_table[k];
+  }
   delete[] hypertrig_y_minus_eta_table;
 
   if (MC_sampling == 2) {
@@ -315,17 +338,17 @@ EmissionFunctionArray::~EmissionFunctionArray()
 
   //delete[] sorted_FZ;
 
-  for (int j=0; j<phi_tab4Sampling_length; j++)
+  for (int j=0; j<phi_tab4Sampling_length; j++) {
       delete[] trig_phi_tab4Sampling[j];
+  }
   delete[] trig_phi_tab4Sampling;
 
-  if(INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0)
+  if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0) {
       delete bulkdf_coeff;
+  }
 
-  if(INCLUDE_DIFFUSION_DELTAF == 1)
-  {
-      for(int i = 0; i < deltaf_qmu_coeff_table_length_T; i++)
-      {
+  if(INCLUDE_DIFFUSION_DELTAF == 1) {
+      for (int i = 0; i < deltaf_qmu_coeff_table_length_T; i++) {
           delete [] deltaf_qmu_coeff_tb[i];
       }
       delete [] deltaf_qmu_coeff_tb;
@@ -334,16 +357,24 @@ EmissionFunctionArray::~EmissionFunctionArray()
   gsl_rng_free(gsl_random_r);
 
   // clean arrays for special functions
-  for(int i = 0; i < sf_tb_length; i++)
-  {
+  for (int i = 0; i < sf_tb_length; i++) {
       delete [] sf_bessel_Kn[i];
-      if(INCLUDE_DIFFUSION_DELTAF == 1)
+      if (INCLUDE_DIFFUSION_DELTAF == 1) {
           delete [] sf_expint_En[i];
+      }
   }
   delete [] sf_bessel_Kn;
-  if(INCLUDE_DIFFUSION_DELTAF == 1)
+  if (INCLUDE_DIFFUSION_DELTAF == 1) {
       delete [] sf_expint_En;
+  }
   delete [] lambert_W;
+
+    if (flag_store_samples_in_memory == 1) {
+        for (unsigned int i = 0; i < Hadron_list->size(); i++) {
+            (*Hadron_list)[i]->clear();
+        }
+        Hadron_list->clear();
+    }
 }
 //***************************************************************************
 
@@ -661,19 +692,24 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
     // for intermedia results
     //cout << "initializing intermedia variables... ";
     double dN_pTdpTdphidy_tab[pT_tab_length][phi_tab_length];
-    for (int i=0; i<pT_tab_length; i++)
-        for (int j=0; j<phi_tab_length; j++)
+    for (int i=0; i<pT_tab_length; i++) {
+        for (int j=0; j<phi_tab_length; j++) {
             dN_pTdpTdphidy_tab[i][j] = 0.0;
+        }
+    }
     double dN_pTdpTdphidy_max_tab[pT_tab_length][phi_tab_length];
-    for (int i=0; i<pT_tab_length; i++)
-        for (int j=0; j<phi_tab_length; j++)
+    for (int i=0; i<pT_tab_length; i++) {
+        for (int j=0; j<phi_tab_length; j++) {
             dN_pTdpTdphidy_max_tab[i][j] = 0.0;
+        }
+    }
 
 
     // create local cache
     double delta_y_minus_eta_tab[y_minus_eta_tab_length];
-    for (int k=0; k<y_minus_eta_tab_length; k++)
+    for (int k=0; k<y_minus_eta_tab_length; k++) {
         delta_y_minus_eta_tab[k] = y_minus_eta_tab->get(2,k+1);
+    }
 
     //---------------------------
     // THE main summation loop
@@ -1269,7 +1305,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(
 
 
 //***************************************************************************
-void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
+void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
 // This version give smooth distribution in pT and phi.
 // Sample according to the dN_dxtdetady and dN_dxtdetady_pT_max array. These
 // arrays are asssumed to be already cacluated.
@@ -1292,13 +1328,13 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
 // -- model parameter:
 //    1): The fractional part of dN_dy is used as a probability to determine
 //       whether we have 0 or 1 more particle.
-{
     Stopwatch sw;
     sw.tic();
 
     double pT_to = paraRdr->getVal("sample_pT_up_to");
-    if (pT_to < 0.)
-        pT_to = pT_tab->getLast(1); // use table to determine pT range
+    if (pT_to < 0.) {
+        pT_to = pT_tab->getLast(1);  // use table to determine pT range
+    }
     
     // If dN/(dx_t deta dy) is evaluated to be smaller than this value, 
     // then it is replaced by this value.
@@ -1318,12 +1354,12 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi()
     FO_surf* surf = &FOsurf_ptr[0];
   
     double *bulkvisCoefficients;
-    if(INCLUDE_BULK_DELTAF == 1)
-    {
-        if(bulk_deltaf_kind == 0)
+    if (INCLUDE_BULK_DELTAF == 1) {
+        if (bulk_deltaf_kind == 0) {
             bulkvisCoefficients = new double [3];
-        else
+        } else {
             bulkvisCoefficients = new double [2];
+        }
     }
 
     // create local cache
@@ -2745,33 +2781,38 @@ void EmissionFunctionArray::shell() {
     }
 
     if (calculate_vn) {
-        if (historic_format)
+        if (historic_format) {
             calculate_dN_pTdpTdphidy_and_flows_4all_old_output(
                             perform_sampling_during_calculation);
-        else
+        } else {
             calculate_dN_pTdpTdphidy_and_flows_4all(
                             perform_sampling_during_calculation);
+        }
     }
 
     if (MC_sampling == 1) {
         calculate_dN_dxtdetady_and_sample_4all();
-        if (USE_OSCAR_FORMAT)
+        if (USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
+        }
     } else if (MC_sampling == 2) {
         //calculate_dN_dxtdy_4all_particles();
         sample_using_dN_dxtdy_4all_particles_conventional();
-        if (USE_OSCAR_FORMAT)
+        if (flag_output_samples_into_files == 1 && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
+        } else if (flag_store_samples_in_memory == 1 && USE_OSCAR_FORMAT) {
+            combine_samples_to_OSCAR();
+        }
     } else if (MC_sampling == 3) {
-        if (USE_OSCAR_FORMAT)
+        if (USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
+        }
     }
 }
 
 
 //***************************************************************************
-void EmissionFunctionArray::combine_samples_to_OSCAR()
-{
+void EmissionFunctionArray::combine_samples_to_OSCAR() {
     Stopwatch sw;
     sw.tic();
     cout << " -- Now combine sample files to OSCAR file..." << endl;
@@ -2784,87 +2825,108 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
 
     // write header first
     ifstream header(OSCAR_header_filename.c_str());
-    if (!header.is_open())
-    {
+    if (!header.is_open()) {
         cout << endl 
             << "combine_samples_to_OSCAR error: OSCAR header file " 
             << OSCAR_header_filename.c_str() << " not found." << endl;
         exit(-1);
     }
-    while (true)
-    {
+    while (true) {
         header.getline(line_buffer, 500);
-        if (!header.eof()) oscar << line_buffer << endl;
-        else break;
+        if (!header.eof()) {
+            oscar << line_buffer << endl;
+        } else {
+            break;
+        }
     }
     header.close();
 
-    // open control and sample files
-    vector<ifstream*> controls(number_of_chosen_particles); // control files
-    vector<ifstream*> samples(number_of_chosen_particles); // sample files
-    for (int m=0; m<number_of_chosen_particles; m++)
-    {
-        char filename_buffer[300];
-        int monval = particles[chosen_particles_sampling_table[m]].monval;
-        // control files first
-        sprintf(filename_buffer, samples_control_filename.c_str(), monval);
-        controls[m] = new ifstream ;
-        controls[m]->open(filename_buffer);
-        if (!controls[m]->is_open())
-        {
-            cout << endl 
-                 << "combine_samples_to_OSCAR error: control file " 
-                 << filename_buffer << " not found." << endl;
-            exit(-1);
-        }
-        sprintf(filename_buffer, samples_filename.c_str(), monval);
-        samples[m] = new ifstream ;
-        samples[m]->open(filename_buffer);
-        if (!samples[m]->is_open())
-        {
-            cout << endl 
-                 << "combine_samples_to_OSCAR error: sample file " 
-                 << filename_buffer << " not found." << endl;
-            exit(-1);
-        }
-    }
-
-    // big loop for generating OSCAR
-    if (AMOUNT_OF_OUTPUT>0) print_progressbar(-1);
-    long number_of_repeated_sampling = paraRdr->getVal(
-                    "number_of_repeated_sampling");
-    for (long sample_idx=1; sample_idx<=number_of_repeated_sampling; 
-         sample_idx++)
-    {
-        // read-in number of particles for each species
-        int number_of_particles[number_of_chosen_particles];
-        long total_number_of_particles = 0;
-        for (int m=0; m<number_of_chosen_particles; m++)
-        {
-            (*controls[m]) >> number_of_particles[m];
-            total_number_of_particles += number_of_particles[m];
-        }
-        // sub-header for each event
-        oscar << setw(10) << sample_idx << "  " 
-              << setw(10) << total_number_of_particles << "  " 
-              << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
-
-        // now copy each line from samples file to OSCAR file
-        long ipart = 1;
-        for (int m=0; m<number_of_chosen_particles; m++)
-        {
+    if (flag_store_samples_in_memory == 0) {
+        // open control and sample files
+        vector<ifstream*> controls(number_of_chosen_particles);
+        vector<ifstream*> samples(number_of_chosen_particles);
+        for (int m = 0; m < number_of_chosen_particles; m++) {
+            char filename_buffer[300];
             int monval = particles[chosen_particles_sampling_table[m]].monval;
-            for (long ii=1; ii<=number_of_particles[m]; ii++)
-            {
-                oscar << setw(10) << ipart << "  " 
-                      << setw(10) << monval << "  ";
-                samples[m]->getline(line_buffer, 500);
-                oscar << line_buffer << endl;
-                ipart ++;
+            // control files first
+            sprintf(filename_buffer, samples_control_filename.c_str(), monval);
+            controls[m] = new ifstream ;
+            controls[m]->open(filename_buffer);
+            if (!controls[m]->is_open()) {
+                cout << endl 
+                     << "combine_samples_to_OSCAR error: control file " 
+                     << filename_buffer << " not found." << endl;
+                exit(-1);
+            }
+            sprintf(filename_buffer, samples_filename.c_str(), monval);
+            samples[m] = new ifstream ;
+            samples[m]->open(filename_buffer);
+            if (!samples[m]->is_open()) {
+                cout << endl 
+                     << "combine_samples_to_OSCAR error: sample file " 
+                     << filename_buffer << " not found." << endl;
+                exit(-1);
             }
         }
-        if (AMOUNT_OF_OUTPUT>0)
-            print_progressbar((double)sample_idx/number_of_repeated_sampling);
+
+        // big loop for generating OSCAR
+        if (AMOUNT_OF_OUTPUT > 0) print_progressbar(-1);
+        long number_of_repeated_sampling = paraRdr->getVal(
+                        "number_of_repeated_sampling");
+        for (long sample_idx=1; sample_idx<=number_of_repeated_sampling; 
+             sample_idx++) {
+            // read-in number of particles for each species
+            int number_of_particles[number_of_chosen_particles];
+            long total_number_of_particles = 0;
+            for (int m=0; m<number_of_chosen_particles; m++) {
+                (*controls[m]) >> number_of_particles[m];
+                total_number_of_particles += number_of_particles[m];
+            }
+            // sub-header for each event
+            oscar << setw(10) << sample_idx << "  " 
+                  << setw(10) << total_number_of_particles << "  " 
+                  << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
+
+            // now copy each line from samples file to OSCAR file
+            long ipart = 1;
+            for (int m = 0; m < number_of_chosen_particles; m++) {
+                int monval = (
+                        particles[chosen_particles_sampling_table[m]].monval);
+                for (long ii = 1; ii <= number_of_particles[m]; ii++) {
+                    oscar << setw(10) << ipart << "  " 
+                          << setw(10) << monval << "  ";
+                    samples[m]->getline(line_buffer, 500);
+                    oscar << line_buffer << endl;
+                    ipart ++;
+                }
+            }
+            if (AMOUNT_OF_OUTPUT > 0) {
+                print_progressbar(static_cast<double>(
+                            sample_idx/number_of_repeated_sampling));
+            }
+        }
+    } else {
+        for (unsigned int iev = 0; iev < Hadron_list->size(); iev++) {
+            int total_number_of_particles = (*Hadron_list)[iev]->size();
+            // sub-header for each event
+            oscar << setw(10) << iev << "  " 
+                  << setw(10) << total_number_of_particles << "  " 
+                  << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
+            for (int ipart = 0; ipart < total_number_of_particles; ipart++) {
+                oscar << setw(10) << ipart + 1 << "  "
+                      << setw(10) << (*(*Hadron_list)[iev])[ipart].pid << "  ";
+                oscar << scientific << setw(24) << setprecision(16)
+                      << (*(*Hadron_list)[iev])[ipart].px << "  "
+                      << (*(*Hadron_list)[iev])[ipart].py << "  "
+                      << (*(*Hadron_list)[iev])[ipart].pz << "  "
+                      << (*(*Hadron_list)[iev])[ipart].E << "  "
+                      << (*(*Hadron_list)[iev])[ipart].mass << "  "
+                      << (*(*Hadron_list)[iev])[ipart].x << "  "
+                      << (*(*Hadron_list)[iev])[ipart].y << "  "
+                      << (*(*Hadron_list)[iev])[ipart].z << "  "
+                      << (*(*Hadron_list)[iev])[ipart].t << endl;
+            }
+        }
     }
 
     sw.toc();
@@ -2872,7 +2934,6 @@ void EmissionFunctionArray::combine_samples_to_OSCAR()
          << " -- combine_samples_to_OSCAR samples finishes " 
          << sw.takeTime() << " seconds."
          << endl;
-
 }
 
 
@@ -3150,9 +3211,9 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
         int real_particle_idx = chosen_particles_sampling_table[particle_idx];
         particle = &particles[real_particle_idx];
 
-        int sign = particle->sign;
+        //int sign = particle->sign;
         int degen = particle->gspin;
-        double mass = particle->mass;
+        //double mass = particle->mass;
         int baryon = particle->baryon;
         double mu = baryon*surf->muB;
         if (flag_PCE == 1) {
@@ -3336,8 +3397,7 @@ double EmissionFunctionArray::calculate_total_FZ_energy_flux() {
 
 
 //***************************************************************************
-void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
-{
+void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() {
 /*
  Sample using the already calculated dN_dxtdy_4all array.
  Different model can be used in the sampling.
@@ -3353,15 +3413,16 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
 
     double *bulkvisCoefficients;
     if (INCLUDE_BULK_DELTAF == 1) {
-        if (bulk_deltaf_kind == 0)
+        if (bulk_deltaf_kind == 0) {
             bulkvisCoefficients = new double[3];
-        else
+        } else {
             bulkvisCoefficients = new double[2];
+        }
     }
 
     // load pre-calculated table
     // (x,y) that y*exp(-y) = x; y<=1
-    TableFunction z_exp_m_z("tables/z_exp_m_z.dat");
+    TableFunction z_exp_m_z("iSS_tables/z_exp_m_z.dat");
     z_exp_m_z.interpolation_model = 5;
 
     // control variables
@@ -3380,688 +3441,690 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
     }
     double y_minus_eta_s_range = paraRdr->getVal("sample_y_minus_eta_s_range");
 
-    if (sampling_model <= 100) {
-        // use "conventional" sampling
-        // reusable variables
-        // dN_dxtdy for 1 particle
-        vector<double> dN_dxtdy_single_particle(FO_length, 0);
-        cout << endl << "Sampling using dN/dy with "
-            << "sample_using_dN_dxtdy_4all_particles function."
-            << endl << endl;
-        for (int n = 0; n < number_of_chosen_particles; n++) {
-            calculate_dN_dxtdy_for_one_particle_species(n);
-            int real_particle_idx = chosen_particles_sampling_table[n];
-            particle = &particles[real_particle_idx];
-            double mass = particle->mass;
-            int sign = particle->sign;
-            int degen = particle->gspin;
-            int baryon = particle->baryon;
-            cout << "Index: " << n << ", Name: " << particle->name
-                 << ", Monte-carlo index: " << particle->monval << endl;
+    if (sampling_model > 100) {
+        cout << "EmissionFunctionArray::"
+             << "sample_using_dN_dxtdy_4all_particles error: sampling model " 
+             << sampling_model << " is not supported." << endl;
+        exit(-1);
+    }
 
-            // prepare for outputs
-            // the control file records how many particles are there
-            // in each sampling
-            char samples_control_filename_buffer[300];
-            sprintf(samples_control_filename_buffer,
-                    samples_control_filename.c_str(), particle->monval);
-            remove(samples_control_filename_buffer);
-            ofstream of_control(samples_control_filename_buffer);
+    if (flag_store_samples_in_memory == 1) {
+        for (int isample = 0; isample < number_of_repeated_sampling;
+                isample++) {
+            Hadron_list->push_back(new vector<iSS_Hadron> );
+        }
+    }
 
-            // the sample file contains the actual samples
-            char samples_filename_buffer[300];
-            sprintf(samples_filename_buffer, samples_filename.c_str(),
-                    particle->monval);
-            remove(samples_filename_buffer);
-            ofstream of_sample(samples_filename_buffer);
+    // use "conventional" sampling
+    // reusable variables
+    // dN_dxtdy for 1 particle
+    vector<double> dN_dxtdy_single_particle(FO_length, 0);
+    cout << endl << "Sampling using dN/dy with "
+        << "sample_using_dN_dxtdy_4all_particles function."
+        << endl << endl;
+    for (int n = 0; n < number_of_chosen_particles; n++) {
+        calculate_dN_dxtdy_for_one_particle_species(n);
+        int real_particle_idx = chosen_particles_sampling_table[n];
+        particle = &particles[real_particle_idx];
+        double mass = particle->mass;
+        int sign = particle->sign;
+        int degen = particle->gspin;
+        int baryon = particle->baryon;
+        cout << "Index: " << n << ", Name: " << particle->name
+             << ", Monte-carlo index: " << particle->monval << endl;
 
-            // buffers are used to speed up the output process
-            char line_buffer[500];            // only used in text mode
-            stringstream sample_str_buffer;   // to speed up outputing process
-            stringstream control_str_buffer;
+        // prepare for outputs
+        // the control file records how many particles are there
+        // in each sampling
+        char samples_control_filename_buffer[300];
+        sprintf(samples_control_filename_buffer,
+                samples_control_filename.c_str(), particle->monval);
+        remove(samples_control_filename_buffer);
+        ofstream of_control;
+        if (flag_output_samples_into_files == 1) {
+            of_control.open(samples_control_filename_buffer,
+                            std::ofstream::out | std::ofstream::app);
+        }
 
-            // get y range for sampling
-            double y_LB = paraRdr->getVal("y_LB");
-            double y_RB = paraRdr->getVal("y_RB");
+        // the sample file contains the actual samples
+        char samples_filename_buffer[300];
+        sprintf(samples_filename_buffer, samples_filename.c_str(),
+                particle->monval);
+        remove(samples_filename_buffer);
+        ofstream of_sample;
+        if (flag_output_samples_into_files == 1) {
+            of_sample.open(samples_filename_buffer,
+                           std::ofstream::out | std::ofstream::app);
+        }
 
-            // prepare the inverse CDF
-            for (long l=0; l<FO_length; l++) {
-                //dN_dxtdy_single_particle[l] = dN_dxtdy_4all[l][n];
-                dN_dxtdy_single_particle[l] = (
-                                        dN_dxtdy_for_one_particle_species[l]);
-            }
-            RandomVariable1DArray rand1D(&dN_dxtdy_single_particle, 0);
+        // buffers are used to speed up the output process
+        char line_buffer[500];            // only used in text mode
+        stringstream sample_str_buffer;   // to speed up outputing process
+        stringstream control_str_buffer;
 
-            // first get total number of particles
-            double dN_dy = rand1D.return_sum();
+        // get y range for sampling
+        double y_LB = paraRdr->getVal("y_LB");
+        double y_RB = paraRdr->getVal("y_RB");
 
-            cout << " -- Sampling using dN_dy=" << dN_dy << ", ";
+        // prepare the inverse CDF
+        for (long l = 0; l < FO_length; l++) {
+            //dN_dxtdy_single_particle[l] = dN_dxtdy_4all[l][n];
+            dN_dxtdy_single_particle[l] = (
+                                    dN_dxtdy_for_one_particle_species[l]);
+        }
+        RandomVariable1DArray rand1D(&dN_dxtdy_single_particle, 0);
 
-            double dN;
-            if (hydro_mode != 2) {
-                dN = (y_RB-y_LB)*dN_dy;
-            } else {
-                // for (3+1)-d case, dN_dy is total N (summing over all etas)
-                dN = dN_dy;
-            }
-            cout << "dN=" << dN << "..." << endl;
+        // first get total number of particles
+        double dN_dy = rand1D.return_sum();
 
-            Stopwatch sw;
-            sw.tic();
+        cout << " -- Sampling using dN_dy=" << dN_dy << ", ";
 
-            // The following variables are for "dynamic maximum" treatment
-            // The maximum used in pdf sampling is "maximum_guess", this value
-            // is guaranteed (proven) to be larger than the emission function
-            // but may over estimate the actual maximum
-            // (hard to find analytically).
-            // The code first use the guessed maximum (maximum_guess) for
-            // adjust_maximum_after number of sampling-tries;
-            // during which process the largest ratio between the emission
-            // function and maximum_guess is stored in maximum_ratio variable.
-            // Next, if use_dynamic_maximum is set to 1, then the code adjust
-            // maximum_guess to maximum_guess*maximum_ratio*adjust_maximum_to
-            // for the rest of sampling. Note that you want to set
-            // adjust_maximum_to to be slightly larger than 1 to avoid errors.
-            int use_dynamic_maximum = paraRdr->getVal("use_dynamic_maximum");
-            long adjust_maximum_after = paraRdr->getVal("adjust_maximum_after");
-            double adjust_maximum_to = paraRdr->getVal("adjust_maximum_to");
-            long number_of_tries = 0;
-            int number_of_success = 0;
-            double maximum_ratio = 0;
-            bool has_adjusted_maximum = false;
-            double actual_adjusted_maximum_factor = 1.0;
+        double dN;
+        if (hydro_mode != 2) {
+            dN = (y_RB-y_LB)*dN_dy;
+        } else {
+            // for (3+1)-d case, dN_dy is total N (summing over all etas)
+            dN = dN_dy;
+        }
+        cout << "dN=" << dN << "..." << endl;
 
-            long sample_writing_signal = 0;
-            long control_writing_signal = 0;
-            long maximum_impatience = 5000;  // used in etas-pt-phi sampling
+        Stopwatch sw;
+        sw.tic();
 
-            if (AMOUNT_OF_OUTPUT > 0) {
-                print_progressbar(-1);
-            }
+        // The following variables are for "dynamic maximum" treatment
+        // The maximum used in pdf sampling is "maximum_guess", this value
+        // is guaranteed (proven) to be larger than the emission function
+        // but may over estimate the actual maximum
+        // (hard to find analytically).
+        // The code first use the guessed maximum (maximum_guess) for
+        // adjust_maximum_after number of sampling-tries;
+        // during which process the largest ratio between the emission
+        // function and maximum_guess is stored in maximum_ratio variable.
+        // Next, if use_dynamic_maximum is set to 1, then the code adjust
+        // maximum_guess to maximum_guess*maximum_ratio*adjust_maximum_to
+        // for the rest of sampling. Note that you want to set
+        // adjust_maximum_to to be slightly larger than 1 to avoid errors.
+        int use_dynamic_maximum = paraRdr->getVal("use_dynamic_maximum");
+        long adjust_maximum_after = paraRdr->getVal("adjust_maximum_after");
+        double adjust_maximum_to = paraRdr->getVal("adjust_maximum_to");
+        long number_of_tries = 0;
+        int number_of_success = 0;
+        double maximum_ratio = 0;
+        bool has_adjusted_maximum = false;
+        double actual_adjusted_maximum_factor = 1.0;
 
-            for (long repeated_sampling_idx = 1; 
-                 repeated_sampling_idx <= number_of_repeated_sampling;
-                 repeated_sampling_idx++) {
-                long number_to_sample = determine_number_to_sample(
-                    dN, sampling_model, sampling_para1, sampling_para2, 
-                    sampling_para3, sampling_para4, sampling_para5);
+        long sample_writing_signal = 0;
+        long control_writing_signal = 0;
+        long maximum_impatience = 5000;  // used in etas-pt-phi sampling
 
+        if (AMOUNT_OF_OUTPUT > 0) {
+            print_progressbar(-1);
+        }
+
+        for (long repeated_sampling_idx = 1; 
+             repeated_sampling_idx <= number_of_repeated_sampling;
+             repeated_sampling_idx++) {
+            long number_to_sample = determine_number_to_sample(
+                dN, sampling_model, sampling_para1, sampling_para2, 
+                sampling_para3, sampling_para4, sampling_para5);
+
+            control_writing_signal++;
+            if (flag_output_samples_into_files == 1) {
                 // write to control file
                 sprintf(line_buffer, "%lu\n", number_to_sample);
                 control_str_buffer << line_buffer;
-                control_writing_signal++;
                 if (control_writing_signal == NUMBER_OF_LINES_TO_WRITE) {
                     of_control << control_str_buffer.str();
-                    if (use_dynamic_maximum && !has_adjusted_maximum) {
-                        if (number_of_tries > adjust_maximum_after) {
-                            // adjust maximum
-                            actual_adjusted_maximum_factor = (
-                                            maximum_ratio*adjust_maximum_to);
-                            has_adjusted_maximum = true;
-                        }
-                    }
                     control_str_buffer.str("");
                     control_writing_signal = 0;
                 }
-
-                long sample_idx = 1;
-                while (sample_idx <= number_to_sample) {
-                    // first, sample eta and freeze-out cell index
-                    //long FO_idx =  sorted_FZ[rand1D.rand()];
-                    long FO_idx =  rand1D.rand();
-
-                    surf = &FOsurf_ptr[FO_idx];
-
-                    double Tdec = surf->Tdec;
-                    double inv_Tdec = 1.0/Tdec;
-                    double Pdec = surf->Pdec;
-                    double Edec = surf->Edec;
-
-                    double tau = surf->tau;
-                    double u0 = surf->u0;
-                    double u1 = surf->u1;
-                    double u2 = surf->u2;
-                    double u3 = surf->u3;
-
-                    double mu = baryon*surf->muB;
-                    if (flag_PCE == 1) {
-                        double mu_PCE = (
-                                    surf->particle_mu_PCE[real_particle_idx]);
-                        mu += mu_PCE;
-                    }
-
-                    double da0 = surf->da0;
-                    double da1 = surf->da1;
-                    double da2 = surf->da2;
-                    double da3 = surf->da3;
-
-                    double eta_s;
-                    if (hydro_mode == 2)
-                        eta_s = surf->eta;
-                    else
-                        eta_s = 0.0;
-
-                    double pi00 = surf->pi00;
-                    double pi01 = surf->pi01;
-                    double pi02 = surf->pi02;
-                    double pi03 = surf->pi03;
-                    double pi11 = surf->pi11;
-                    double pi12 = surf->pi12;
-                    double pi13 = surf->pi13;
-                    double pi22 = surf->pi22;
-                    double pi23 = surf->pi23;
-                    double pi33 = surf->pi33;
-
-                    double deltaf_prefactor = 0.0;
-                    if (INCLUDE_DELTAF)
-                        deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
-                    
-                    double bulkPi = 0.0;
-                    if (INCLUDE_BULK_DELTAF == 1) {
-                        if (bulk_deltaf_kind == 0)
-                            bulkPi = surf->bulkPi;
-                        else
-                            bulkPi = surf->bulkPi/hbarC;   // unit in fm^-4 
-                        getbulkvisCoefficients(Tdec, bulkvisCoefficients);
-                    }
-
-                    // diffusion delta f
-                    double qmu0 = 0.0;
-                    double qmu1 = 0.0;
-                    double qmu2 = 0.0;
-                    double qmu3 = 0.0;
-                    double deltaf_qmu_coeff = 1.0;
-                    double prefactor_qmu = 0.0;
-                    if (INCLUDE_DIFFUSION_DELTAF == 1) {
-                        qmu0 = surf->qmu0;
-                        qmu1 = surf->qmu1;
-                        qmu2 = surf->qmu2;
-                        qmu3 = surf->qmu3;
-                        
-                        double mu_B = surf->muB;
-                        deltaf_qmu_coeff = get_deltaf_qmu_coeff(Tdec, mu_B);
-                        
-                        double rho_B = surf->Bn;
-                        prefactor_qmu = rho_B/(Edec + Pdec);  // 1/GeV
-                    }
-
-                    // calculate maximum value for p*dsigma f, 
-                    // used in PDF accept/reject sampling
-                    double u_dot_dsigma = tau*(
-                                    u0*da0 + u1*da1 + u2*da2 + u3*da3/tau);
-                    double dsigma_sq = tau*tau*(
-                              da0*da0 - da1*da1 - da2*da2 - da3*da3/tau/tau);
-                    double dsigmaT = sqrt(fabs(dsigma_sq 
-                                               - u_dot_dsigma*u_dot_dsigma));
-                    //double dsigmaT = sqrt(da0*da0*(u1*u1+u2*u2) 
-                    //                      + da1*da1*(1+u1*u1) 
-                    //                      + da2*da2*(1+u2*u2) 
-                    //                      + 2*da0*da1*u0*u1 + 2*da0*da2*u0*u2 
-                    //                      + 2*da1*da2*u1*u2);
-                    
-                    double dsigma_all = abs(u_dot_dsigma) + dsigmaT;
-
-                    double f0_mass = 1./(exp((mass - mu)*inv_Tdec) + sign);
-
-                    // ideal first, p*dsigma pT f < dsgima_all*E^2*f0
-                    // Here pT is involved because instead of sampling pT^2 
-                    // uniformly by using d(pT^2) uniformly, 
-                    // we sample pT*d(pT) where pT is uniformly to avoid 
-                    // taking sqrt, which saves time
-                    // solve (1 -+ f0) = A/(beta E) 
-                    // (A= power of E, for ideal case A=2), which gives
-                    // (beta*E-A)*exp(beta*E-A) = +- A*exp(beta*mu-A) --- (*)
-                    int A;
-                    A = 1;
-                    // ideal part for the guess of the maximum
-                    double guess_ideal = 0; 
-                    if (sign==1) // fermion
-                    {
-                        // choose upper sign; (*) always has a solution
-                        // which gives the maximum
-                        double Emax = Tdec*(
-                                        get_special_function_lambertW(
-                                                A*exp(inv_Tdec*mu - A)) + A);
-                        if (Emax < mass)
-                            Emax = mass; // maximum in [mass, inf]
-                        guess_ideal = (
-                            pow(Emax, A)/(exp((Emax - mu)*inv_Tdec) + sign));
-                    }
-                    else // boson
-                    {
-                        // choose lower sign; (*) has a solution only 
-                        // when A*exp(beta*mu-A)<=1/e
-                        double rhs = A*exp(inv_Tdec*mu - A);
-                        if (rhs>0.3678794) // 1/e = 0.367879441171442
-                        {
-                            // no solution; maximum is attained at E=mass
-                            guess_ideal = pow(mass, A)*f0_mass;
-                        }
-                        else
-                        {
-                            // has a solution; maximum is attained either at 
-                            // the solution E=Emax or at E=mass. Note that 
-                            // there are two Emax solutions to (*) and we want 
-                            // the larger one.
-                            double Emax = Tdec*(A - z_exp_m_z.map(rhs));
-                            if (Emax < mass)
-                            {
-                                guess_ideal = pow(mass, A)*f0_mass;
-                            }
-                            else
-                            {
-                                double guess_ideal1 = (pow(Emax, A)
-                                          /(exp((Emax - mu)*inv_Tdec) + sign));
-                                double guess_ideal2 = pow(mass, A)*f0_mass;
-                                guess_ideal = (guess_ideal1>guess_ideal2 ? 
-                                                guess_ideal1 : guess_ideal2);
-                            }
-                        }
-                    }
-
-                    // next viscous part
-                    // p*dsigma pT f < dsgima_all*tmp_factor*sqrt(3)
-                    //                 *E^3*f0*trace_Pi2/(2*T^2*(e+p))
-                    double trace_Pi2 = (
-                        pi00*pi00 + pi11*pi11 + pi22*pi22 + pi33*pi33 
-                        - 2*pi01*pi01 - 2*pi02*pi02 -2.*pi03*pi03
-                        + 2*pi12*pi12 + 2.*pi13*pi13 + 2.*pi23*pi23);
-                    double tmp_factor = 1;
-                    if (F0_IS_NOT_SMALL && sign==-1)
-                    {
-                        // (1+f0) <= 2*f0
-                        tmp_factor = 2.0;
-                    }
-                    else
-                    {
-                        // (1-f0) or (1-0*f0) <= 1*f0
-                        tmp_factor = 1.0;
-                    }
-                    // viscous case, solve (1 -+ f0) = A/(beta E) for A=3. 
-                    // Ref. ideal case
-                    A = 3;
-                    // ideal part for the guess of the maximum
-                    double guess_viscous = 0; 
-                    if (sign == 1) // fermion
-                    {
-                        // choose upper sign; (*) always has a solution 
-                        // which gives the maximum
-                        double Emax = (Tdec*(
-                            get_special_function_lambertW(
-                                    A*exp(inv_Tdec*mu - A)) + A));
-                        if (Emax < mass)
-                            Emax = mass;
-                        guess_viscous = (pow(Emax, A)
-                                    /(exp((Emax - mu)*inv_Tdec) + sign));
-                    }
-                    else // boson
-                    {
-                        double rhs = A*exp(inv_Tdec*mu - A);
-                        if (rhs>0.3678794) // 1/e = 0.367879441171442
-                        {
-                            guess_viscous = pow(mass, A)*f0_mass;
-                        }
-                        else
-                        {
-                            double Emax = Tdec*(A - z_exp_m_z.map(rhs));
-                            if (Emax < mass)
-                            {
-                                guess_viscous = pow(mass, A)*f0_mass;
-                            }
-                            else
-                            {
-                                double guess_viscous1 = (pow(Emax, A)
-                                          /(exp((Emax - mu)*inv_Tdec) + sign));
-                                double guess_viscous2 = pow(mass, A)*f0_mass;
-                                guess_viscous = (
-                                    guess_viscous1>guess_viscous2 ? 
-                                    guess_viscous1 : guess_viscous2);
-                            }
-                        }
-                    }
-                    guess_viscous *= (tmp_factor/2.0*inv_Tdec*inv_Tdec
-                                      *sqrt(trace_Pi2)/(Edec+Pdec));
-
-                    // bulk delta f
-                    double guess_bulk = 0.0;
-                    if(INCLUDE_BULK_DELTAF == 1)
-                    {
-                        guess_bulk = (fabs(bulkPi*bulkvisCoefficients[0])
-                                      *mass*mass*inv_Tdec/3.
-                                      *f0_mass*(1. - sign*f0_mass));
-                    }
-
-                    // baryon diffusion delta f
-                    double guess_qmu = 0.0;
-                    if(INCLUDE_DIFFUSION_DELTAF == 1)
-                    {
-                        double qmu_sq = (qmu0*qmu0 - qmu1*qmu1 
-                                        - qmu2*qmu2 - qmu3*qmu3);
-                        double qmu_mag_over_kappa_hat = (
-                                        sqrt(fabs(qmu_sq))/deltaf_qmu_coeff);
-                        // term 1
-                        A = 2;
-                        // ideal part for the guess of the maximum
-                        double guess_G2max = 0; 
-                        if (sign == 1) // fermion
-                        {
-                            // choose upper sign; (*) always has a solution 
-                            // which gives the maximum
-                            double Emax = (Tdec*(
-                                get_special_function_lambertW(
-                                                A*exp(inv_Tdec*mu - A)) + A));
-                            if (Emax < mass)
-                                Emax = mass;
-                            guess_G2max = (pow(Emax, A)
-                                        /(exp((Emax - mu)*inv_Tdec) + sign));
-                        }
-                        else // boson
-                        {
-                            double rhs = A*exp(inv_Tdec*mu - A);
-                            if (rhs>0.3678794) // 1/e = 0.367879441171442
-                            {
-                                guess_G2max = pow(mass, A)*f0_mass;
-                            }
-                            else
-                            {
-                                double Emax = Tdec*(A - z_exp_m_z.map(rhs));
-                                if (Emax < mass)
-                                {
-                                    guess_G2max = pow(mass, A)*f0_mass;
-                                }
-                                else
-                                {
-                                    double guess_G2max_temp1 = (
-                                        pow(Emax, A)/(exp((Emax - mu)*inv_Tdec) 
-                                                      + sign));
-                                    double guess_G2max_temp2 = (
-                                                    pow(mass, A)*f0_mass);
-                                    guess_G2max = (
-                                        guess_G2max_temp1>guess_G2max_temp2 ? 
-                                        guess_G2max_temp1 : guess_G2max_temp2);
-                                }
-                            }
-                        }
-
-                        double guess_G1max = guess_ideal;
-
-                        guess_qmu = prefactor_qmu*guess_G2max;
-                        if(baryon > 0)
-                            guess_qmu += baryon*guess_G1max;
-
-                        guess_qmu *= tmp_factor*qmu_mag_over_kappa_hat;
-                    }
-
-                    
-                    // combine
-                    double maximum_guess = (prefactor*degen*dsigma_all
-                                            *(guess_ideal + guess_viscous 
-                                              + guess_bulk + guess_qmu));
-
-                    // next sample pt and phi
-                    // will-be sampled values
-                    double pT, mT, phi, px, py; 
-                    double rapidity_y, y_minus_eta_s;
-                    long tries = 1;
-                    double accept_prob_max = 0.0;
-                    while (tries < maximum_impatience)
-                    {
-                        // refer to calculate_dNArrays function to see how 
-                        // the rate is calculated
-                        // Basically it is "just Cooper-Frye"
-
-                        // sample according to pT dpT
-                        pT = sqrt(drand(0, pT_to*pT_to)); 
-                        mT = sqrt(mass*mass + pT*pT);
-
-                        phi = drand(0, 2*M_PI);
-                        px = pT*cos(phi);
-                        py = pT*sin(phi);
-
-                        y_minus_eta_s = drand(-y_minus_eta_s_range, 
-                                              y_minus_eta_s_range);
-
-                        double p0 = mT*cosh(y_minus_eta_s);  // p0 = p^tau
-                        double p3 = mT*sinh(y_minus_eta_s);  // p3 = tau p^eta
-
-                        double pdotu = p0*u0 - px*u1 - py*u2 - p3*u3;
-                        double expon = (pdotu - mu)*inv_Tdec;
-                        double f0 = 1./(exp(expon)+sign);
-
-                        double pdsigma = p0*da0 + px*da1 + py*da2 + p3*da3/tau;
-
-                        double Wfactor = (
-                            p0*p0*pi00 - 2.0*p0*px*pi01 - 2.0*p0*py*pi02 
-                            - 2.0*p0*p3*pi03
-                            + px*px*pi11 + 2.0*px*py*pi12 + 2.0*px*p3*pi13
-                            + py*py*pi22 + 2.0*py*p3*pi23
-                            + p3*p3*pi33);
-
-                        double delta_f_shear = (
-                            (1. - F0_IS_NOT_SMALL*sign*f0)*Wfactor
-                            *deltaf_prefactor);
-
-                        double delta_f_bulk = 0.0;
-                        if (INCLUDE_BULK_DELTAF== 1)
-                        {
-                            if(bulk_deltaf_kind == 0)
-                            {
-                                delta_f_bulk = (
-                                    -(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi
-                                    *(bulkvisCoefficients[0]*mass*mass 
-                                      + bulkvisCoefficients[1]*pdotu 
-                                      + bulkvisCoefficients[2]*pdotu*pdotu));
-                            }
-                            else if (bulk_deltaf_kind == 1)
-                            {
-
-                                double E_over_T = pdotu/Tdec;
-                                double mass_over_T = mass/Tdec;
-                                delta_f_bulk = (
-                                    -1.0*(1.-sign*f0)/E_over_T
-                                    *bulkvisCoefficients[0]
-                                    *(mass_over_T*mass_over_T/3. 
-                                      - bulkvisCoefficients[1]
-                                        *E_over_T*E_over_T)
-                                    *bulkPi);
-                            }
-                            else if (bulk_deltaf_kind == 2)
-                            {
-                                double E_over_T = pdotu/Tdec;
-                                delta_f_bulk = (
-                                    -1.*(1.-sign*f0)*(-bulkvisCoefficients[0] 
-                                        + bulkvisCoefficients[1]*E_over_T)
-                                    *bulkPi);
-                            }
-                            else if (bulk_deltaf_kind == 3)
-                            {
-                                double E_over_T = pdotu/Tdec;
-                                delta_f_bulk = (
-                                    -1.0*(1.-sign*f0)/sqrt(E_over_T)
-                                    *(-bulkvisCoefficients[0] 
-                                      + bulkvisCoefficients[1]*E_over_T)
-                                    *bulkPi);
-                            }
-                            else if (bulk_deltaf_kind == 4)
-                            {
-                                double E_over_T = pdotu/Tdec;
-                                delta_f_bulk = (
-                                    -1.0*(1.-sign*f0)*(bulkvisCoefficients[0] 
-                                        - bulkvisCoefficients[1]/E_over_T)
-                                    *bulkPi);
-                            }
-                        }
-
-                        // delta f for diffusion
-                        double delta_f_qmu = 0.0;
-                        if(INCLUDE_DIFFUSION_DELTAF == 1)
-                        {
-                            double qmufactor = (
-                                    p0*qmu0 - px*qmu1 - py*qmu2 - p3*qmu3);
-                            delta_f_qmu = ((1. - sign*f0)
-                                           *(prefactor_qmu - baryon/pdotu)
-                                           *qmufactor/deltaf_qmu_coeff);
-                        }
-
-                        double result;
-                        double resize_factor = 1.0;
-                        if (flag_restrict_deltaf == 1) {
-                            // restrict the size of delta f to be smaller
-                            // than f_0
-                            double ratio_max = deltaf_max_ratio;
-                            double deltaf_size = fabs(delta_f_shear
-                                                      + delta_f_bulk 
-                                                      + delta_f_qmu);
-                            resize_factor = (
-                                min(1., ratio_max/(deltaf_size + 1e-10)));
-                        }
-                        result = (prefactor*degen*f0*pdsigma*tau
-                                  *(1. + (delta_f_shear + delta_f_bulk 
-                                          + delta_f_qmu)*resize_factor));
-
-                        double accept_prob = (
-                            result/(actual_adjusted_maximum_factor
-                                    *maximum_guess));
-                        if (AMOUNT_OF_OUTPUT > 5) {
-                            if(accept_prob > accept_prob_max)
-                                accept_prob_max = accept_prob;
-                        }
-
-                        // to track success rate
-                        number_of_tries ++;
-                        if (accept_prob > maximum_ratio)
-                                maximum_ratio = accept_prob;
-
-                        // for debugging
-                        if (accept_prob > 1 && AMOUNT_OF_OUTPUT > 1) {
-                            cout << "EmissionFunctionArray::"
-                                 << "sample_using_dN_dxtdy_4all_particles "
-                                 << "warning: emission function is bigger "
-                                 << "than 1: " << accept_prob << endl;
-                        }
-
-                        if (drand48() < accept_prob)
-                            break; // accept sample!
-
-                        tries++;
-                    }
-                    if (tries == maximum_impatience && AMOUNT_OF_OUTPUT > 5)
-                    {
-                        cout << "EmissionFunctionArray::"
-                             << "sample_using_dN_dxtdy_4all_particles warning:"
-                             << "maximum_impatience reached." << endl;
-                        cout << "accept_prob_max = " << accept_prob_max << ", "
-                             << "maximum_guess = " << maximum_guess << endl;
-                        cout << "guess_ideal = " << guess_ideal << ", "
-                             << "guess_shear = " << guess_viscous << ", "
-                             << "guess_bulk = " << guess_bulk << endl;
-                    }
-
-                    if (tries == maximum_impatience)
-                        continue; // resample
-                    else 
-                        sample_idx++; // write-out sample
-
-                    number_of_success++; // to track success rate
-
-                    if(hydro_mode != 2)
-                    {
-                        rapidity_y = y_LB + drand48()*(y_RB-y_LB);
-                        eta_s = rapidity_y - y_minus_eta_s;
-                    }
-                    else
-                    {
-                        rapidity_y = y_minus_eta_s + eta_s;
-                    }
-
-                    double p_z = mT*sinh(rapidity_y);
-                    double E = mT*cosh(rapidity_y);
-                    double z = surf->tau*sinh(eta_s);
-                    double t = surf->tau*cosh(eta_s);
-
-                    // write to sample file
-                    if (!USE_OSCAR_FORMAT)
-                    {
-                        sprintf(line_buffer, 
-                                "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", 
-                                FO_idx, surf->tau, surf->xpt, surf->ypt, 
-                                y_minus_eta_s, pT, phi, surf->da0, surf->da1, 
-                                surf->da2, surf->u1/surf->u0, 
-                                surf->u2/surf->u0, rapidity_y, eta_s, E, p_z, 
-                                t, z);
-                    }
-                    // To be combined to OSCAR
-                    if (USE_OSCAR_FORMAT)
-                    {
-                        sprintf(line_buffer, 
-                                "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", 
-                                px, py, p_z, E, mass, surf->xpt, 
-                                surf->ypt, z, t);
-                    }
-                    sample_str_buffer << line_buffer;
-                    sample_writing_signal++;
-                    if (sample_writing_signal==NUMBER_OF_LINES_TO_WRITE)
-                    {
-                        of_sample << sample_str_buffer.str();
-                        sample_str_buffer.str("");
-                        sample_writing_signal=0;
-                    }
-
-                }
-
-                // check whether to adjust maximum
-                if (use_dynamic_maximum && !has_adjusted_maximum)
-                {
-                    if (number_of_tries > adjust_maximum_after)
-                    {
+            }
+            
+            if (control_writing_signal == NUMBER_OF_LINES_TO_WRITE) {
+                if (use_dynamic_maximum && !has_adjusted_maximum) {
+                    if (number_of_tries > adjust_maximum_after) {
                         // adjust maximum
                         actual_adjusted_maximum_factor = (
                                         maximum_ratio*adjust_maximum_to);
                         has_adjusted_maximum = true;
                     }
                 }
+            }
 
-                if (AMOUNT_OF_OUTPUT>0)
-                    print_progressbar((double)(repeated_sampling_idx)
-                                              /number_of_repeated_sampling);
+            long sample_idx = 1;
+            while (sample_idx <= number_to_sample) {
+                // first, sample eta and freeze-out cell index
+                //long FO_idx =  sorted_FZ[rand1D.rand()];
+                long FO_idx =  rand1D.rand();
+
+                surf = &FOsurf_ptr[FO_idx];
+
+                double Tdec = surf->Tdec;
+                double inv_Tdec = 1.0/Tdec;
+                double Pdec = surf->Pdec;
+                double Edec = surf->Edec;
+
+                double tau = surf->tau;
+                double u0 = surf->u0;
+                double u1 = surf->u1;
+                double u2 = surf->u2;
+                double u3 = surf->u3;
+
+                double mu = baryon*surf->muB;
+                if (flag_PCE == 1) {
+                    double mu_PCE = (
+                                surf->particle_mu_PCE[real_particle_idx]);
+                    mu += mu_PCE;
+                }
+
+                double da0 = surf->da0;
+                double da1 = surf->da1;
+                double da2 = surf->da2;
+                double da3 = surf->da3;
+
+                double eta_s;
+                if (hydro_mode == 2)
+                    eta_s = surf->eta;
+                else
+                    eta_s = 0.0;
+
+                double pi00 = surf->pi00;
+                double pi01 = surf->pi01;
+                double pi02 = surf->pi02;
+                double pi03 = surf->pi03;
+                double pi11 = surf->pi11;
+                double pi12 = surf->pi12;
+                double pi13 = surf->pi13;
+                double pi22 = surf->pi22;
+                double pi23 = surf->pi23;
+                double pi33 = surf->pi33;
+
+                double deltaf_prefactor = 0.0;
+                if (INCLUDE_DELTAF)
+                    deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
+                
+                double bulkPi = 0.0;
+                if (INCLUDE_BULK_DELTAF == 1) {
+                    if (bulk_deltaf_kind == 0)
+                        bulkPi = surf->bulkPi;
+                    else
+                        bulkPi = surf->bulkPi/hbarC;   // unit in fm^-4 
+                    getbulkvisCoefficients(Tdec, bulkvisCoefficients);
+                }
+
+                // diffusion delta f
+                double qmu0 = 0.0;
+                double qmu1 = 0.0;
+                double qmu2 = 0.0;
+                double qmu3 = 0.0;
+                double deltaf_qmu_coeff = 1.0;
+                double prefactor_qmu = 0.0;
+                if (INCLUDE_DIFFUSION_DELTAF == 1) {
+                    qmu0 = surf->qmu0;
+                    qmu1 = surf->qmu1;
+                    qmu2 = surf->qmu2;
+                    qmu3 = surf->qmu3;
+                    
+                    double mu_B = surf->muB;
+                    deltaf_qmu_coeff = get_deltaf_qmu_coeff(Tdec, mu_B);
+                    
+                    double rho_B = surf->Bn;
+                    prefactor_qmu = rho_B/(Edec + Pdec);  // 1/GeV
+                }
+
+                // calculate maximum value for p*dsigma f, 
+                // used in PDF accept/reject sampling
+                double u_dot_dsigma = tau*(
+                                u0*da0 + u1*da1 + u2*da2 + u3*da3/tau);
+                double dsigma_sq = tau*tau*(
+                          da0*da0 - da1*da1 - da2*da2 - da3*da3/tau/tau);
+                double dsigmaT = sqrt(fabs(dsigma_sq 
+                                           - u_dot_dsigma*u_dot_dsigma));
+                //double dsigmaT = sqrt(da0*da0*(u1*u1+u2*u2) 
+                //                      + da1*da1*(1+u1*u1) 
+                //                      + da2*da2*(1+u2*u2) 
+                //                      + 2*da0*da1*u0*u1 + 2*da0*da2*u0*u2 
+                //                      + 2*da1*da2*u1*u2);
+                
+                double dsigma_all = abs(u_dot_dsigma) + dsigmaT;
+
+                double f0_mass = 1./(exp((mass - mu)*inv_Tdec) + sign);
+
+                // ideal first, p*dsigma pT f < dsgima_all*E^2*f0
+                // Here pT is involved because instead of sampling pT^2 
+                // uniformly by using d(pT^2) uniformly, 
+                // we sample pT*d(pT) where pT is uniformly to avoid 
+                // taking sqrt, which saves time
+                // solve (1 -+ f0) = A/(beta E) 
+                // (A= power of E, for ideal case A=2), which gives
+                // (beta*E-A)*exp(beta*E-A) = +- A*exp(beta*mu-A) --- (*)
+                int A;
+                A = 1;
+                // ideal part for the guess of the maximum
+                double guess_ideal = 0; 
+                if (sign == 1) {  // fermion
+                    // choose upper sign; (*) always has a solution
+                    // which gives the maximum
+                    double Emax = Tdec*(
+                                    get_special_function_lambertW(
+                                            A*exp(inv_Tdec*mu - A)) + A);
+                    if (Emax < mass)
+                        Emax = mass; // maximum in [mass, inf]
+                    guess_ideal = (
+                        pow(Emax, A)/(exp((Emax - mu)*inv_Tdec) + sign));
+                } else {  // boson
+                    // choose lower sign; (*) has a solution only 
+                    // when A*exp(beta*mu-A)<=1/e
+                    double rhs = A*exp(inv_Tdec*mu - A);
+                    if (rhs>0.3678794) {
+                        // 1/e = 0.367879441171442
+                        // no solution; maximum is attained at E=mass
+                        guess_ideal = pow(mass, A)*f0_mass;
+                    } else {
+                        // has a solution; maximum is attained either at 
+                        // the solution E=Emax or at E=mass. Note that 
+                        // there are two Emax solutions to (*) and we want 
+                        // the larger one.
+                        double Emax = Tdec*(A - z_exp_m_z.map(rhs));
+                        if (Emax < mass) {
+                            guess_ideal = pow(mass, A)*f0_mass;
+                        } else {
+                            double guess_ideal1 = (pow(Emax, A)
+                                      /(exp((Emax - mu)*inv_Tdec) + sign));
+                            double guess_ideal2 = pow(mass, A)*f0_mass;
+                            guess_ideal = (guess_ideal1>guess_ideal2 ? 
+                                            guess_ideal1 : guess_ideal2);
+                        }
+                    }
+                }
+
+                // next viscous part
+                // p*dsigma pT f < dsgima_all*tmp_factor*sqrt(3)
+                //                 *E^3*f0*trace_Pi2/(2*T^2*(e+p))
+                double trace_Pi2 = (
+                    pi00*pi00 + pi11*pi11 + pi22*pi22 + pi33*pi33 
+                    - 2*pi01*pi01 - 2*pi02*pi02 -2.*pi03*pi03
+                    + 2*pi12*pi12 + 2.*pi13*pi13 + 2.*pi23*pi23);
+                double tmp_factor = 1;
+                if (F0_IS_NOT_SMALL && sign==-1) {
+                    // (1+f0) <= 2*f0
+                    tmp_factor = 2.0;
+                } else {
+                    // (1-f0) or (1-0*f0) <= 1*f0
+                    tmp_factor = 1.0;
+                }
+                // viscous case, solve (1 -+ f0) = A/(beta E) for A=3. 
+                // Ref. ideal case
+                A = 3;
+                // ideal part for the guess of the maximum
+                double guess_viscous = 0; 
+                if (sign == 1) {
+                    // fermion
+                    // choose upper sign; (*) always has a solution 
+                    // which gives the maximum
+                    double Emax = (Tdec*(
+                        get_special_function_lambertW(
+                                A*exp(inv_Tdec*mu - A)) + A));
+                    if (Emax < mass) {
+                        Emax = mass;
+                    }
+                    guess_viscous = (pow(Emax, A)
+                                /(exp((Emax - mu)*inv_Tdec) + sign));
+                } else {
+                    // boson
+                    double rhs = A*exp(inv_Tdec*mu - A);
+                    if (rhs>0.3678794) {
+                        // 1/e = 0.367879441171442
+                        guess_viscous = pow(mass, A)*f0_mass;
+                    } else {
+                        double Emax = Tdec*(A - z_exp_m_z.map(rhs));
+                        if (Emax < mass) {
+                            guess_viscous = pow(mass, A)*f0_mass;
+                        } else {
+                            double guess_viscous1 = (pow(Emax, A)
+                                      /(exp((Emax - mu)*inv_Tdec) + sign));
+                            double guess_viscous2 = pow(mass, A)*f0_mass;
+                            guess_viscous = (
+                                guess_viscous1>guess_viscous2 ? 
+                                guess_viscous1 : guess_viscous2);
+                        }
+                    }
+                }
+                guess_viscous *= (tmp_factor/2.0*inv_Tdec*inv_Tdec
+                                  *sqrt(trace_Pi2)/(Edec+Pdec));
+
+                // bulk delta f
+                double guess_bulk = 0.0;
+                if (INCLUDE_BULK_DELTAF == 1) {
+                    guess_bulk = (fabs(bulkPi*bulkvisCoefficients[0])
+                                  *mass*mass*inv_Tdec/3.
+                                  *f0_mass*(1. - sign*f0_mass));
+                }
+
+                // baryon diffusion delta f
+                double guess_qmu = 0.0;
+                if (INCLUDE_DIFFUSION_DELTAF == 1) {
+                    double qmu_sq = (qmu0*qmu0 - qmu1*qmu1 
+                                    - qmu2*qmu2 - qmu3*qmu3);
+                    double qmu_mag_over_kappa_hat = (
+                                    sqrt(fabs(qmu_sq))/deltaf_qmu_coeff);
+                    // term 1
+                    A = 2;
+                    // ideal part for the guess of the maximum
+                    double guess_G2max = 0; 
+                    if (sign == 1) {
+                        // fermion
+                        // choose upper sign; (*) always has a solution 
+                        // which gives the maximum
+                        double Emax = (Tdec*(
+                            get_special_function_lambertW(
+                                            A*exp(inv_Tdec*mu - A)) + A));
+                        if (Emax < mass) {
+                            Emax = mass;
+                        }
+                        guess_G2max = (pow(Emax, A)
+                                    /(exp((Emax - mu)*inv_Tdec) + sign));
+                    } else {
+                        // boson
+                        double rhs = A*exp(inv_Tdec*mu - A);
+                        if (rhs > 0.3678794) {
+                            // 1/e = 0.367879441171442
+                            guess_G2max = pow(mass, A)*f0_mass;
+                        } else {
+                            double Emax = Tdec*(A - z_exp_m_z.map(rhs));
+                            if (Emax < mass) {
+                                guess_G2max = pow(mass, A)*f0_mass;
+                            } else {
+                                double guess_G2max_temp1 = (
+                                    pow(Emax, A)/(exp((Emax - mu)*inv_Tdec) 
+                                                  + sign));
+                                double guess_G2max_temp2 = (
+                                                pow(mass, A)*f0_mass);
+                                guess_G2max = (
+                                    guess_G2max_temp1>guess_G2max_temp2 ? 
+                                    guess_G2max_temp1 : guess_G2max_temp2);
+                            }
+                        }
+                    }
+
+                    double guess_G1max = guess_ideal;
+
+                    guess_qmu = prefactor_qmu*guess_G2max;
+                    if (baryon > 0) {
+                        guess_qmu += baryon*guess_G1max;
+                    }
+
+                    guess_qmu *= tmp_factor*qmu_mag_over_kappa_hat;
+                }
+
+                
+                // combine
+                double maximum_guess = (prefactor*degen*dsigma_all
+                                        *(guess_ideal + guess_viscous 
+                                          + guess_bulk + guess_qmu));
+
+                // next sample pt and phi
+                // will-be sampled values
+                double pT, mT, phi, px, py; 
+                double rapidity_y, y_minus_eta_s;
+                long tries = 1;
+                double accept_prob_max = 0.0;
+                while (tries < maximum_impatience) {
+                    // refer to calculate_dNArrays function to see how 
+                    // the rate is calculated
+                    // Basically it is "just Cooper-Frye"
+
+                    // sample according to pT dpT
+                    pT = sqrt(drand(0, pT_to*pT_to)); 
+                    mT = sqrt(mass*mass + pT*pT);
+
+                    phi = drand(0, 2*M_PI);
+                    px = pT*cos(phi);
+                    py = pT*sin(phi);
+
+                    y_minus_eta_s = drand(-y_minus_eta_s_range, 
+                                          y_minus_eta_s_range);
+
+                    double p0 = mT*cosh(y_minus_eta_s);  // p0 = p^tau
+                    double p3 = mT*sinh(y_minus_eta_s);  // p3 = tau p^eta
+
+                    double pdotu = p0*u0 - px*u1 - py*u2 - p3*u3;
+                    double expon = (pdotu - mu)*inv_Tdec;
+                    double f0 = 1./(exp(expon)+sign);
+
+                    double pdsigma = p0*da0 + px*da1 + py*da2 + p3*da3/tau;
+
+                    double Wfactor = (
+                        p0*p0*pi00 - 2.0*p0*px*pi01 - 2.0*p0*py*pi02 
+                        - 2.0*p0*p3*pi03
+                        + px*px*pi11 + 2.0*px*py*pi12 + 2.0*px*p3*pi13
+                        + py*py*pi22 + 2.0*py*p3*pi23
+                        + p3*p3*pi33);
+
+                    double delta_f_shear = (
+                        (1. - F0_IS_NOT_SMALL*sign*f0)*Wfactor
+                        *deltaf_prefactor);
+
+                    double delta_f_bulk = 0.0;
+                    if (INCLUDE_BULK_DELTAF== 1) {
+                        if (bulk_deltaf_kind == 0) {
+                            delta_f_bulk = (
+                                -(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi
+                                *(bulkvisCoefficients[0]*mass*mass 
+                                  + bulkvisCoefficients[1]*pdotu 
+                                  + bulkvisCoefficients[2]*pdotu*pdotu));
+                        } else if (bulk_deltaf_kind == 1) {
+                            double E_over_T = pdotu/Tdec;
+                            double mass_over_T = mass/Tdec;
+                            delta_f_bulk = (
+                                -1.0*(1.-sign*f0)/E_over_T
+                                *bulkvisCoefficients[0]
+                                *(mass_over_T*mass_over_T/3. 
+                                  - bulkvisCoefficients[1]
+                                    *E_over_T*E_over_T)
+                                *bulkPi);
+                        } else if (bulk_deltaf_kind == 2) {
+                            double E_over_T = pdotu/Tdec;
+                            delta_f_bulk = (
+                                -1.*(1.-sign*f0)*(-bulkvisCoefficients[0] 
+                                    + bulkvisCoefficients[1]*E_over_T)
+                                *bulkPi);
+                        } else if (bulk_deltaf_kind == 3) {
+                            double E_over_T = pdotu/Tdec;
+                            delta_f_bulk = (
+                                -1.0*(1.-sign*f0)/sqrt(E_over_T)
+                                *(-bulkvisCoefficients[0] 
+                                  + bulkvisCoefficients[1]*E_over_T)
+                                *bulkPi);
+                        } else if (bulk_deltaf_kind == 4) {
+                            double E_over_T = pdotu/Tdec;
+                            delta_f_bulk = (
+                                -1.0*(1.-sign*f0)*(bulkvisCoefficients[0] 
+                                    - bulkvisCoefficients[1]/E_over_T)
+                                *bulkPi);
+                        }
+                    }
+
+                    // delta f for diffusion
+                    double delta_f_qmu = 0.0;
+                    if (INCLUDE_DIFFUSION_DELTAF == 1) {
+                        double qmufactor = (
+                                p0*qmu0 - px*qmu1 - py*qmu2 - p3*qmu3);
+                        delta_f_qmu = ((1. - sign*f0)
+                                       *(prefactor_qmu - baryon/pdotu)
+                                       *qmufactor/deltaf_qmu_coeff);
+                    }
+
+                    double result;
+                    double resize_factor = 1.0;
+                    if (flag_restrict_deltaf == 1) {
+                        // restrict the size of delta f to be smaller
+                        // than f_0
+                        double ratio_max = deltaf_max_ratio;
+                        double deltaf_size = fabs(delta_f_shear
+                                                  + delta_f_bulk 
+                                                  + delta_f_qmu);
+                        resize_factor = (
+                            min(1., ratio_max/(deltaf_size + 1e-10)));
+                    }
+                    result = (prefactor*degen*f0*pdsigma*tau
+                              *(1. + (delta_f_shear + delta_f_bulk 
+                                      + delta_f_qmu)*resize_factor));
+
+                    double accept_prob = (
+                        result/(actual_adjusted_maximum_factor
+                                *maximum_guess));
+                    if (AMOUNT_OF_OUTPUT > 5) {
+                        if(accept_prob > accept_prob_max)
+                            accept_prob_max = accept_prob;
+                    }
+
+                    // to track success rate
+                    number_of_tries ++;
+                    if (accept_prob > maximum_ratio) {
+                        maximum_ratio = accept_prob;
+                    }
+
+                    // for debugging
+                    if (accept_prob > 1 && AMOUNT_OF_OUTPUT > 1) {
+                        cout << "EmissionFunctionArray::"
+                             << "sample_using_dN_dxtdy_4all_particles "
+                             << "warning: emission function is bigger "
+                             << "than 1: " << accept_prob << endl;
+                    }
+
+                    if (drand48() < accept_prob) {
+                        break;  // accept sample!
+                    }
+
+                    tries++;
+                }
+                if (tries == maximum_impatience && AMOUNT_OF_OUTPUT > 5) {
+                    cout << "EmissionFunctionArray::"
+                         << "sample_using_dN_dxtdy_4all_particles warning:"
+                         << "maximum_impatience reached." << endl;
+                    cout << "accept_prob_max = " << accept_prob_max << ", "
+                         << "maximum_guess = " << maximum_guess << endl;
+                    cout << "guess_ideal = " << guess_ideal << ", "
+                         << "guess_shear = " << guess_viscous << ", "
+                         << "guess_bulk = " << guess_bulk << endl;
+                }
+
+                if (tries == maximum_impatience) {
+                    continue;  // resample
+                } else {
+                    sample_idx++;  // write-out sample
+                }
+
+                number_of_success++; // to track success rate
+
+                if (hydro_mode != 2) {
+                    rapidity_y = y_LB + drand48()*(y_RB-y_LB);
+                    eta_s = rapidity_y - y_minus_eta_s;
+                } else {
+                    rapidity_y = y_minus_eta_s + eta_s;
+                }
+
+                double p_z = mT*sinh(rapidity_y);
+                double E = mT*cosh(rapidity_y);
+                double z = surf->tau*sinh(eta_s);
+                double t = surf->tau*cosh(eta_s);
+
+                // write to sample file
+                if (!USE_OSCAR_FORMAT) {
+                    sprintf(line_buffer, 
+                            "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", 
+                            FO_idx, surf->tau, surf->xpt, surf->ypt, 
+                            y_minus_eta_s, pT, phi, surf->da0, surf->da1, 
+                            surf->da2, surf->u1/surf->u0, 
+                            surf->u2/surf->u0, rapidity_y, eta_s, E, p_z, 
+                            t, z);
+                } else {
+                    // To be combined to OSCAR
+                    sprintf(line_buffer, 
+                            "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", 
+                            px, py, p_z, E, mass, surf->xpt, 
+                            surf->ypt, z, t);
+                }
+                if (flag_output_samples_into_files == 1) {
+                    sample_str_buffer << line_buffer;
+                    sample_writing_signal++;
+                    if (sample_writing_signal == NUMBER_OF_LINES_TO_WRITE) {
+                        of_sample << sample_str_buffer.str();
+                        sample_str_buffer.str("");
+                        sample_writing_signal=0;
+                    }
+                }
+
+                if (flag_store_samples_in_memory == 1) {
+                    iSS_Hadron *temp_hadron = new iSS_Hadron;
+                    temp_hadron->pid = particle->monval;
+                    temp_hadron->mass = mass;
+                    temp_hadron->E = E;
+                    temp_hadron->px = px;
+                    temp_hadron->py = py;
+                    temp_hadron->pz = p_z;
+                    temp_hadron->t = t;
+                    temp_hadron->x = surf->xpt;
+                    temp_hadron->y = surf->ypt;
+                    temp_hadron->z = z;
+                    (*Hadron_list)[repeated_sampling_idx-1]->push_back(
+                                                                *temp_hadron);
+                }
             }
-            // flushing buffers
-            if (control_writing_signal!=0)
-            {
-                of_control << control_str_buffer.str();
-                control_str_buffer.str("");
-                control_writing_signal = 0;
+
+            // check whether to adjust maximum
+            if (use_dynamic_maximum && !has_adjusted_maximum) {
+                if (number_of_tries > adjust_maximum_after) {
+                    // adjust maximum
+                    actual_adjusted_maximum_factor = (
+                                    maximum_ratio*adjust_maximum_to);
+                    has_adjusted_maximum = true;
+                }
             }
+
+            if (AMOUNT_OF_OUTPUT>0) {
+                print_progressbar(
+                        static_cast<double>(repeated_sampling_idx)
+                                            /number_of_repeated_sampling);
+            }
+        }
+        // flushing buffers
+        if (flag_output_samples_into_files == 1
+                && control_writing_signal != 0) {
+            of_control << control_str_buffer.str();
+            control_str_buffer.str("");
+            control_writing_signal = 0;
             of_control.close();
-            if (sample_writing_signal!=0)
-            {
-                of_sample << sample_str_buffer.str();
-                sample_str_buffer.str("");
-                sample_writing_signal = 0;
-            }
+        }
+        if (flag_output_samples_into_files == 1
+                && sample_writing_signal != 0) {
+            of_sample << sample_str_buffer.str();
+            sample_str_buffer.str("");
+            sample_writing_signal = 0;
             of_sample.close();
-            if (AMOUNT_OF_OUTPUT>0) print_progressbar(1);
+        }
+        if (AMOUNT_OF_OUTPUT > 0) print_progressbar(1);
 
-            if (AMOUNT_OF_OUTPUT>3)
-            {
-                cout << endl << " -- -- Number of tries: " << number_of_tries 
-                     << ", number of success: " << number_of_success << endl
-                     << " -- -- Success rate: " 
-                     << (double) number_of_success/number_of_tries << ", " 
-                     << "maximum accept rate: " << maximum_ratio << endl;
-            }
+        if (AMOUNT_OF_OUTPUT > 3) {
+            cout << endl << " -- -- Number of tries: " << number_of_tries 
+                 << ", number of success: " << number_of_success << endl
+                 << " -- -- Success rate: " 
+                 << (double) number_of_success/number_of_tries << ", " 
+                 << "maximum accept rate: " << maximum_ratio << endl;
+        }
 
-            sw.toc();
-            cout << endl << "Sampling finished in " 
-                 << sw.takeTime() << " seconds." << endl;
+        sw.toc();
+        cout << endl << "Sampling finished in " 
+             << sw.takeTime() << " seconds." << endl;
 
-        } // n; particle loop
+    } // n; particle loop
 
+    if (flag_output_samples_into_files == 1) {
         ofstream of_sample_format(samples_format_filename.c_str());
         // Be careful that ParameterReader class convert all strings to lower 
         // case so do NOT use variable names that differ only by cases!
-        if (!USE_OSCAR_FORMAT)
-        {
+        if (!USE_OSCAR_FORMAT) {
             of_sample_format
             << "Total_number_of_columns = " << 18 << endl
             << "FZ_cell_idx = " << 1 << endl
@@ -4082,9 +4145,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
             << "p_z = " << 16 << endl
             << "t = " << 17 << endl
             << "z = " << 18 << endl;
-        }
-        if (USE_OSCAR_FORMAT)
-        {
+        } else {
             of_sample_format
             << "Total_number_of_columns = " << 9 << endl
             << "t = " << 9 << endl
@@ -4098,18 +4159,11 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional()
             << "mass =" << 5 << endl;
         }
         of_sample_format.close();
-
-    }
-    else
-    {
-        cout << "EmissionFunctionArray::"
-             << "sample_using_dN_dxtdy_4all_particles error: sampling model " 
-             << sampling_model << " is not supported." << endl;
-        exit(-1);
     }
     
-    if(INCLUDE_BULK_DELTAF == 1)
+    if (INCLUDE_BULK_DELTAF == 1) {
         delete [] bulkvisCoefficients;
+    }
 
     sw_total.toc();
     cout << endl 
@@ -4450,13 +4504,10 @@ void EmissionFunctionArray::get_special_function_En(double arg,
     }
 }
 
-double EmissionFunctionArray::get_special_function_lambertW(double arg)
-{
+double EmissionFunctionArray::get_special_function_lambertW(double arg) {
     double results;
-    if(arg < lambert_x_min || arg > lambert_x_max-lambert_dx)
-    {
-        if(AMOUNT_OF_OUTPUT > 5)
-        {
+    if (arg < lambert_x_min || arg > lambert_x_max-lambert_dx) {
+        if (AMOUNT_OF_OUTPUT > 5) {
             cout << "EmissionFunctionArray::get_special_function_lambertW: "
                  << "out of the table bound!" << endl;
             cout << "lambert_x_min = " << lambert_x_min 
@@ -4464,9 +4515,7 @@ double EmissionFunctionArray::get_special_function_lambertW(double arg)
                  << ", arg = " << arg << endl;
         }
         results = gsl_sf_lambert_W0(arg);
-    }
-    else
-    {
+    } else {
         int idx = (int)((arg - lambert_x_min)/lambert_dx);
         double fraction = (arg - lambert_x_min - idx*lambert_dx)/lambert_dx;
         results = (1. - fraction)*lambert_W[idx] + fraction*lambert_W[idx+1];
@@ -4474,3 +4523,17 @@ double EmissionFunctionArray::get_special_function_lambertW(double arg)
     return(results);
 }
 
+void EmissionFunctionArray::check_samples_in_memory() {
+    cout << "check samples in memory ... " << endl;
+    cout << "number of events: " << Hadron_list->size() << endl;
+    for (unsigned int i = 0; i < Hadron_list->size(); i++) {
+        cout << "event " << i << ": number of particles = "
+             << (*Hadron_list)[i]->size() << endl;
+        for (unsigned int j = 0; j < (*Hadron_list)[i]->size(); j++) {
+            cout << "particle " << j
+                 << " pid = " << (*(*Hadron_list)[i])[j].pid
+                 << " mass = " << (*(*Hadron_list)[i])[j].mass
+                 << endl;
+        }
+    }
+}
