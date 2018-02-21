@@ -79,12 +79,12 @@ void iSS::set_random_seed() {
 
 int iSS::generate_samples() {
     // skip others except for these particle
-    Table chosen_particles("iSS_tables/chosen_particles.dat");
+    Table chosen_particles(table_path + "/chosen_particles.dat");
 
-    Table pT_tab("iSS_tables/bin_tables/pT_gauss_table.dat");    // pt tables
-    Table phi_tab("iSS_tables/bin_tables/phi_gauss_table.dat");  // phi tables
+    Table pT_tab(table_path + "/bin_tables/pT_gauss_table.dat");
+    Table phi_tab(table_path + "/bin_tables/phi_gauss_table.dat");
     // eta uniform dist table
-    Table eta_tab("iSS_tables/bin_tables/eta_uni_table.dat");
+    Table eta_tab(table_path + "/bin_tables/eta_uni_table.dat");
     // Table eta_tab("tables/eta_gauss_table_30_full.dat");
 
     efa = new EmissionFunctionArray(

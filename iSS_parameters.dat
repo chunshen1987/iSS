@@ -24,6 +24,7 @@ f0_is_not_small = 1      # include (1 \pm f_0) factor in delta f
 output_samples_into_files = 0
 use_OSCAR_format = 1     # output results in OSCAR format
 store_samples_in_memory = 1
+perform_decays = 1
 
 calculate_vn = 0         # 1/0: whether to calculate the 
                          # dN/(pt dpt dphi dy) and v_n flows 

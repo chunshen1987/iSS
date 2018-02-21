@@ -96,6 +96,11 @@ EmissionFunctionArray::EmissionFunctionArray(
     if (flag_store_samples_in_memory == 1) {
         Hadron_list = new vector< vector<iSS_Hadron>* >;
     }
+    
+    flag_perform_decays = paraRdr->getVal("perform_decays");
+    if (flag_perform_decays == 1) {
+        decayer_ptr = new particle_decay;
+    }
 
     // allocate internal buffer
     dN_pTdpTdphidy = new Table(pT_tab_length, phi_tab_length);
@@ -226,7 +231,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     dN_dxt_filename = path + "/dN_dxt_%d.dat";
     dN_dx_filename = path + "/dN_dx_%d.dat";
 
-    OSCAR_header_filename = "iSS_tables/OSCAR_header.txt";
+    OSCAR_header_filename = table_path + "/OSCAR_header.txt";
     OSCAR_output_filename = "OSCAR.DAT";
 
     if (MC_sampling == 2) {
@@ -241,10 +246,10 @@ EmissionFunctionArray::EmissionFunctionArray(
     // for interpolation for the third way of sampling
     // generate new set of pT and phi table to be interpolated onto
     pT_tab4Sampling.loadTableFromFile(
-                    "iSS_tables/bin_tables/pT_table_for_sampling.dat");
+                    table_path + "/bin_tables/pT_table_for_sampling.dat");
     pT_tab4Sampling_length = pT_tab4Sampling.getNumberOfRows();
     phi_tab4Sampling.loadTableFromFile(
-                    "iSS_tables/bin_tables/phi_table_for_sampling.dat");
+                    table_path + "/bin_tables/phi_table_for_sampling.dat");
     phi_tab4Sampling_length = phi_tab4Sampling.getNumberOfRows();
     // extend pT_tab and phi_tab in order to extract index info for given
     // pT or phi
@@ -278,16 +283,16 @@ EmissionFunctionArray::EmissionFunctionArray(
     // arrays for bulk delta f coefficients
     if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0) {
         bulkdf_coeff = new Table (
-            "iSS_tables/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat");
+            table_path
+            + "/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat");
     }
 
     // load table for diffusion delta f coeffient
     if (INCLUDE_DIFFUSION_DELTAF == 1) {
         load_deltaf_qmu_coeff_table(
-            "iSS_tables/deltaf_tables/Coefficients_RTA_diffusion.dat");
+            table_path + "/deltaf_tables/Coefficients_RTA_diffusion.dat");
     }
 
-    decayer_ptr = new particle_decay;
 
     // create arrays for special functions who are needed to compute 
     // particle yields
@@ -377,7 +382,10 @@ EmissionFunctionArray::~EmissionFunctionArray() {
         }
         Hadron_list->clear();
     }
-    delete decayer_ptr;
+    
+    if (flag_perform_decays == 1) {
+        delete decayer_ptr;
+    }
 }
 //***************************************************************************
 
@@ -2801,7 +2809,9 @@ void EmissionFunctionArray::shell() {
     } else if (MC_sampling == 2) {
         //calculate_dN_dxtdy_4all_particles();
         sample_using_dN_dxtdy_4all_particles_conventional();
-        perform_resonance_feed_down(Hadron_list);
+        if (flag_perform_decays == 1) {
+            perform_resonance_feed_down(Hadron_list);
+        }
         if (flag_output_samples_into_files == 1 && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
         } else if (flag_store_samples_in_memory == 1 && USE_OSCAR_FORMAT) {
@@ -3426,7 +3436,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
 
     // load pre-calculated table
     // (x,y) that y*exp(-y) = x; y<=1
-    TableFunction z_exp_m_z("iSS_tables/z_exp_m_z.dat");
+    TableFunction z_exp_m_z(table_path + "/z_exp_m_z.dat");
     z_exp_m_z.interpolation_model = 5;
 
     // control variables

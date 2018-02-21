@@ -5,6 +5,7 @@
 #include <sstream>
 #include <cmath>
 #include <cstdlib>
+#include "./main.h"
 #include "./particle_decay.h"
 
 using namespace std;
@@ -28,7 +29,7 @@ particle_decay::~particle_decay() {
 int particle_decay::read_resonances_list() {
     double eps = 1e-15;
     cout << " -- Read in particle resonance decay table..." << endl;
-    ifstream resofile("iSS_tables/pdg.dat");
+    ifstream resofile(table_path + "/pdg.dat");
     int dummy_int;
     int particle_monval;
     resofile >> particle_monval;

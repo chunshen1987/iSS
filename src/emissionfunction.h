@@ -138,6 +138,7 @@ class EmissionFunctionArray {
     int flag_store_samples_in_memory;
     
     //! particle decay
+    int flag_perform_decays;
     particle_decay *decayer_ptr;
 
  public:
