@@ -128,13 +128,16 @@ use_historic_flow_output_format = 0    # 1/0: The "historical flow format"
 
 calculate_vn_to_order = 9              # v_n's are calculated up to this order
 
+sample_upto_desired_particle_number = 1  # flag to run sampling until desired
+                                         # particle numbers is reached
+number_of_particles_needed = 300000      # number of hadrons to sample
 number_of_repeated_sampling = 10      # How many times should the sampling be 
                                        # repeated.
 
 sample_pT_up_to = -1                   # Up to this value will pT be sampled; 
                                        # if<0 then use the largest value in 
                                        # the pT table.
-sample_y_minus_eta_s_range = 2         # y_minus_eta_s will be sampled between 
+sample_y_minus_eta_s_range = 3         # y_minus_eta_s will be sampled between 
                                        # +- this value. It is used only when 
                                        # sampling using 
                                        # sample_using_dN_dxtdy_4all_particles 

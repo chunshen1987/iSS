@@ -239,6 +239,7 @@ class EmissionFunctionArray {
     };
     void perform_resonance_feed_down(
                 vector< vector<iSS_Hadron>* >* input_particle_list);
+    int compute_number_of_sampling_needed(int number_of_particles_needed);
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_

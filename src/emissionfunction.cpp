@@ -3147,7 +3147,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
 
 //***************************************************************************
 void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
-                                                            int particle_idx) {
+                                                    int real_particle_idx) {
 /*
    The p_integral_table is a table stores results for the integral
      int( p^2 / ( exp(sqrt(p^2+m^2)-mu) + 1), p=0..inf)
@@ -3220,7 +3220,6 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
 
         // calculate dN / (dxt dy) for all particles
         double total_N = 0;
-        int real_particle_idx = chosen_particles_sampling_table[particle_idx];
         particle = &particles[real_particle_idx];
 
         //int sign = particle->sign;
@@ -3405,6 +3404,22 @@ double EmissionFunctionArray::calculate_total_FZ_energy_flux() {
 }
 
 
+int EmissionFunctionArray::compute_number_of_sampling_needed(
+                                            int number_of_particles_needed) {
+    double dNdy_thermal_pion = 0.;
+    calculate_dN_dxtdy_for_one_particle_species(1);  // 1 for thermal pion^+
+    for (long l = 0; l < FO_length; l++) {
+        dNdy_thermal_pion += dN_dxtdy_for_one_particle_species[l];
+    }
+    particle_info *particle = &particles[1];
+    // cout << "check  Name: " << particle->name
+    //      << ", Monte-carlo index: " << particle->monval
+    //      << ", dN/dy = " << dNdy_thermal_pion << endl;
+    int nev_needed = static_cast<int>(number_of_particles_needed
+                                      /(6.*dNdy_thermal_pion));
+    if (nev_needed < 1) nev_needed = 1;
+    return(nev_needed);
+}
 
 
 //***************************************************************************
@@ -3419,7 +3434,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
          << endl;
 
     // reusable local variables
-    FO_surf *surf; particle_info* particle;
+    FO_surf *surf;
+    particle_info *particle;
     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
 
     double *bulkvisCoefficients = new double[3];
@@ -3437,8 +3453,19 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     double sampling_para4 = paraRdr->getVal("dN_dy_sampling_para4");
     double sampling_para5 = paraRdr->getVal("dN_dy_sampling_para5");
 
-    long number_of_repeated_sampling = paraRdr->getVal(
+    int flag_sample_upto_desired_particle_number = paraRdr->getVal(
+                                    "sample_upto_desired_particle_number");
+    long number_of_repeated_sampling = 0;
+    if (flag_sample_upto_desired_particle_number == 0) {
+        number_of_repeated_sampling = paraRdr->getVal(
                                                 "number_of_repeated_sampling");
+    } else {
+        long number_of_particles_needed = paraRdr->getVal(
+                                                "number_of_particles_needed");
+        number_of_repeated_sampling = compute_number_of_sampling_needed(
+                                                number_of_particles_needed);
+    }
+
     double pT_to = paraRdr->getVal("sample_pT_up_to");
     if (pT_to < 0) {
         pT_to = pT_tab->getLast(1); // use table to determine pT range
@@ -3466,9 +3493,11 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     cout << endl << "Sampling using dN/dy with "
         << "sample_using_dN_dxtdy_4all_particles function."
         << endl << endl;
+    cout << "number of repeated sampling = " << number_of_repeated_sampling
+         << endl;
     for (int n = 0; n < number_of_chosen_particles; n++) {
-        calculate_dN_dxtdy_for_one_particle_species(n);
         int real_particle_idx = chosen_particles_sampling_table[n];
+        calculate_dN_dxtdy_for_one_particle_species(real_particle_idx);
         particle = &particles[real_particle_idx];
         double mass = particle->mass;
         int sign = particle->sign;
