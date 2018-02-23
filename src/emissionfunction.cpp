@@ -3417,6 +3417,9 @@ int EmissionFunctionArray::compute_number_of_sampling_needed(
     //      << ", dN/dy = " << dNdy_thermal_pion << endl;
     int nev_needed = static_cast<int>(number_of_particles_needed
                                       /(6.*dNdy_thermal_pion));
+    if (hydro_mode == 2) {
+        nev_needed *= 10;
+    }
     if (nev_needed < 1) nev_needed = 1;
     return(nev_needed);
 }
