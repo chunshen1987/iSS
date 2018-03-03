@@ -3409,9 +3409,10 @@ int EmissionFunctionArray::compute_number_of_sampling_needed(
     double dNdy_thermal_pion = 0.;
     calculate_dN_dxtdy_for_one_particle_species(1);  // 1 for thermal pion^+
     for (long l = 0; l < FO_length; l++) {
-        dNdy_thermal_pion += dN_dxtdy_for_one_particle_species[l];
+        dNdy_thermal_pion += (
+                    std::max(0.0, dN_dxtdy_for_one_particle_species[l]));
     }
-    particle_info *particle = &particles[1];
+    // particle_info *particle = &particles[1];
     // cout << "check  Name: " << particle->name
     //      << ", Monte-carlo index: " << particle->monval
     //      << ", dN/dy = " << dNdy_thermal_pion << endl;
