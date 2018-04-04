@@ -247,6 +247,10 @@ class EmissionFunctionArray {
     double estimate_shear_viscous_maximum(
         int sign, double mass, double Tdec, double mu, double f0_mass,
         TableFunction &z_exp_m_z, double pi_size);
+    double estimate_diffusion_maximum(
+        int sign, int baryon, double mass, double Tdec, double mu,
+        double f0_mass, TableFunction &z_exp_m_z,
+        double prefactor_qmu, double guess_ideal, double q_size);
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_

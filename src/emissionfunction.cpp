@@ -3728,8 +3728,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 // (beta*E-A)*exp(beta*E-A) = +- A*exp(beta*mu-A) --- (*)
                 double guess_ideal = estimate_ideal_maximum(
                                     sign, mass, Tdec, mu, f0_mass, z_exp_m_z);
-                int A;
-
+                
                 // next viscous part
                 // p*dsigma pT f < dsgima_all*tmp_factor*sqrt(3)
                 //                 *E^3*f0*trace_Pi2/(2*T^2*(e+p))
@@ -3753,66 +3752,13 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 double guess_qmu = 0.0;
                 if (INCLUDE_DIFFUSION_DELTAF == 1) {
                     double qmu_sq = (qmu0*qmu0 - qmu1*qmu1 
-                                    - qmu2*qmu2 - qmu3*qmu3);
+                                     - qmu2*qmu2 - qmu3*qmu3);
                     double qmu_mag_over_kappa_hat = (
-                                    sqrt(fabs(qmu_sq))/deltaf_qmu_coeff);
-                    // term 1
-                    A = 2;
-                    // ideal part for the guess of the maximum
-                    double guess_G2max = 0; 
-                    if (sign == 1) {
-                        // fermion
-                        // choose upper sign; (*) always has a solution 
-                        // which gives the maximum
-                        double Emax = (Tdec*(
-                            get_special_function_lambertW(
-                                            A*exp(inv_Tdec*mu - A)) + A));
-                        if (Emax < mass) {
-                            Emax = mass;
-                        }
-                        guess_G2max = (pow(Emax, A)
-                                    /(exp((Emax - mu)*inv_Tdec) + sign));
-                    } else {
-                        // boson
-                        double rhs = A*exp(inv_Tdec*mu - A);
-                        if (rhs > 0.3678794) {
-                            // 1/e = 0.367879441171442
-                            guess_G2max = pow(mass, A)*f0_mass;
-                        } else {
-                            double Emax = Tdec*(A - z_exp_m_z.map(rhs));
-                            if (Emax < mass) {
-                                guess_G2max = pow(mass, A)*f0_mass;
-                            } else {
-                                double guess_G2max_temp1 = (
-                                    pow(Emax, A)/(exp((Emax - mu)*inv_Tdec) 
-                                                  + sign));
-                                double guess_G2max_temp2 = (
-                                                pow(mass, A)*f0_mass);
-                                guess_G2max = (
-                                    guess_G2max_temp1>guess_G2max_temp2 ? 
-                                    guess_G2max_temp1 : guess_G2max_temp2);
-                            }
-                        }
-                    }
-
-                    double guess_G1max = guess_ideal;
-
-                    guess_qmu = prefactor_qmu*guess_G2max;
-                    if (baryon > 0) {
-                        guess_qmu += baryon*guess_G1max;
-                    }
-
-                    double tmp_factor = 1.;
-                    if (F0_IS_NOT_SMALL && sign == -1) {
-                        // (1+f0) <= 2*f0
-                        tmp_factor = 2.0;
-                    } else {
-                        // (1-f0) or (1-0*f0) <= 1*f0
-                        tmp_factor = 1.0;
-                    }
-                    guess_qmu *= tmp_factor*qmu_mag_over_kappa_hat;
+                                        sqrt(fabs(qmu_sq))/deltaf_qmu_coeff);
+                    guess_qmu = estimate_diffusion_maximum(
+                        sign, baryon, mass, Tdec, mu, f0_mass, z_exp_m_z,
+                        prefactor_qmu, guess_ideal, qmu_mag_over_kappa_hat);
                 }
-
                 
                 // combine
                 double maximum_guess = (prefactor*degen*dsigma_all
@@ -4602,4 +4548,56 @@ double EmissionFunctionArray::estimate_shear_viscous_maximum(
     }
     guess_viscous *= (tmp_factor/(2.0*Tdec*Tdec)*pi_size);
     return(guess_viscous);
+}
+
+double EmissionFunctionArray::estimate_diffusion_maximum(
+        int sign, int baryon, double mass, double Tdec, double mu,
+        double f0_mass, TableFunction &z_exp_m_z,
+        double prefactor_qmu, double guess_ideal, double q_size) {
+    double inv_Tdec = 1./Tdec;
+    double guess_qmu = 0.0;
+    // term 1
+    int A = 2;
+    // ideal part for the guess of the maximum
+    double guess_G2max = 0; 
+    if (sign == 1) {
+        // fermion
+        // choose upper sign; (*) always has a solution 
+        // which gives the maximum
+        double Emax = (Tdec*(
+            get_special_function_lambertW(A*exp(inv_Tdec*mu - A)) + A));
+        if (Emax < mass) Emax = mass;
+        guess_G2max = Emax*Emax/(exp((Emax - mu)*inv_Tdec) + sign);
+    } else {
+        // boson
+        double rhs = A*exp(inv_Tdec*mu - A);
+        if (rhs > 0.3678794) {
+            // 1/e = 0.367879441171442
+            guess_G2max = mass*mass*f0_mass;
+        } else {
+            double Emax = Tdec*(A - z_exp_m_z.map(rhs));
+            if (Emax < mass) {
+                guess_G2max = mass*mass*f0_mass;
+            } else {
+                double guess_G2max_temp1 = (
+                    Emax*Emax/(exp((Emax - mu)*inv_Tdec) + sign));
+                double guess_G2max_temp2 = mass*mass*f0_mass;
+                guess_G2max = (guess_G2max_temp1>guess_G2max_temp2 ? 
+                               guess_G2max_temp1 : guess_G2max_temp2);
+            }
+        }
+    }
+    guess_qmu = prefactor_qmu*guess_G2max;
+
+    if (baryon > 0) {
+        double guess_G1max = guess_ideal;
+        guess_qmu += baryon*guess_G1max;
+    }
+
+    double tmp_factor = 1.;
+    if (F0_IS_NOT_SMALL && sign == -1) {  // (1+f0) <= 2*f0
+        tmp_factor = 2.0;
+    }
+    guess_qmu *= tmp_factor*q_size;
+    return(guess_qmu);
 }
