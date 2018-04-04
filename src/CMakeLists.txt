@@ -1,5 +1,4 @@
 set (SOURCES
-  main.cpp 
   iSS.cpp
   arsenal.cpp
   ParameterReader.cpp
@@ -16,8 +15,11 @@ set (SOURCES
   )
 
 add_library(iSS_lib SHARED ${SOURCES})
-add_executable(iSS.e ${SOURCES})
 target_link_libraries (iSS_lib ${LIBS} ${ZLIB_LIBRARIES})
-target_link_libraries (iSS.e ${LIBS} ${ZLIB_LIBRARIES})
 
-install(TARGETS iSS.e DESTINATION ${CMAKE_HOME_DIRECTORY})
+add_executable(iSS.e main.cpp)
+target_link_libraries (iSS.e iSS_lib ${LIBS} ${ZLIB_LIBRARIES})
+install(TARGETS iSS.e iSS_lib
+        RUNTIME DESTINATION ${CMAKE_HOME_DIRECTORY}
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib/static)
