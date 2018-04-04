@@ -20,19 +20,19 @@ deltaf_max_ratio = 1.0   # the maximum allowed size of delta f w.r.t f0
 
 f0_is_not_small = 1      # include (1 \pm f_0) factor in delta f
 
-output_samples_into_files = 0  # output particle samples into individual files
+output_samples_into_files = 1  # output particle samples into individual files
                                # for individual particle species
-store_samples_in_memory = 1  # flag to store particle samples in memory
+store_samples_in_memory = 0  # flag to store particle samples in memory
 use_OSCAR_format = 1         # output results in OSCAR format
 use_gzip_format = 0          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
 perform_decays = 0           # flag to perform resonance decay
 
-calculate_vn = 0         # 1/0: whether to calculate the 
+calculate_vn = 1         # 1/0: whether to calculate the 
                          # dN/(pt dpt dphi dy) and v_n flows 
                          # (they not required for MC-sampling)
 
-MC_sampling = 2          # 0/1/2/3: whether to perform Monte-Carlo sampling
+MC_sampling = 3          # 0/1/2/3: whether to perform Monte-Carlo sampling
                          # (not required for spectra calculation). 
                          # 0: No sampling. 
                          # 1: use dN_dxtdetady to sample. 
