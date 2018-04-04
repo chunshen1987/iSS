@@ -3726,45 +3726,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 // solve (1 -+ f0) = A/(beta E) 
                 // (A= power of E, for ideal case A=2), which gives
                 // (beta*E-A)*exp(beta*E-A) = +- A*exp(beta*mu-A) --- (*)
+                double guess_ideal = estimate_ideal_maximum(
+                                    sign, mass, Tdec, mu, f0_mass, z_exp_m_z);
                 int A;
-                A = 1;
-                // ideal part for the guess of the maximum
-                double guess_ideal = 0; 
-                if (sign == 1) {  // fermion
-                    // choose upper sign; (*) always has a solution
-                    // which gives the maximum
-                    double Emax = Tdec*(
-                                    get_special_function_lambertW(
-                                            A*exp(inv_Tdec*mu - A)) + A);
-                    if (Emax < mass)
-                        Emax = mass; // maximum in [mass, inf]
-                    guess_ideal = (
-                        pow(Emax, A)/(exp((Emax - mu)*inv_Tdec) + sign));
-                } else {  // boson
-                    // choose lower sign; (*) has a solution only 
-                    // when A*exp(beta*mu-A)<=1/e
-                    double rhs = A*exp(inv_Tdec*mu - A);
-                    if (rhs>0.3678794) {
-                        // 1/e = 0.367879441171442
-                        // no solution; maximum is attained at E=mass
-                        guess_ideal = pow(mass, A)*f0_mass;
-                    } else {
-                        // has a solution; maximum is attained either at 
-                        // the solution E=Emax or at E=mass. Note that 
-                        // there are two Emax solutions to (*) and we want 
-                        // the larger one.
-                        double Emax = Tdec*(A - z_exp_m_z.map(rhs));
-                        if (Emax < mass) {
-                            guess_ideal = pow(mass, A)*f0_mass;
-                        } else {
-                            double guess_ideal1 = (pow(Emax, A)
-                                      /(exp((Emax - mu)*inv_Tdec) + sign));
-                            double guess_ideal2 = pow(mass, A)*f0_mass;
-                            guess_ideal = (guess_ideal1>guess_ideal2 ? 
-                                            guess_ideal1 : guess_ideal2);
-                        }
-                    }
-                }
 
                 // next viscous part
                 // p*dsigma pT f < dsgima_all*tmp_factor*sqrt(3)
@@ -3773,53 +3737,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                     pi00*pi00 + pi11*pi11 + pi22*pi22 + pi33*pi33 
                     - 2*pi01*pi01 - 2*pi02*pi02 -2.*pi03*pi03
                     + 2*pi12*pi12 + 2.*pi13*pi13 + 2.*pi23*pi23);
-                double tmp_factor = 1;
-                if (F0_IS_NOT_SMALL && sign==-1) {
-                    // (1+f0) <= 2*f0
-                    tmp_factor = 2.0;
-                } else {
-                    // (1-f0) or (1-0*f0) <= 1*f0
-                    tmp_factor = 1.0;
-                }
-                // viscous case, solve (1 -+ f0) = A/(beta E) for A=3. 
-                // Ref. ideal case
-                A = 3;
-                // ideal part for the guess of the maximum
-                double guess_viscous = 0; 
-                if (sign == 1) {
-                    // fermion
-                    // choose upper sign; (*) always has a solution 
-                    // which gives the maximum
-                    double Emax = (Tdec*(
-                        get_special_function_lambertW(
-                                A*exp(inv_Tdec*mu - A)) + A));
-                    if (Emax < mass) {
-                        Emax = mass;
-                    }
-                    guess_viscous = (pow(Emax, A)
-                                /(exp((Emax - mu)*inv_Tdec) + sign));
-                } else {
-                    // boson
-                    double rhs = A*exp(inv_Tdec*mu - A);
-                    if (rhs>0.3678794) {
-                        // 1/e = 0.367879441171442
-                        guess_viscous = pow(mass, A)*f0_mass;
-                    } else {
-                        double Emax = Tdec*(A - z_exp_m_z.map(rhs));
-                        if (Emax < mass) {
-                            guess_viscous = pow(mass, A)*f0_mass;
-                        } else {
-                            double guess_viscous1 = (pow(Emax, A)
-                                      /(exp((Emax - mu)*inv_Tdec) + sign));
-                            double guess_viscous2 = pow(mass, A)*f0_mass;
-                            guess_viscous = (
-                                guess_viscous1>guess_viscous2 ? 
-                                guess_viscous1 : guess_viscous2);
-                        }
-                    }
-                }
-                guess_viscous *= (tmp_factor/2.0*inv_Tdec*inv_Tdec
-                                  *sqrt(trace_Pi2)/(Edec+Pdec));
+                double pi_size = sqrt(trace_Pi2)/(Edec + Pdec);
+                double guess_viscous = estimate_shear_viscous_maximum(
+                        sign, mass, Tdec, mu, f0_mass, z_exp_m_z, pi_size);
 
                 // bulk delta f
                 double guess_bulk = 0.0;
@@ -3882,6 +3802,14 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                         guess_qmu += baryon*guess_G1max;
                     }
 
+                    double tmp_factor = 1.;
+                    if (F0_IS_NOT_SMALL && sign == -1) {
+                        // (1+f0) <= 2*f0
+                        tmp_factor = 2.0;
+                    } else {
+                        // (1-f0) or (1-0*f0) <= 1*f0
+                        tmp_factor = 1.0;
+                    }
                     guess_qmu *= tmp_factor*qmu_mag_over_kappa_hat;
                 }
 
@@ -4575,4 +4503,103 @@ void EmissionFunctionArray::perform_resonance_feed_down(
         }
         temp_list.clear();
     }
+}
+
+
+double EmissionFunctionArray::estimate_ideal_maximum(
+        int sign, double mass, double Tdec, double mu, double f0_mass,
+        TableFunction &z_exp_m_z) {
+    // ideal first, p*dsigma pT f < dsgima_all*E^2*f0
+    // Here pT is involved because instead of sampling pT^2 
+    // uniformly by using d(pT^2) uniformly, 
+    // we sample pT*d(pT) where pT is uniformly to avoid 
+    // taking sqrt, which saves time
+    // solve (1 -+ f0) = A/(beta E) 
+    // (A= power of E, for ideal case A=2), which gives
+    // (beta*E-A)*exp(beta*E-A) = +- A*exp(beta*mu-A) --- (*)
+    int A = 1;
+    // ideal part for the guess of the maximum
+    double guess_ideal = 0; 
+    double inv_Tdec = 1./Tdec;
+    if (sign == 1) {  // fermion
+        // choose upper sign; (*) always has a solution
+        // which gives the maximum
+        double Emax = Tdec*(get_special_function_lambertW(
+                            A*exp(inv_Tdec*mu - A)) + A);
+        if (Emax < mass) Emax = mass;  // maximum in [mass, inf]
+        guess_ideal = Emax/(exp((Emax - mu)*inv_Tdec) + sign);
+    } else {  // boson
+        // choose lower sign; (*) has a solution only 
+        // when A*exp(beta*mu-A)<=1/e
+        double rhs = A*exp(inv_Tdec*mu - A);
+        if (rhs > 0.3678794) {
+            // 1/e = 0.367879441171442
+            // no solution; maximum is attained at E=mass
+            guess_ideal = mass*f0_mass;
+        } else {
+            // has a solution; maximum is attained either at 
+            // the solution E=Emax or at E=mass. Note that 
+            // there are two Emax solutions to (*) and we want 
+            // the larger one.
+            double Emax = Tdec*(A - z_exp_m_z.map(rhs));
+            if (Emax < mass) {
+                guess_ideal = mass*f0_mass;
+            } else {
+                double guess_ideal1 = Emax/(exp((Emax - mu)*inv_Tdec) + sign);
+                double guess_ideal2 = mass*f0_mass;
+                guess_ideal = (guess_ideal1>guess_ideal2 ? 
+                                guess_ideal1 : guess_ideal2);
+            }
+        }
+    }
+    return(guess_ideal);
+}
+
+double EmissionFunctionArray::estimate_shear_viscous_maximum(
+        int sign, double mass, double Tdec, double mu, double f0_mass,
+        TableFunction &z_exp_m_z, double pi_size) {
+    // p*dsigma pT f < dsgima_all*tmp_factor*sqrt(3)
+    //                 *E^3*f0*trace_Pi2/(2*T^2*(e+p))
+    double inv_Tdec = 1./Tdec;
+    double tmp_factor = 1.;
+    if (F0_IS_NOT_SMALL && sign == -1) {
+        // (1+f0) <= 2*f0
+        tmp_factor = 2.0;
+    } else {
+        // (1-f0) or (1-0*f0) <= 1*f0
+        tmp_factor = 1.0;
+    }
+    // viscous case, solve (1 -+ f0) = A/(beta E) for A=3. 
+    int A = 3;
+    // ideal part for the guess of the maximum
+    double guess_viscous = 0; 
+    if (sign == 1) {
+        // fermion
+        // choose upper sign; (*) always has a solution 
+        // which gives the maximum
+        double Emax = (Tdec*(
+                get_special_function_lambertW(A*exp(inv_Tdec*mu - A)) + A));
+        if (Emax < mass) Emax = mass;
+        guess_viscous = Emax*Emax*Emax/(exp((Emax - mu)*inv_Tdec) + sign);
+    } else {
+        // boson
+        double rhs = A*exp(inv_Tdec*mu - A);
+        if (rhs>0.3678794) {
+            // 1/e = 0.367879441171442
+            guess_viscous = mass*mass*mass*f0_mass;
+        } else {
+            double Emax = Tdec*(A - z_exp_m_z.map(rhs));
+            if (Emax < mass) {
+                guess_viscous = mass*mass*mass*f0_mass;
+            } else {
+                double guess_viscous1 = (Emax*Emax*Emax
+                                         /(exp((Emax - mu)*inv_Tdec) + sign));
+                double guess_viscous2 = mass*mass*mass*f0_mass;
+                guess_viscous = (guess_viscous1>guess_viscous2 ? 
+                                 guess_viscous1 : guess_viscous2);
+            }
+        }
+    }
+    guess_viscous *= (tmp_factor/(2.0*Tdec*Tdec)*pi_size);
+    return(guess_viscous);
 }

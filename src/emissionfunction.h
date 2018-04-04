@@ -241,6 +241,12 @@ class EmissionFunctionArray {
     void perform_resonance_feed_down(
                 vector< vector<iSS_Hadron>* >* input_particle_list);
     int compute_number_of_sampling_needed(int number_of_particles_needed);
+    double estimate_ideal_maximum(
+        int sign, double mass, double Tdec, double mu, double f0_mass,
+        TableFunction &z_exp_m_z);
+    double estimate_shear_viscous_maximum(
+        int sign, double mass, double Tdec, double mu, double f0_mass,
+        TableFunction &z_exp_m_z, double pi_size);
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_
