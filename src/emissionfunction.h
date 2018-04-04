@@ -32,6 +32,7 @@ class EmissionFunctionArray {
     string path;
 
     int MC_sampling;
+    int number_of_repeated_sampling;
 
     Table *pT_tab, *phi_tab, *y_minus_eta_tab;
     int pT_tab_length, phi_tab_length;

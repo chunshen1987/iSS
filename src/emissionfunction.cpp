@@ -85,6 +85,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     deltaf_max_ratio = paraRdr->getVal("deltaf_max_ratio");
     
     MC_sampling = paraRdr->getVal("MC_sampling");
+    number_of_repeated_sampling = paraRdr->getVal("number_of_repeated_sampling");
 
     flag_output_samples_into_files = (
                             paraRdr->getVal("output_samples_into_files"));
@@ -1335,8 +1336,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
     // If dN/(dx_t deta dy) is evaluated to be smaller than this value, 
     // then it is replaced by this value.
     double zero = paraRdr->getVal("minimum_emission_function_val"); 
-    long number_of_repeated_sampling = (
-                    paraRdr->getVal("number_of_repeated_sampling"));
 
     particle_info* particle = &particles[last_particle_idx];
 
@@ -1795,8 +1794,6 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     // If dN/(dx_t deta dy) is evaluated to be smaller than this value, 
     // then it is replaced by this value.
     double zero = paraRdr->getVal("minimum_emission_function_val"); 
-    long number_of_repeated_sampling = paraRdr->getVal(
-                                                "number_of_repeated_sampling");
 
     particle_info* particle = &particles[last_particle_idx];
 
@@ -2855,8 +2852,6 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
 
         // big loop for generating OSCAR
         if (AMOUNT_OF_OUTPUT > 0) print_progressbar(-1);
-        long number_of_repeated_sampling = paraRdr->getVal(
-                        "number_of_repeated_sampling");
         for (long sample_idx=1; sample_idx<=number_of_repeated_sampling; 
              sample_idx++) {
             // read-in number of particles for each species
@@ -3459,11 +3454,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
 
     int flag_sample_upto_desired_particle_number = paraRdr->getVal(
                                     "sample_upto_desired_particle_number");
-    long number_of_repeated_sampling = 0;
-    if (flag_sample_upto_desired_particle_number == 0) {
-        number_of_repeated_sampling = paraRdr->getVal(
-                                                "number_of_repeated_sampling");
-    } else {
+    if (flag_sample_upto_desired_particle_number == 1) {
         long number_of_particles_needed = paraRdr->getVal(
                                                 "number_of_particles_needed");
         number_of_repeated_sampling = compute_number_of_sampling_needed(
