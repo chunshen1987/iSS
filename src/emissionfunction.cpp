@@ -3766,7 +3766,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                                           + guess_bulk + guess_qmu));
 
                 // next sample pt and phi
-                // will-be sampled values
                 double pT, mT, phi, px, py; 
                 double rapidity_y, y_minus_eta_s;
                 long tries = 1;
@@ -3807,45 +3806,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                         (1. - F0_IS_NOT_SMALL*sign*f0)*Wfactor
                         *deltaf_prefactor);
 
-                    double delta_f_bulk = 0.0;
-                    if (INCLUDE_BULK_DELTAF== 1) {
-                        if (bulk_deltaf_kind == 0) {
-                            delta_f_bulk = (
-                                -(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi
-                                *(bulkvisCoefficients[0]*mass*mass 
-                                  + bulkvisCoefficients[1]*pdotu 
-                                  + bulkvisCoefficients[2]*pdotu*pdotu));
-                        } else if (bulk_deltaf_kind == 1) {
-                            double E_over_T = pdotu/Tdec;
-                            double mass_over_T = mass/Tdec;
-                            delta_f_bulk = (
-                                -1.0*(1.-sign*f0)/E_over_T
-                                *bulkvisCoefficients[0]
-                                *(mass_over_T*mass_over_T/3. 
-                                  - bulkvisCoefficients[1]
-                                    *E_over_T*E_over_T)
-                                *bulkPi);
-                        } else if (bulk_deltaf_kind == 2) {
-                            double E_over_T = pdotu/Tdec;
-                            delta_f_bulk = (
-                                -1.*(1.-sign*f0)*(-bulkvisCoefficients[0] 
-                                    + bulkvisCoefficients[1]*E_over_T)
-                                *bulkPi);
-                        } else if (bulk_deltaf_kind == 3) {
-                            double E_over_T = pdotu/Tdec;
-                            delta_f_bulk = (
-                                -1.0*(1.-sign*f0)/sqrt(E_over_T)
-                                *(-bulkvisCoefficients[0] 
-                                  + bulkvisCoefficients[1]*E_over_T)
-                                *bulkPi);
-                        } else if (bulk_deltaf_kind == 4) {
-                            double E_over_T = pdotu/Tdec;
-                            delta_f_bulk = (
-                                -1.0*(1.-sign*f0)*(bulkvisCoefficients[0] 
-                                    - bulkvisCoefficients[1]/E_over_T)
-                                *bulkPi);
-                        }
-                    }
+                    double delta_f_bulk = get_deltaf_bulk(
+                        mass, pdotu, bulkPi, Tdec, sign, f0,
+                        bulkvisCoefficients);
 
                     // delta f for diffusion
                     double delta_f_qmu = 0.0;
@@ -4600,4 +4563,36 @@ double EmissionFunctionArray::estimate_diffusion_maximum(
     }
     guess_qmu *= tmp_factor*q_size;
     return(guess_qmu);
+}
+
+double EmissionFunctionArray::get_deltaf_bulk(
+        double mass, double pdotu, double bulkPi, double Tdec, int sign,
+        double f0, double *bulkvisCoefficients) {
+    if (INCLUDE_BULK_DELTAF== 0) return(0.0);
+    double delta_f_bulk = 0.0;
+    if (bulk_deltaf_kind == 0) {
+        delta_f_bulk = (-(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi
+                        *(  bulkvisCoefficients[0]*mass*mass 
+                          + bulkvisCoefficients[1]*pdotu 
+                          + bulkvisCoefficients[2]*pdotu*pdotu));
+    } else if (bulk_deltaf_kind == 1) {
+        double E_over_T = pdotu/Tdec;
+        double mass_over_T = mass/Tdec;
+        delta_f_bulk = (- 1.0*(1. - sign*f0)*bulkvisCoefficients[0]
+                        *(mass_over_T*mass_over_T/(3.*E_over_T)
+                          - bulkvisCoefficients[1]*E_over_T)*bulkPi);
+    } else if (bulk_deltaf_kind == 2) {
+        double E_over_T = pdotu/Tdec;
+        delta_f_bulk = (- 1.*(1. - sign*f0)*bulkPi
+                *(- bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T));
+    } else if (bulk_deltaf_kind == 3) {
+        double E_over_T = pdotu/Tdec;
+        delta_f_bulk = (- 1.*(1. - sign*f0)*bulkPi/sqrt(E_over_T)
+                *(- bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T));
+    } else if (bulk_deltaf_kind == 4) {
+        double E_over_T = pdotu/Tdec;
+        delta_f_bulk = (- 1.*(1. - sign*f0)*bulkPi
+                *(bulkvisCoefficients[0] - bulkvisCoefficients[1]/E_over_T));
+    }
+    return(delta_f_bulk);
 }

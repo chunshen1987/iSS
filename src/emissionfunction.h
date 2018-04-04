@@ -251,6 +251,9 @@ class EmissionFunctionArray {
         int sign, int baryon, double mass, double Tdec, double mu,
         double f0_mass, TableFunction &z_exp_m_z,
         double prefactor_qmu, double guess_ideal, double q_size);
+    double get_deltaf_bulk(
+        double mass, double pdotu, double bulkPi, double Tdec, int sign,
+        double f0, double *bulkvisCoefficients);
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_
