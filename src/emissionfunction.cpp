@@ -71,20 +71,20 @@ EmissionFunctionArray::EmissionFunctionArray(
 
     hydro_mode = paraRdr->getVal("hydro_mode");
 
-    F0_IS_NOT_SMALL = paraRdr->getVal("f0_is_not_small");
-    USE_OSCAR_FORMAT = paraRdr->getVal("use_OSCAR_format");
-    USE_GZIP_FORMAT = paraRdr->getVal("use_gzip_format");
-    INCLUDE_DELTAF = paraRdr->getVal("include_deltaf_shear");
-    INCLUDE_BULK_DELTAF = paraRdr->getVal("include_deltaf_bulk");
-    bulk_deltaf_kind = paraRdr->getVal("bulk_deltaf_kind");
-
+    F0_IS_NOT_SMALL          = paraRdr->getVal("f0_is_not_small");
+    USE_OSCAR_FORMAT         = paraRdr->getVal("use_OSCAR_format");
+    USE_GZIP_FORMAT          = paraRdr->getVal("use_gzip_format");
+    INCLUDE_DELTAF           = paraRdr->getVal("include_deltaf_shear");
+    INCLUDE_BULK_DELTAF      = paraRdr->getVal("include_deltaf_bulk");
+    bulk_deltaf_kind         = paraRdr->getVal("bulk_deltaf_kind");
     INCLUDE_DIFFUSION_DELTAF = paraRdr->getVal("include_deltaf_diffusion");
 
-    turn_on_rhob = paraRdr->getVal("turn_on_rhob");
+    turn_on_rhob         = paraRdr->getVal("turn_on_rhob");
     flag_restrict_deltaf = paraRdr->getVal("restrict_deltaf");
-    deltaf_max_ratio = paraRdr->getVal("deltaf_max_ratio");
+    deltaf_max_ratio     = paraRdr->getVal("deltaf_max_ratio");
     
     MC_sampling = paraRdr->getVal("MC_sampling");
+    local_charge_conservation = paraRdr->getVal("local_charge_conservation");
     number_of_repeated_sampling = paraRdr->getVal("number_of_repeated_sampling");
 
     flag_output_samples_into_files = (

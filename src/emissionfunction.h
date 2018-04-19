@@ -33,6 +33,7 @@ class EmissionFunctionArray {
 
     int MC_sampling;
     int number_of_repeated_sampling;
+    int local_charge_conservation;
 
     Table *pT_tab, *phi_tab, *y_minus_eta_tab;
     int pT_tab_length, phi_tab_length;

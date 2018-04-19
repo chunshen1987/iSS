@@ -28,11 +28,13 @@ use_gzip_format = 0          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
 perform_decays = 0           # flag to perform resonance decay
 
-calculate_vn = 1         # 1/0: whether to calculate the 
+local_charge_conservation = 0  # flag to impose local charge conservation
+
+calculate_vn = 0         # 1/0: whether to calculate the 
                          # dN/(pt dpt dphi dy) and v_n flows 
                          # (they not required for MC-sampling)
 
-MC_sampling = 3          # 0/1/2/3: whether to perform Monte-Carlo sampling
+MC_sampling = 2          # 0/1/2/3: whether to perform Monte-Carlo sampling
                          # (not required for spectra calculation). 
                          # 0: No sampling. 
                          # 1: use dN_dxtdetady to sample. 
