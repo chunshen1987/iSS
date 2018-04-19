@@ -11,6 +11,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 
 #include "./Table.h"
 #include "./NBD.h"
@@ -19,6 +20,9 @@
 #include "./iSS_hadron.h"
 #include "./particle_decay.h"
 #include "./main.h"
+
+typedef std::array<double, 4> Vec4;
+typedef std::array<double, 10> ViscousVec;
 
 using namespace std;
 
@@ -255,6 +259,14 @@ class EmissionFunctionArray {
     double get_deltaf_bulk(
         double mass, double pdotu, double bulkPi, double Tdec, int sign,
         double f0, double *bulkvisCoefficients);
+    int sample_momemtum_from_a_fluid_cell(
+        double mass, double degen, int sign, int baryon,
+        double pT_to, double y_minus_eta_s_range, double maximum_guess,
+        double tau, Vec4 da, Vec4 u, double mu, double Tdec,
+        ViscousVec pi, double deltaf_prefactor,
+        double bulkPi, double *bulkvisCoefficients,
+        Vec4 qmu, double prefactor_qmu, double deltaf_qmu_coeff,
+        double &pT, double &phi, double &y_minus_eta_s);
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_
