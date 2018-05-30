@@ -558,10 +558,10 @@ void read_FOdata::read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr) {
     for (int i=0; i<length; i++) {
         if (surface_in_binary) {
             float array[32];
-            for (int i = 0; i < 32; i++) {
+            for (int ii = 0; ii < 32; ii++) {
                 float temp = 0.;
                 surfdat.read((char*)&temp, sizeof(float));
-                array[i] = temp;
+                array[ii] = temp;
             }
             surf_ptr[i].tau = array[0];
             surf_ptr[i].xpt = array[1];
