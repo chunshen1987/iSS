@@ -34,7 +34,7 @@ class TableFunction
     double getYMin();
     double getYMax();
     long getNumberOfRows();
-    void printFunction(ostream& os=std::cout);
+    void printFunction(std::ostream& os=std::cout);
 };
 
 #endif

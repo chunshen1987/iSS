@@ -7,7 +7,7 @@
 class RandomVariable2DArray
 {
   private:
-    vector<double>* invCDF;
+      std::vector<double>* invCDF;
     long size_left, size_right, data_size; // col, row, and col*row of data
     //double data_zero;
     double data_max, data_sum; // "tolerance zero value", max and sum

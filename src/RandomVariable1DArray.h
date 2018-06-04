@@ -7,12 +7,12 @@
 class RandomVariable1DArray
 {
   private:
-    vector<double>* invCDF;
+      std::vector<double>* invCDF;
     long data_size;
     //double data_zero;
     double data_sum; // "tolerance zero value", max and sum
   public:
-    RandomVariable1DArray(vector<double>*, double=1e-30);
+    RandomVariable1DArray(std::vector<double>*, double=1e-30);
     ~RandomVariable1DArray();
     long rand();
     double return_sum();

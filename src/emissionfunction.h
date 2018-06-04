@@ -149,7 +149,7 @@ class EmissionFunctionArray {
                           std::string path_in);
     ~EmissionFunctionArray();
 
-    vector< vector<iSS_Hadron>* >* Hadron_list;
+    std::vector< std::vector<iSS_Hadron>* >* Hadron_list;
 
     void initialize_special_function_arrays();
     double get_special_function_K1(double arg);
@@ -236,7 +236,7 @@ class EmissionFunctionArray {
         return((*(*Hadron_list)[iev])[ipart]);
     };
     void perform_resonance_feed_down(
-                vector< vector<iSS_Hadron>* >* input_particle_list);
+                std::vector< std::vector<iSS_Hadron>* >* input_particle_list);
     int compute_number_of_sampling_needed(int number_of_particles_needed);
     double estimate_ideal_maximum(
         int sign, double mass, double Tdec, double mu, double f0_mass,
