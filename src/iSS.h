@@ -14,7 +14,7 @@ class iSS {
     std::string path;
     
     int FO_length;
-    FO_surf* FOsurf_ptr;
+    //FO_surf* FOsurf_ptr;
     std::vector<FO_surf> FOsurf_ptr;
 
     int Nparticle;
@@ -22,7 +22,7 @@ class iSS {
 
     long randomSeed;
 
-    std::<particle_info> particle;
+    std::vector<particle_info> particle;
     
     EmissionFunctionArray *efa;
 

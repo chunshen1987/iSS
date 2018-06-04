@@ -98,11 +98,11 @@ class EmissionFunctionArray {
 
     // list for information for all particles
     int Nparticles;
-    particle_info* particles;
+    std::vector<particle_info> particles;
 
     // list for information for all fluid cells
     long FO_length;
-    FO_surf* FOsurf_ptr;
+    std::vector<FO_surf> FOsurf_ptr;
 
     // store the last particle index being used by calculate_dNArrays function
     int last_particle_idx;
@@ -151,8 +151,8 @@ class EmissionFunctionArray {
  public:
     EmissionFunctionArray(Table* chosen_particle, Table* pt_tab_in,
                           Table* phi_tab_in, Table* eta_tab_in,
-                          particle_info* particles_in, int Nparticles,
-                          FO_surf* FOsurf_ptr_in, long FO_length_in,
+                          std::vector<particle_info> particles_in, int Nparticles,
+                          std::vector<FO_surf> FOsurf_ptr_in, long FO_length_in,
                           int flag_PCE_in, ParameterReader* paraRdr_in,
                           string path_in);
     ~EmissionFunctionArray();

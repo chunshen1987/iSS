@@ -43,9 +43,9 @@ int iSS::read_in_FO_surface() {
     read_FOdata freeze_out_data(paraRdr_ptr, path);
     FO_length = freeze_out_data.get_number_of_freezeout_cells();
     cout << "total number of cells: " <<  FO_length << endl;
-    FOsurf_ptr = new FO_surf[FO_length];
+    //FOsurf_ptr = new FO_surf[FO_length];
     freeze_out_data.read_in_freeze_out_data(FO_length, FOsurf_ptr);
-    particle = new particle_info[Maxparticle];
+    //particle = new particle_info[Maxparticle];
     Nparticle = freeze_out_data.read_in_chemical_potentials(
                                     path, FO_length, FOsurf_ptr, particle);
     flag_PCE = freeze_out_data.get_flag_PCE();

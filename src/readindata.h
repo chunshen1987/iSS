@@ -32,26 +32,29 @@ class read_FOdata {
     int get_number_of_freezeout_cells();
     int get_number_of_lines_of_binary_surface_file(string filename);
     int get_flag_PCE() {return(flag_PCE);}
-    void read_in_freeze_out_data(int length, std::vector<FO_surf> surf_ptr);
+    void read_in_freeze_out_data(int length, std::vector<FO_surf> &surf_ptr);
     int read_in_chemical_potentials(std::string path, int FO_length,
-                                    FO_surf* surf_ptr,
-                                    particle_info* particle_ptr);
-    void read_decdat(int length, FO_surf* surf_ptr);
-    void read_surfdat(int length, FO_surf* surf_ptr);
-    void read_FOsurfdat_VISH2p1(int length, FO_surf* surf_ptr);
-    void read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr);
+                                    std::vector<FO_surf> &surf_ptr,
+                                    std::vector<particle_info> &particle_ptr);
+    void read_decdat(int length, std::vector<FO_surf> &surf_ptr);
+    void read_surfdat(int length, std::vector<FO_surf> &surf_ptr);
+    void read_FOsurfdat_VISH2p1(int length, std::vector<FO_surf> &surf_ptr);
+    void read_FOsurfdat_MUSIC(int length, std::vector<FO_surf> &surf_ptr);
     void read_FOsurfdat_MUSIC_boost_invariant(int length,
-                                              std::vector<FO_surf> surf_ptr);
-    void read_FOsurfdat_hydro_analysis_boost_invariant(int length,
-                                                       FO_surf* surf_ptr);
+                                              std::vector<FO_surf> &surf_ptr);
+    void read_FOsurfdat_hydro_analysis_boost_invariant(
+                                int length, std::vector<FO_surf> &surf_ptr);
     void read_decdat_mu(int FO_length, int N_stable, double** particle_mu);
-    void read_chemical_potentials_music(int FO_length, FO_surf* FOsurf_ptr,
+    void read_chemical_potentials_music(int FO_length,
+                                        std::vector<FO_surf> &FOsurf_ptr,
                                         int N_stable, double** particle_mu);
-    int read_resonances_list(particle_info* particle);
-    void calculate_particle_mu_PCE(int Nparticle, FO_surf* FOsurf_ptr,
-                                   int FO_length, particle_info* particle,
+    int read_resonances_list(std::vector<particle_info> &particle);
+    void calculate_particle_mu_PCE(int Nparticle,
+                                   std::vector<FO_surf> &FOsurf_ptr,
+                                   int FO_length,
+                                   std::vector<particle_info> &particle,
                                    double** particle_mu);
-    void regulate_surface_cells(int length, FO_surf* surf_ptr);
+    void regulate_surface_cells(int length, std::vector<FO_surf> &surf_ptr);
     void regulate_Wmunu(double u[4], double Wmunu[4][4],
                         double Wmunu_regulated[4][4]);
 };
