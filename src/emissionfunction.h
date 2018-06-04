@@ -14,8 +14,7 @@
 #include <array>
 
 #include "Table.h"
-#include "NBD.h"
-#include "Poisson.h"
+#include "TableFunction.h"
 #include "ParameterReader.h"
 #include "iSS_hadron.h"
 #include "particle_decay.h"
@@ -112,8 +111,6 @@ class EmissionFunctionArray {
                     double dN, int model=1, double para1=0, double para2=0, 
                     double para3=0, double para4=0, double para5=0);
 
-    NBD nbd;  // NBD random sample generator
-    Poisson poissonDistribution;
     const gsl_rng_type *gsl_type_random_number;
     gsl_rng *gsl_random_r;
 

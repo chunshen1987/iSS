@@ -9,8 +9,6 @@ set (SOURCES
   Table.cpp
   emissionfunction.cpp
   readindata.cpp
-  Poisson.cpp
-  NBD.cpp
   particle_decay.cpp
   )
 

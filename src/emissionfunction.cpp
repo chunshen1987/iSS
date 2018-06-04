@@ -26,8 +26,6 @@
 #include "RandomVariable1DArray.h"
 #include "RandomVariable2DArray.h"
 #include "RandomVariableNDArray.h"
-#include "NBD.h"
-#include "Poisson.h"
 #include "ParameterReader.h"
 #include "arsenal.h"
 #include "Stopwatch.h"
@@ -2215,7 +2213,6 @@ inline long EmissionFunctionArray::determine_number_to_sample(
             if (dN_dy < 1e-15)
                 number_to_sample = 0;
             else
-                //number_to_sample = poissonDistribution.rand(dN_dy);
                 number_to_sample = gsl_ran_poisson(gsl_random_r, dN_dy);
             break;
         default:
