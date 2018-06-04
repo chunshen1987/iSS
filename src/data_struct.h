@@ -2,6 +2,7 @@
 #define DATA_STRUCT_H_
 
 #include <string>
+#include <array>
 
 const double hbarC=0.197327053;  //GeV*fm
 
@@ -10,6 +11,8 @@ const int Maxdecaychannel=16;
 const int Maxdecaypart=5;
 const std::string table_path="iSS_tables";
 
+typedef std::array<double, 4> Vec4;
+typedef std::array<double, 10> ViscousVec;
 
 typedef struct {
     int monval;     // Monte Carlo number according PDG

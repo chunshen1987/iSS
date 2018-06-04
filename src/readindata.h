@@ -9,7 +9,6 @@
 #include "data_struct.h"
 #include "ParameterReader.h"
 
-
 class read_FOdata {
  private:
     ParameterReader* paraRdr;

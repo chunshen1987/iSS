@@ -11,7 +11,6 @@
 
 #include <string>
 #include <vector>
-#include <array>
 
 #include "Table.h"
 #include "TableFunction.h"
@@ -19,11 +18,7 @@
 #include "iSS_hadron.h"
 #include "particle_decay.h"
 #include "data_struct.h"
-
-typedef std::array<double, 4> Vec4;
-typedef std::array<double, 10> ViscousVec;
-
-using namespace std;
+#include "data_struct.h"
 
 class EmissionFunctionArray {
  private:
@@ -32,7 +27,7 @@ class EmissionFunctionArray {
     int flag_restrict_deltaf;
     double deltaf_max_ratio;
 
-    string path;
+    std::string path;
 
     int MC_sampling;
     int number_of_repeated_sampling;
@@ -151,7 +146,7 @@ class EmissionFunctionArray {
                           std::vector<particle_info> particles_in,
                           std::vector<FO_surf> FOsurf_ptr_in,
                           int flag_PCE_in, ParameterReader* paraRdr_in,
-                          string path_in);
+                          std::string path_in);
     ~EmissionFunctionArray();
 
     vector< vector<iSS_Hadron>* >* Hadron_list;
@@ -166,14 +161,14 @@ class EmissionFunctionArray {
     void calculate_dN_dxtdetady(int);
     void calculate_dN_pTdpTdphidy(int);
     void write_dN_pTdpTdphidy_toFile();
-    string dN_pTdpTdphidy_filename;  // where to save
+    std::string dN_pTdpTdphidy_filename;  // where to save
     void write_dN_dxtdetady_toFile();
-    string dN_dxtdetady_filename;
+    std::string dN_dxtdetady_filename;
 
-    void calculate_flows(int to_order, string flow_diff_filename,
-                         string flow_inte_filename);
-    string flow_differential_filename_old, flow_integrated_filename_old;
-    string flow_differential_filename, flow_integrated_filename;
+    void calculate_flows(int to_order, std::string flow_diff_filename,
+                         std::string flow_inte_filename);
+    std::string flow_differential_filename_old, flow_integrated_filename_old;
+    std::string flow_differential_filename, flow_integrated_filename;
 
     void calculate_dN_pTdpTdphidy_and_flows_4all_old_output(
                                                     int perform_sampling = 0);
@@ -183,30 +178,30 @@ class EmissionFunctionArray {
     void shell();  // it all starts here...
 
     void combine_samples_to_OSCAR();
-    string OSCAR_header_filename, OSCAR_output_filename;
+    std::string OSCAR_header_filename, OSCAR_output_filename;
     void combine_samples_to_gzip_file();
 
     // Sample files
     // where samples, its control informations, and its "format file" 
     // are stored; 
     // the first two can contain a "%d" string to generate multiple files
-    string samples_filename;
-    string samples_control_filename, samples_format_filename; 
+    std::string samples_filename;
+    std::string samples_control_filename, samples_format_filename; 
 
     // First sampling method
     void sample_using_dN_dxtdetady_smooth_pT_phi();
     void calculate_dN_dtau_using_dN_dxtdetady(
                     double tau0 = 0, double dtau = 0.5, double tau_max = 17);
-    string dN_dtau_filename;
+    std::string dN_dtau_filename;
     void calculate_dN_dphi_using_dN_pTdpTdphidy();
-    string dN_dphi_filename;
+    std::string dN_dphi_filename;
     void calculate_dN_deta_using_dN_dxtdetady();
-    string dN_deta_filename;
+    std::string dN_deta_filename;
     void calculate_dN_dxt_using_dN_dxtdetady();
-    string dN_dxt_filename;
+    std::string dN_dxt_filename;
     void calculate_dN_dx_using_dN_dxtdetady(
                     double x_min, double x_max, double dx);
-    string dN_dx_filename;
+    std::string dN_dx_filename;
 
     // Second sampling method
     void calculate_dN_analytic(const particle_info* particle, double mu,
@@ -229,7 +224,7 @@ class EmissionFunctionArray {
     double** trig_phi_tab4Sampling;
 
     void getbulkvisCoefficients(double Tdec, double* bulkvisCoefficients);
-    void load_deltaf_qmu_coeff_table(string filename);
+    void load_deltaf_qmu_coeff_table(std::string filename);
     double get_deltaf_qmu_coeff(double T, double muB);
 
     void check_samples_in_memory();
