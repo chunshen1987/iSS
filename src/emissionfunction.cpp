@@ -20,17 +20,17 @@
 #include <array>
 
 #include "zlib.h"
-#include "./main.h"
-#include "./readindata.h"
-#include "./emissionfunction.h"
-#include "./RandomVariable1DArray.h"
-#include "./RandomVariable2DArray.h"
-#include "./RandomVariableNDArray.h"
-#include "./NBD.h"
-#include "./Poisson.h"
-#include "./ParameterReader.h"
-#include "./arsenal.h"
-#include "./Stopwatch.h"
+#include "data_struct.h"
+#include "readindata.h"
+#include "emissionfunction.h"
+#include "RandomVariable1DArray.h"
+#include "RandomVariable2DArray.h"
+#include "RandomVariableNDArray.h"
+#include "NBD.h"
+#include "Poisson.h"
+#include "ParameterReader.h"
+#include "arsenal.h"
+#include "Stopwatch.h"
 
 #define AMOUNT_OF_OUTPUT 0                  // smaller value means less outputs
 #define NUMBER_OF_LINES_TO_WRITE   100000   // string buffer for sample files

@@ -5,8 +5,8 @@
 #include <sstream>
 #include <cmath>
 #include <cstdlib>
-#include "./main.h"
-#include "./particle_decay.h"
+#include "data_struct.h"
+#include "particle_decay.h"
 
 using namespace std;
 

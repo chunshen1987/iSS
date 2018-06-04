@@ -13,13 +13,13 @@
 #include <vector>
 #include <array>
 
-#include "./Table.h"
-#include "./NBD.h"
-#include "./Poisson.h"
-#include "./ParameterReader.h"
-#include "./iSS_hadron.h"
-#include "./particle_decay.h"
-#include "./main.h"
+#include "Table.h"
+#include "NBD.h"
+#include "Poisson.h"
+#include "ParameterReader.h"
+#include "iSS_hadron.h"
+#include "particle_decay.h"
+#include "data_struct.h"
 
 typedef std::array<double, 4> Vec4;
 typedef std::array<double, 10> ViscousVec;

@@ -14,9 +14,9 @@
 #include <iostream>
 #include <string>
 
-#include "./main.h"
-#include "./iSS.h"
-#include "./arsenal.h"
+#include "data_struct.h"
+#include "iSS.h"
+#include "arsenal.h"
 
 using namespace std;
 

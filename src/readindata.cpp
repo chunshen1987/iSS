@@ -8,11 +8,11 @@
 #include <cmath>
 #include <iomanip>
 
-#include "./main.h"
-#include "./readindata.h"
-#include "./arsenal.h"
-#include "./ParameterReader.h"
-#include "./Table.h"
+#include "data_struct.h"
+#include "readindata.h"
+#include "arsenal.h"
+#include "ParameterReader.h"
+#include "Table.h"
 
 using namespace std;
 

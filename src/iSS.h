@@ -3,9 +3,10 @@
 
 #include <string>
 
-#include "./ParameterReader.h"
-#include "./readindata.h"
-#include "./emissionfunction.h"
+#include "data_struct.h"
+#include "ParameterReader.h"
+#include "readindata.h"
+#include "emissionfunction.h"
 
 using namespace std;
 
