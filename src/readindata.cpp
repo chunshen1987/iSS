@@ -139,22 +139,21 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
     return(counted_line);
 }
 
-void read_FOdata::read_in_freeze_out_data(int length,
-                                          std::vector<FO_surf> &surf_ptr) {
+void read_FOdata::read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr) {
     if (mode == 0)     // VISH2+1 outputs
-        read_FOsurfdat_VISH2p1(length, surf_ptr);
+        read_FOsurfdat_VISH2p1(surf_ptr);
     else if (mode == 1)   // MUSIC boost invariant outputs
-        read_FOsurfdat_MUSIC_boost_invariant(length, surf_ptr);
+        read_FOsurfdat_MUSIC_boost_invariant(surf_ptr);
     else if (mode == 2)   // MUSIC full (3+1)-d outputs
-        read_FOsurfdat_MUSIC(length, surf_ptr);
+        read_FOsurfdat_MUSIC(surf_ptr);
     else if (mode == 10)   // MUSIC boost invariant outputs
-        read_FOsurfdat_hydro_analysis_boost_invariant(length, surf_ptr);
-    regulate_surface_cells(length, surf_ptr);
+        read_FOsurfdat_hydro_analysis_boost_invariant(surf_ptr);
+    regulate_surface_cells(surf_ptr);
 }
 
-int read_FOdata::read_in_chemical_potentials(string path, int FO_length,
-                                             std::vector<FO_surf> &surf_ptr,
-                                             std::vector<particle_info> &particle_ptr) {
+void read_FOdata::read_in_chemical_potentials(string path,
+                                              std::vector<FO_surf> &surf_ptr,
+                                              std::vector<particle_info> &particle_ptr) {
     int Nparticle = 0;
     int N_stableparticle;
     Table mu_table;
@@ -228,6 +227,7 @@ int read_FOdata::read_in_chemical_potentials(string path, int FO_length,
     if (N_stableparticle > 0) {
         cout << " -- EOS is partially chemical equilibrium " << endl;
         flag_PCE = 1;
+        int FO_length = surf_ptr.size();
         double** particle_mu = new double* [N_stableparticle];
         for (int i = 0; i < N_stableparticle; i++)
             particle_mu[i] = new double[FO_length];
@@ -247,18 +247,17 @@ int read_FOdata::read_in_chemical_potentials(string path, int FO_length,
         cout << " -- EOS is chemical equilibrium. " << endl;
         flag_PCE = 0;
     }
-    return(Nparticle);
 }
 
-void read_FOdata::read_decdat(int length, std::vector<FO_surf> &surf_ptr) {
+void read_FOdata::read_decdat(std::vector<FO_surf> &surf_ptr) {
     double temp, temp_vx, temp_vy;
     cout <<" -- Read in information on freeze out surface...";
     ostringstream decdat_stream;
     decdat_stream << path << "/decdat2.dat";
     ifstream decdat(decdat_stream.str().c_str());
     string input;
-    for (int i = 0; i < length; i++) {
-        getline(decdat, input, '\n');
+    getline(decdat, input, '\n');
+    while (!decdat.eof()) {
         stringstream ss(input);
 
         FO_surf surf_elem;
@@ -308,13 +307,14 @@ void read_FOdata::read_decdat(int length, std::vector<FO_surf> &surf_ptr) {
         surf_elem.qmu3 = 0.0e0;
 
         surf_ptr.push_back(surf_elem);
+        getline(decdat, input, '\n');
     }
     decdat.close();
     cout << "done" << endl;
     return;
 }
 
-void read_FOdata::read_surfdat(int length, std::vector<FO_surf> &surf_ptr) {
+void read_FOdata::read_surfdat(std::vector<FO_surf> &surf_ptr) {
     cout<<" -- Read spatial positions of freeze out surface...";
     ostringstream surfdat_stream;
     double dummy;
@@ -332,18 +332,17 @@ void read_FOdata::read_surfdat(int length, std::vector<FO_surf> &surf_ptr) {
     return;
 }
 
-void read_FOdata::read_FOsurfdat_VISH2p1(int length,
-                                         std::vector<FO_surf> &surf_ptr) {
+void read_FOdata::read_FOsurfdat_VISH2p1(std::vector<FO_surf> &surf_ptr) {
     cout << " -- Loading the decoupling data from VISH2+1 ...." << endl;
     // read the data arrays for the decoupling information
-    read_decdat(length, surf_ptr);
+    read_decdat(surf_ptr);
     // read the positions of the freeze out surface
-    read_surfdat(length, surf_ptr);
+    read_surfdat(surf_ptr);
     return;
 }
 
 void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
-                                int length, std::vector<FO_surf> &surf_ptr) {
+                                std::vector<FO_surf> &surf_ptr) {
     cout << " -- Read spatial positions of freeze out surface from MUSIC "
          << "(boost-invariant) ...";
     ostringstream surfdat_stream;
@@ -358,7 +357,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     } else {
         surfdat.open(surfdat_stream.str().c_str());
     }
-    for (int i = 0; i < length*n_eta_skip; i++) {
+    while (!surfdat.eof()) {
         FO_surf surf_elem;
         if (surface_in_binary) {
             float array[32];
@@ -475,7 +474,9 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             }
         }
         idx++;
-        surf_ptr.push_back(surf_elem);
+        if (!surfdat.eof()) {
+            surf_ptr.push_back(surf_elem);
+        }
     }
     surfdat.close();
     cout << "done" << endl;
@@ -483,7 +484,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
 }
 
 void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
-                                int length, std::vector<FO_surf> &surf_ptr) {
+                                        std::vector<FO_surf> &surf_ptr) {
   cout << " -- Read spatial positions of freeze out surface from "
        << "hydro_analysis (boost-invariant) ...";
   ostringstream surfdat_stream;
@@ -493,8 +494,8 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
   int idx = 0;
   surfdat_stream << path << "/hyper_surface_2+1d.dat";
   ifstream surfdat(surfdat_stream.str().c_str());
-  for (int i = 0; i < length; i++) {
-     getline(surfdat, input, '\n' );
+  getline(surfdat, input, '\n' );
+  while (!surfdat.eof()) {
      stringstream ss(input);
      ss >> temp_tau >> temp_xpt >> temp_ypt;
 
@@ -551,6 +552,7 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
      surf_ptr.push_back(surf_elem);
 
      idx++;
+     getline(surfdat, input, '\n' );
   }
   surfdat.close();
 
@@ -558,8 +560,7 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
   return;
 }
 
-void read_FOdata::read_FOsurfdat_MUSIC(int length,
-                                       std::vector<FO_surf> &surf_ptr) {
+void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
     cout << " -- Read spatial positions of freeze out surface from MUSIC...";
     ostringstream surfdat_stream;
     double dummy;
@@ -570,7 +571,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(int length,
     } else {
         surfdat.open(surfdat_stream.str().c_str());
     }
-    for (int i=0; i<length; i++) {
+    while (!surfdat.eof()) {
         FO_surf surf_elem;
         if (surface_in_binary) {
             float array[32];
@@ -676,14 +677,15 @@ void read_FOdata::read_FOsurfdat_MUSIC(int length,
                 surf_elem.qmu3 = 0.0e0;
             }
         }
-        surf_ptr.push_back(surf_elem);
+        if (!surfdat.eof()) {
+            surf_ptr.push_back(surf_elem);
+        }
     }
     surfdat.close();
     cout << "done" << endl;
 }
 
-void read_FOdata::regulate_surface_cells(int length,
-                                         std::vector<FO_surf> &surf_ptr) {
+void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
     double pi_init[4][4];
     double pi_reg[4][4];
     double u_flow[4];
@@ -801,7 +803,6 @@ void read_FOdata::read_chemical_potentials_music(
 
 int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
     double eps = 1e-15;
-    int Nparticle=0;
     cout << " -- Read in particle resonance decay table...";
     ifstream resofile(table_path + "/pdg.dat");
     int local_i = 0;
@@ -904,15 +905,14 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
         }
         local_i++;   // Add one to the counting variable "i" for the meson/baryon
     }
-    Nparticle = particle.size(); //take account the final fake one
-    for (int i=0; i < Nparticle; i++) {
-       if (particle[i].baryon==0) {
-          particle[i].sign = -1;
+    for (auto &particle_i: particle) {
+       if (particle_i.baryon == 0) {
+          particle_i.sign = -1;
        } else {
-          particle[i].sign=1;
+          particle_i.sign=1;
        }
     }
-    return(Nparticle);
+    return(particle.size());
 }
 
 void read_FOdata::calculate_particle_mu_PCE(int Nparticle,

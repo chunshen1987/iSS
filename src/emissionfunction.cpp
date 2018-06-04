@@ -41,8 +41,8 @@ using namespace std;
 //***************************************************************************
 EmissionFunctionArray::EmissionFunctionArray(
     Table* chosen_particles_in, Table* pt_tab_in, Table* phi_tab_in,
-    Table* y_minus_eta_tab_in, std::vector<particle_info> particles_in, int Nparticles_in,
-    std::vector<FO_surf> FOsurf_ptr_in, long FO_length_in, int flag_PCE_in,
+    Table* y_minus_eta_tab_in, std::vector<particle_info> particles_in,
+    std::vector<FO_surf> FOsurf_ptr_in, int flag_PCE_in,
     ParameterReader* paraRdr_in, string path_in) {
 
     path = path_in;
@@ -63,10 +63,10 @@ EmissionFunctionArray::EmissionFunctionArray(
     }
 
     particles = particles_in;
-    Nparticles = Nparticles_in;
+    Nparticles = particles.size();
 
     FOsurf_ptr = FOsurf_ptr_in;
-    FO_length = FO_length_in;
+    FO_length = FOsurf_ptr.size();
 
     paraRdr = paraRdr_in;
 

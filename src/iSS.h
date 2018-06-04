@@ -13,8 +13,6 @@ class iSS {
  private:
     std::string path;
     
-    int FO_length;
-    //FO_surf* FOsurf_ptr;
     std::vector<FO_surf> FOsurf_ptr;
 
     int Nparticle;

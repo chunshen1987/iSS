@@ -8,8 +8,6 @@ using namespace std;
 
 iSS::iSS(string path_in) {
     path = path_in;
-    FO_length = 0;
-    Nparticle = 0;
     flag_PCE = 0;
 
     efa = nullptr;
@@ -41,13 +39,9 @@ int iSS::shell() {
 
 int iSS::read_in_FO_surface() {
     read_FOdata freeze_out_data(paraRdr_ptr, path);
-    FO_length = freeze_out_data.get_number_of_freezeout_cells();
-    cout << "total number of cells: " <<  FO_length << endl;
-    //FOsurf_ptr = new FO_surf[FO_length];
-    freeze_out_data.read_in_freeze_out_data(FO_length, FOsurf_ptr);
-    //particle = new particle_info[Maxparticle];
-    Nparticle = freeze_out_data.read_in_chemical_potentials(
-                                    path, FO_length, FOsurf_ptr, particle);
+    freeze_out_data.read_in_freeze_out_data(FOsurf_ptr);
+    cout << "total number of cells: " <<  FOsurf_ptr.size() << endl;
+    freeze_out_data.read_in_chemical_potentials(path, FOsurf_ptr, particle);
     flag_PCE = freeze_out_data.get_flag_PCE();
     cout << endl << " -- Read in data finished!" << endl << endl;
     return(0);
@@ -80,8 +74,7 @@ int iSS::generate_samples() {
 
     efa = new EmissionFunctionArray(
             &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
-            particle, Nparticle, FOsurf_ptr, FO_length,
-            flag_PCE, paraRdr_ptr, path);
+            particle, FOsurf_ptr, flag_PCE, paraRdr_ptr, path);
     efa->shell();
 
     return(0);

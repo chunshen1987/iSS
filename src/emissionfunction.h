@@ -151,8 +151,8 @@ class EmissionFunctionArray {
  public:
     EmissionFunctionArray(Table* chosen_particle, Table* pt_tab_in,
                           Table* phi_tab_in, Table* eta_tab_in,
-                          std::vector<particle_info> particles_in, int Nparticles,
-                          std::vector<FO_surf> FOsurf_ptr_in, long FO_length_in,
+                          std::vector<particle_info> particles_in,
+                          std::vector<FO_surf> FOsurf_ptr_in,
                           int flag_PCE_in, ParameterReader* paraRdr_in,
                           string path_in);
     ~EmissionFunctionArray();
