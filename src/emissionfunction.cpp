@@ -406,8 +406,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
 
   int use_pos_dN_only = paraRdr->getVal("use_pos_dN_only");
 
-  particle_info* particle;
-  particle = &particles[particle_idx];
+  const particle_info* particle = &particles[particle_idx];
 
   double mass = particle->mass;
   double sign = particle->sign;
@@ -418,7 +417,6 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
   
   double *bulkvisCoefficients = new double[3];
 
-  FO_surf* surf = &FOsurf_ptr[0];
 
   // initialize to 0
   for (int k=0; k<y_minus_eta_tab_length; k++)
@@ -451,7 +449,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
     double progress_total = FO_length;
     if (AMOUNT_OF_OUTPUT > 0) print_progressbar(-1);
     for (long l = 0; l < FO_length; l++) {
-        surf = &FOsurf_ptr[l];
+        const FO_surf* surf = &FOsurf_ptr[l];
 
         double Tdec = surf->Tdec;
         double Pdec = surf->Pdec;
@@ -633,8 +631,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
 
     int use_pos_dN_only = paraRdr->getVal("use_pos_dN_only");
 
-    particle_info* particle;
-    particle = &particles[particle_idx];
+    const particle_info* particle = &particles[particle_idx];
 
     double mass = particle->mass;
     double sign = particle->sign;
@@ -643,7 +640,6 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
 
     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
 
-    FO_surf* surf = &FOsurf_ptr[0];
   
     double *bulkvisCoefficients = new double[3];
 
@@ -688,7 +684,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
             double dN_pTdpTdphidy_max_tmp = 0.0;
 
             for (long l=0; l<FO_length; l++) {
-                surf = &FOsurf_ptr[l];
+                const FO_surf *surf = &FOsurf_ptr[l];
 
                 double Tdec = surf->Tdec;
                 double Pdec = surf->Pdec;
@@ -1059,7 +1055,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all_old_output(
     int to_order = paraRdr->getVal("calculate_vn_to_order");
 
     // loop over particles
-    particle_info* particle = NULL;
+    particle_info* particle = nullptr;
     for (int n=0; n<Nparticles; n++)
     {
         particle = &particles[n];
@@ -1155,7 +1151,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(
     for (int n=0; n<Nparticles; n++) dNs[n]=NULL;
 
     // loop over chosen particles
-    particle_info* particle = NULL;
+    particle_info* particle = nullptr;
     for (int m=0; m<number_of_chosen_particles; m++)
     {
         int particle_idx = chosen_particles_sampling_table[m];
@@ -1262,7 +1258,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
     // then it is replaced by this value.
     double zero = paraRdr->getVal("minimum_emission_function_val"); 
 
-    particle_info* particle = &particles[last_particle_idx];
+    const particle_info* particle = &particles[last_particle_idx];
 
     double mass = particle->mass;
     double sign = particle->sign;
@@ -1271,8 +1267,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
 
     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
 
-    FO_surf* surf = &FOsurf_ptr[0];
-  
     double *bulkvisCoefficients = new double[3];
 
     // create local cache
@@ -1368,7 +1362,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
         {
             // first, sample eta and freeze-out cell index
             rand2D.sampleAccToInvCDF(&y_minus_eta_s_idx, &FO_idx);
-            surf = &FOsurf_ptr[FO_idx];
+            const FO_surf *surf = &FOsurf_ptr[FO_idx];
 
             // Table starts with 1
             double y_minus_eta_s = y_minus_eta_tab->get(1,y_minus_eta_s_idx+1); 
@@ -1677,7 +1671,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     // then it is replaced by this value.
     double zero = paraRdr->getVal("minimum_emission_function_val"); 
 
-    particle_info* particle = &particles[last_particle_idx];
+    const particle_info* particle = &particles[last_particle_idx];
 
     double mass = particle->mass;
     double sign = particle->sign;
@@ -1685,8 +1679,6 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     double baryon = particle->baryon;
 
     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
-
-    FO_surf* surf = &FOsurf_ptr[0];
 
     double *bulkvisCoefficients = new double[3];
 
@@ -1832,6 +1824,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                             dN_pTdpTdphidy_max_4Sampling[pT_idx][phi_idx]);
 
             long tries = 1;
+            FO_surf *surf = nullptr;
             while (tries<maximum_impatience) {
                 bool found_sample = false;
 
@@ -2260,7 +2253,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady_and_sample_4all()
     int calculate_dN_dx = paraRdr->getVal("calculate_dN_dx");
 
     // loop over chosen particles
-    particle_info* particle = NULL;
+    particle_info* particle = nullptr;
     for (int m=0; m<number_of_chosen_particles; m++)
     {
         int particle_idx = chosen_particles_sampling_table[m];
@@ -2360,7 +2353,7 @@ void EmissionFunctionArray::calculate_dN_dtau_using_dN_dxtdetady(
     }
 
     // average them and output
-    particle_info* particle = &particles[last_particle_idx];
+    const particle_info* particle = &particles[last_particle_idx];
     char dN_dtau_filename_buffer[300];
     sprintf(dN_dtau_filename_buffer, dN_dtau_filename.c_str(), 
             particle->monval);
@@ -2431,7 +2424,7 @@ void EmissionFunctionArray::calculate_dN_dx_using_dN_dxtdetady(
     }
 
     // average them and output
-    particle_info* particle = &particles[last_particle_idx];
+    const particle_info* particle = &particles[last_particle_idx];
     char dN_dx_filename_buffer[300];
     sprintf(dN_dx_filename_buffer, dN_dx_filename.c_str(), particle->monval);
     ofstream of(dN_dx_filename_buffer);
@@ -2465,7 +2458,7 @@ void EmissionFunctionArray::calculate_dN_dphi_using_dN_pTdpTdphidy()
     }
 
     // output
-    particle_info* particle = &particles[last_particle_idx];
+    const particle_info* particle = &particles[last_particle_idx];
     char dN_dphi_filename_buffer[300];
     sprintf(dN_dphi_filename_buffer, dN_dphi_filename.c_str(),
             particle->monval);
@@ -2495,7 +2488,7 @@ void EmissionFunctionArray::calculate_dN_deta_using_dN_dxtdetady()
     }
 
     // output
-    particle_info* particle = &particles[last_particle_idx];
+    const particle_info* particle = &particles[last_particle_idx];
     char dN_deta_filename_buffer[300];
     sprintf(dN_deta_filename_buffer, dN_deta_filename.c_str(),
             particle->monval);
@@ -2520,7 +2513,7 @@ void EmissionFunctionArray::calculate_dN_dxt_using_dN_dxtdetady()
     }
 
     // output
-    particle_info* particle = &particles[last_particle_idx];
+    const particle_info* particle = &particles[last_particle_idx];
     char dN_dxt_filename_buffer[300];
     sprintf(dN_dxt_filename_buffer, dN_dxt_filename.c_str(), particle->monval);
     ofstream of(dN_dxt_filename_buffer);
@@ -2801,7 +2794,6 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
     double tolerance = paraRdr->getVal("grouping_tolerance");
 
     // now loop over all freeze-out cells and particles
-    FO_surf *surf; particle_info* particle;
     double unit_factor = 1.0/pow(hbarC, 3);  // unit: convert to unitless
 
     double integral_laststep[number_of_chosen_particles];
@@ -2812,7 +2804,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
 
     // loop over all the fluid cells
     for (long l = 0; l < FO_length; l++) {
-        surf = &FOsurf_ptr[l];
+        const FO_surf *surf = &FOsurf_ptr[l];
         double temp = surf->Tdec;
         double tau = surf->tau;
 
@@ -2867,7 +2859,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
         double total_N = 0;
         for (int n = 0; n < number_of_chosen_particles; n++) {
             int real_particle_idx = chosen_particles_sampling_table[n];
-            particle = &particles[real_particle_idx];
+            const particle_info *particle = &particles[real_particle_idx];
 
             int sign = particle->sign;
             int degen = particle->gspin;
@@ -2976,12 +2968,11 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
     double *bulkvisCoefficients = new double[3];
 
     // now loop over all freeze-out cells and particles
-    FO_surf *surf; particle_info* particle;
     double unit_factor = 1.0/pow(hbarC, 3);  // unit: convert to unitless
 
     // loop over all the fluid cells
     for (long l = 0; l < FO_length; l++) {
-        surf = &FOsurf_ptr[l];
+        const FO_surf* surf = &FOsurf_ptr[l];
         double temp = surf->Tdec;
         double tau = surf->tau;
 
@@ -3029,7 +3020,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
 
         // calculate dN / (dxt dy) for all particles
         double total_N = 0;
-        particle = &particles[real_particle_idx];
+        const particle_info *particle = &particles[real_particle_idx];
 
         //int sign = particle->sign;
         int degen = particle->gspin;
@@ -3082,7 +3073,8 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
 
 //***************************************************************************
 void EmissionFunctionArray::calculate_dN_analytic(
-    particle_info* particle, double mu, double Temperature, double* results) {
+        const particle_info* particle, double mu, double Temperature,
+        double* results) {
 /* calculate particle yield using analytic formula as a series sum of Bessel 
    functions. The particle yield emitted from a given fluid cell is 
    \dsigma_mu u^\mu times the return value from this function
@@ -3185,28 +3177,31 @@ double EmissionFunctionArray::calculate_total_FZ_energy_flux() {
     sw.tic();
     cout << " Function calculate_total_FZ_energy_flux started..." << endl;
 
-    FO_surf *surf;
     double total_energy = 0;
-    for (long l=0; l<FO_length; l++) {
-        surf = &FOsurf_ptr[l];
+    for (auto const &surf_i: FOsurf_ptr) {
+        double p = surf_i.Pdec;
+        double e = surf_i.Edec;
 
-        double p = surf->Pdec;
-        double e = surf->Edec;
+        double u0 = surf_i.u0;
+        double u1 = surf_i.u1;
+        double u2 = surf_i.u2;
+        double u3 = surf_i.u3;
 
-        double u0 = surf->u0;
-        double u1 = surf->u1;
-        double u2 = surf->u2;
+        double da0 = surf_i.da0;
+        double da1 = surf_i.da1;
+        double da2 = surf_i.da2;
+        double da3 = surf_i.da3;
 
-        double da0 = surf->da0;
-        double da1 = surf->da1;
-        double da2 = surf->da2;
+        double pi00 = surf_i.pi00;
+        double pi01 = surf_i.pi01;
+        double pi02 = surf_i.pi02;
+        double pi03 = surf_i.pi03;
 
-        double pi00 = surf->pi00;
-        double pi01 = surf->pi01;
-        double pi02 = surf->pi02;
-
-        total_energy += ((e*u0*u0 + pi00)*da0
-                + ((e+p)*u0*u1 + pi01)*da1 + ((e+p)*u0*u2 + pi02)*da2);
+        total_energy += (  ( e     *u0*u0 + pi00)*da0
+                         + ((e + p)*u0*u1 + pi01)*da1
+                         + ((e + p)*u0*u2 + pi02)*da2
+                         + ((e + p)*u0*u3 + pi03)*da3
+                        );
     }
 
     return total_energy;
@@ -3247,8 +3242,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
          << endl;
 
     // reusable local variables
-    FO_surf *surf;
-    particle_info *particle;
     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
 
     double *bulkvisCoefficients = new double[3];
@@ -3307,7 +3300,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     for (int n = 0; n < number_of_chosen_particles; n++) {
         int real_particle_idx = chosen_particles_sampling_table[n];
         calculate_dN_dxtdy_for_one_particle_species(real_particle_idx);
-        particle    = &particles[real_particle_idx];
+        const particle_info *particle = &particles[real_particle_idx];
         double mass = particle->mass;
         int sign    = particle->sign;
         int degen   = particle->gspin;
@@ -3439,7 +3432,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 //long FO_idx =  sorted_FZ[rand1D.rand()];
                 long FO_idx = rand1D.rand();
 
-                surf = &FOsurf_ptr[FO_idx];
+                const FO_surf *surf = &FOsurf_ptr[FO_idx];
 
                 double Tdec     = surf->Tdec;
                 double inv_Tdec = 1.0/Tdec;
