@@ -2,32 +2,32 @@
 #define ISS_H
 
 #include <string>
+#include <vector>
 
 #include "data_struct.h"
 #include "ParameterReader.h"
 #include "readindata.h"
 #include "emissionfunction.h"
 
-using namespace std;
-
 class iSS {
  private:
-    string path;
+    std::string path;
     
     int FO_length;
     FO_surf* FOsurf_ptr;
+    std::vector<FO_surf> FOsurf_ptr;
 
     int Nparticle;
     int flag_PCE;
 
     long randomSeed;
 
-    particle_info *particle;
+    std::<particle_info> particle;
     
     EmissionFunctionArray *efa;
 
  public:
-    iSS(string path_in);
+    iSS(std::string path_in);
     ~iSS();
 
     ParameterReader *paraRdr_ptr;

@@ -12,22 +12,13 @@ iSS::iSS(string path_in) {
     Nparticle = 0;
     flag_PCE = 0;
 
-    FOsurf_ptr = nullptr;
-    particle = nullptr;
     efa = nullptr;
-
     paraRdr_ptr = new ParameterReader;
 }
 
 iSS::~iSS() {
-    if (FOsurf_ptr != nullptr) {
-        delete[] FOsurf_ptr;
-    }
-
-    if (particle != nullptr) {
-        delete[] particle;
-    }
-
+    FOsurf_ptr.clear();
+    particle.clear();
     if (efa != nullptr) {
         delete efa;
     }

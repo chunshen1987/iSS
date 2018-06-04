@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 #include <fstream>
 #include <cmath>
 #include <iomanip>
@@ -105,7 +106,8 @@ int read_FOdata::get_number_of_freezeout_cells() {
     return(number_of_cells);
 }
 
-void read_FOdata::read_in_freeze_out_data(int length, FO_surf* surf_ptr) {
+void read_FOdata::read_in_freeze_out_data(int length,
+                                          std::vector<FO_surf> surf_ptr) {
     if (mode == 0)     // VISH2+1 outputs
         read_FOsurfdat_VISH2p1(length, surf_ptr);
     else if (mode == 1)   // MUSIC boost invariant outputs
@@ -300,8 +302,8 @@ void read_FOdata::read_FOsurfdat_VISH2p1(int length, FO_surf* surf_ptr) {
     return;
 }
 
-void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
-                                                       FO_surf* surf_ptr) {
+void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
+                                int length, std::vector<FO_surf> surf_ptr) {
     cout << " -- Read spatial positions of freeze out surface from MUSIC "
          << "(boost-invariant) ...";
     ostringstream surfdat_stream;
