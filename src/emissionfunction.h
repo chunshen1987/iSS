@@ -255,13 +255,16 @@ class EmissionFunctionArray {
         double mass, double pdotu, double bulkPi, double Tdec, int sign,
         double f0, double *bulkvisCoefficients);
     int sample_momemtum_from_a_fluid_cell(
-        double mass, double degen, int sign, int baryon,
-        double pT_to, double y_minus_eta_s_range, double maximum_guess,
-        double tau, Vec4 da, Vec4 u, double mu, double Tdec,
-        ViscousVec pi, double deltaf_prefactor,
-        double bulkPi, double *bulkvisCoefficients,
-        Vec4 qmu, double prefactor_qmu, double deltaf_qmu_coeff,
+        const double mass, const double degen, const int sign,
+        const int baryon, const double pT_to, const double y_minus_eta_s_range,
+        const double maximum_guess, const FO_surf *surf,
+        double *bulkvisCoefficients, const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s);
+    double estimate_maximum(
+        const FO_surf *surf, const int real_particle_idx, const double mass,
+        const double sign, const double degen, const double baryon,
+        TableFunction &z_exp_m_z,
+        const double *bulkvisCoefficients, const double deltaf_qmu_coeff);
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_
