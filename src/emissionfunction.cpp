@@ -31,8 +31,6 @@
 #define AMOUNT_OF_OUTPUT 0                  // smaller value means less outputs
 #define NUMBER_OF_LINES_TO_WRITE   100000   // string buffer for sample files
 
-//using namespace std;
-
 using std::cout;
 using std::endl;
 using std::string;
