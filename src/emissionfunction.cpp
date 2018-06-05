@@ -1442,7 +1442,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
                 // refer to calculate_dNArrays function to see how the rate 
                 // is calculated
                 // Basically it is "just Cooper-Frye"
-                pT = drand(0, pT_to); // sample according to pT dpT
+                pT = pT_to*ran_gen_ptr.lock()->rand_uniform(); // sample according to pT dpT
                 mT = sqrt(mass*mass + pT*pT);
 
                 double pt = (
@@ -1450,9 +1450,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
                 double pz = (
                     mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][1]);
 
-                phi = drand(0, 2*M_PI);
-                px = pT*cos(phi);
-                py = pT*sin(phi);
+                phi = 2*M_PI*ran_gen_ptr.lock()->rand_uniform();
+                px  = pT*cos(phi);
+                py  = pT*sin(phi);
 
                 double pdotu = pt*gammaT - px*ux - py*uy - pz*tau_ueta;
                 double expon = (pdotu - mu) * inv_Tdec;
@@ -1527,8 +1527,11 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
             else 
                 sample_idx++; // write-out sample
 
-            if (positive_y_minus_eta_table_only)
-                y_minus_eta_s = irand(0,1)==0 ? y_minus_eta_s : -y_minus_eta_s;
+            if (positive_y_minus_eta_table_only) {
+                double flip_a_coin = ran_gen_ptr.lock()->rand_uniform();
+                if (flip_a_coin > 0.5)
+                    y_minus_eta_s = -y_minus_eta_s;
+            }
 
             double y = y_LB + ran_gen_ptr.lock()->rand_uniform()*(y_RB-y_LB);
             double eta_s = y - y_minus_eta_s;
@@ -2042,8 +2045,11 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                 sample_idx++; // write-out sample
 
             double y_minus_eta_s = y_minus_eta_tab->get(1,y_minus_eta_s_idx+1);
-            if (positive_y_minus_eta_table_only)
-                y_minus_eta_s = irand(0,1)==0 ? y_minus_eta_s : -y_minus_eta_s;
+            if (positive_y_minus_eta_table_only) {
+                double flip_a_coin = ran_gen_ptr.lock()->rand_uniform();
+                if (flip_a_coin > 0.5)
+                    y_minus_eta_s = -y_minus_eta_s;
+            }
 
             double y = y_LB + ran_gen_ptr.lock()->rand_uniform()*(y_RB-y_LB);
             double eta_s = y - y_minus_eta_s;
@@ -4283,15 +4289,15 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
         // Basically it is "just Cooper-Frye"
 
         // sample according to pT dpT
-        pT = sqrt(drand(0, pT_to*pT_to)); 
+        pT = sqrt(pT_to*pT_to*ran_gen_ptr.lock()->rand_uniform());
         double mT = sqrt(mass*mass + pT*pT);
 
-        phi = drand(0, 2*M_PI);
+        phi = 2*M_PI*ran_gen_ptr.lock()->rand_uniform();
         double px = pT*cos(phi);
         double py = pT*sin(phi);
 
-        y_minus_eta_s = drand(-y_minus_eta_s_range, 
-                              y_minus_eta_s_range);
+        y_minus_eta_s = ((1. - 2.*ran_gen_ptr.lock()->rand_uniform())
+                         *y_minus_eta_s_range);
 
         double p0 = mT*cosh(y_minus_eta_s);  // p0 = p^tau
         double p3 = mT*sinh(y_minus_eta_s);  // p3 = tau p^eta
