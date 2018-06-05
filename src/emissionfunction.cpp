@@ -3290,7 +3290,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
          << endl;
     for (int n = 0; n < number_of_chosen_particles; n++) {
         int real_particle_idx = chosen_particles_sampling_table[n];
-        calculate_dN_dxtdy_for_one_particle_species(real_particle_idx);
         const particle_info *particle = &particles[real_particle_idx];
         const double mass = particle->mass;
         const int sign    = particle->sign;
@@ -3298,6 +3297,16 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         const int baryon  = particle->baryon;
         cout << "Index: " << n << ", Name: " << particle->name
              << ", Monte-carlo index: " << particle->monval << endl;
+        if (local_charge_conservation == 1) {
+            if (particle->charge < 0) {
+                cout << "local charge conservation is turn on~ "
+                     << "Skip the negative charge particles."
+                     << endl;
+                continue;
+            }
+        }
+        
+        calculate_dN_dxtdy_for_one_particle_species(real_particle_idx);
 
         // prepare for outputs
         // the control file records how many particles are there
@@ -3403,12 +3412,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 long FO_idx = rand1D.rand();
                 const FO_surf *surf = &FOsurf_ptr[FO_idx];
 
-                double eta_s;
-                if (hydro_mode == 2)
-                    eta_s = surf->eta;
-                else
-                    eta_s = 0.0;
-
                 if (INCLUDE_BULK_DELTAF == 1)
                     getbulkvisCoefficients(surf->Tdec, bulkvisCoefficients);
 
@@ -3437,63 +3440,18 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 }
                 number_of_success++; // to track success rate
                 
-                double rapidity_y;
-                if (hydro_mode != 2) {
-                    rapidity_y = (y_LB + (y_RB - y_LB)
-                                         *ran_gen_ptr.lock()->rand_uniform());
-                    eta_s = rapidity_y - y_minus_eta_s;
-                } else {
-                    rapidity_y = y_minus_eta_s + eta_s;
-                }
+                std::string particle_string = add_one_sampled_particle(
+                        repeated_sampling_idx, y_LB, y_RB, FO_idx, surf,
+                        particle->monval, mass, pT, phi, y_minus_eta_s);
 
-                const double px = pT*cos(phi);
-                const double py = pT*sin(phi);
-                const double mT = sqrt(mass*mass + pT*pT);
-                const double p_z = mT*sinh(rapidity_y);
-                const double E = mT*cosh(rapidity_y);
-                const double z = surf->tau*sinh(eta_s);
-                const double t = surf->tau*cosh(eta_s);
-
-                // write to sample file
-                if (!USE_OSCAR_FORMAT) {
-                    sprintf(line_buffer, 
-                            "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", 
-                            FO_idx, surf->tau, surf->xpt, surf->ypt, 
-                            y_minus_eta_s, pT, phi, surf->da0, surf->da1, 
-                            surf->da2, surf->u1/surf->u0, 
-                            surf->u2/surf->u0, rapidity_y, eta_s, E, p_z, 
-                            t, z);
-                } else {
-                    // To be combined to OSCAR
-                    sprintf(line_buffer, 
-                            "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", 
-                            px, py, p_z, E, mass, surf->xpt, 
-                            surf->ypt, z, t);
-                }
                 if (flag_output_samples_into_files == 1) {
-                    sample_str_buffer << line_buffer;
+                    sample_str_buffer << particle_string;
                     sample_writing_signal++;
                     if (sample_writing_signal == NUMBER_OF_LINES_TO_WRITE) {
                         of_sample << sample_str_buffer.str();
                         sample_str_buffer.str("");
                         sample_writing_signal=0;
                     }
-                }
-
-                if (flag_store_samples_in_memory == 1) {
-                    iSS_Hadron *temp_hadron = new iSS_Hadron;
-                    temp_hadron->pid = particle->monval;
-                    temp_hadron->mass = mass;
-                    temp_hadron->E = E;
-                    temp_hadron->px = px;
-                    temp_hadron->py = py;
-                    temp_hadron->pz = p_z;
-                    temp_hadron->t = t;
-                    temp_hadron->x = surf->xpt;
-                    temp_hadron->y = surf->ypt;
-                    temp_hadron->z = z;
-                    (*Hadron_list)[repeated_sampling_idx-1]->push_back(
-                                                                *temp_hadron);
                 }
             }
 
@@ -4268,17 +4226,12 @@ double EmissionFunctionArray::estimate_maximum(
     const double Pdec     = surf->Pdec;
     const double Edec     = surf->Edec;
 
-    const double tau = surf->tau;
-    const Vec4 u = {surf->u0, surf->u1, surf->u2, surf->u3};
-
     double mu = baryon*surf->muB;
     if (flag_PCE == 1) {
         double mu_PCE = (
                     surf->particle_mu_PCE[real_particle_idx]);
         mu += mu_PCE;
     }
-
-    const Vec4 da = {surf->da0, surf->da1, surf->da2, surf->da3};
 
     const ViscousVec pi = {surf->pi00, surf->pi01, surf->pi02,
                            surf->pi03, surf->pi11, surf->pi12,
@@ -4308,11 +4261,12 @@ double EmissionFunctionArray::estimate_maximum(
 
     // calculate maximum value for p*dsigma f, 
     // used in PDF accept/reject sampling
-    const double u_dot_dsigma = tau*(
-        u[0]*da[0] + u[1]*da[1] + u[2]*da[2] + u[3]*da[3]/tau);
-    const double dsigma_sq = tau*tau*(  da[0]*da[0] - da[1]*da[1]
-                                      - da[2]*da[2]
-                                      - da[3]*da[3]/(tau*tau));
+    const double u_dot_dsigma = surf->tau*(
+              surf->u0*surf->da0 + surf->u1*surf->da1
+            + surf->u2*surf->da2 + surf->u3*surf->da3/surf->tau);
+    const double dsigma_sq = surf->tau*surf->tau*(
+              surf->da0*surf->da0 - surf->da1*surf->da1
+            - surf->da2*surf->da2 - surf->da3*surf->da3/(surf->tau*surf->tau));
     const double dsigmaT = sqrt(
             std::abs(dsigma_sq - u_dot_dsigma*u_dot_dsigma));
     const double dsigma_all = std::abs(u_dot_dsigma) + dsigmaT;
@@ -4369,4 +4323,65 @@ double EmissionFunctionArray::estimate_maximum(
     return(maximum_guess);
 }
 
+std::string EmissionFunctionArray::add_one_sampled_particle(
+                const int repeated_sampling_idx, 
+                const double y_LB, const double y_RB,
+                const unsigned long FO_idx, const FO_surf *surf,
+                const int particle_monval, const double mass,
+                const double pT, const double phi, const double y_minus_eta_s
+                ) {
+    std::string text_string;
+    char line_buffer[500];
+    double rapidity_y;
+    double eta_s = surf->eta;
+    if (hydro_mode != 2) {
+        rapidity_y = (y_LB + (y_RB - y_LB)
+                             *ran_gen_ptr.lock()->rand_uniform());
+        eta_s = rapidity_y - y_minus_eta_s;
+    } else {
+        rapidity_y  = y_minus_eta_s + eta_s;
+    }
 
+    const double px = pT*cos(phi);
+    const double py = pT*sin(phi);
+    const double mT = sqrt(mass*mass + pT*pT);
+    const double p_z = mT*sinh(rapidity_y);
+    const double E = mT*cosh(rapidity_y);
+    const double z = surf->tau*sinh(eta_s);
+    const double t = surf->tau*cosh(eta_s);
+
+    // write to sample file
+    if (!USE_OSCAR_FORMAT) {
+        sprintf(line_buffer, 
+                "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", 
+                FO_idx, surf->tau, surf->xpt, surf->ypt, 
+                y_minus_eta_s, pT, phi, surf->da0, surf->da1, 
+                surf->da2, surf->u1/surf->u0, 
+                surf->u2/surf->u0, rapidity_y, eta_s, E, p_z, 
+                t, z);
+    } else {
+        // To be combined to OSCAR
+        sprintf(line_buffer, 
+                "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", 
+                px, py, p_z, E, mass, surf->xpt, 
+                surf->ypt, z, t);
+    }
+    text_string = line_buffer;
+
+    if (flag_store_samples_in_memory == 1) {
+        iSS_Hadron *temp_hadron = new iSS_Hadron;
+        temp_hadron->pid = particle_monval;
+        temp_hadron->mass = mass;
+        temp_hadron->E = E;
+        temp_hadron->px = px;
+        temp_hadron->py = py;
+        temp_hadron->pz = p_z;
+        temp_hadron->t = t;
+        temp_hadron->x = surf->xpt;
+        temp_hadron->y = surf->ypt;
+        temp_hadron->z = z;
+        (*Hadron_list)[repeated_sampling_idx-1]->push_back(
+                                                    *temp_hadron);
+    }
+    return(text_string);
+}
