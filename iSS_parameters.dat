@@ -79,10 +79,6 @@ dN_dy_sampling_para1 = 0.16  # Additional parameters for dN/dy sampling.
                              # -- For dN_dy_sampling_model==10 or 20, 
                              #    this parameter sets the ratio k/n for NBD, 
                              #    see explanation for dN_dy_sampling_model.
-dN_dy_sampling_para2 = 0     # Additional parameters for dN/dy sampling. 
-dN_dy_sampling_para3 = 0     # Additional parameters for dN/dy sampling. 
-dN_dy_sampling_para4 = 0     # Additional parameters for dN/dy sampling. 
-dN_dy_sampling_para5 = 0     # Additional parameters for dN/dy sampling. 
 
 y_LB = -5.0                  # lower bound for y-sampling; 
                              # used in "conventional" sampling

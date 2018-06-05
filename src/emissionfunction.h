@@ -102,8 +102,7 @@ class EmissionFunctionArray {
 
     double **trig_phi_table, **hypertrig_y_minus_eta_table;
     inline long determine_number_to_sample(
-                    double dN, int model=1, double para1=0, double para2=0, 
-                    double para3=0, double para4=0, double para5=0);
+                    double dN, int model=1, double para1=0);
 
     const gsl_rng_type *gsl_type_random_number;
     gsl_rng *gsl_random_r;

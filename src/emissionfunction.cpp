@@ -1327,10 +1327,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
 
     int sampling_model    = paraRdr->getVal("dN_dy_sampling_model");
     double sampling_para1 = paraRdr->getVal("dN_dy_sampling_para1");
-    double sampling_para2 = paraRdr->getVal("dN_dy_sampling_para2");
-    double sampling_para3 = paraRdr->getVal("dN_dy_sampling_para3");
-    double sampling_para4 = paraRdr->getVal("dN_dy_sampling_para4");
-    double sampling_para5 = paraRdr->getVal("dN_dy_sampling_para5");
 
     // get y range for sampling
     double y_LB = paraRdr->getVal("y_LB");
@@ -1347,9 +1343,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
          sampling_idx++)
     {
         long number_to_sample = determine_number_to_sample(
-            dN, sampling_model, sampling_para1, sampling_para2, 
-            sampling_para3, sampling_para4, sampling_para5);
-
+                                        dN, sampling_model, sampling_para1);
         // write to control file
         sprintf(line_buffer, "%lu\n", number_to_sample);
         control_str_buffer << line_buffer;
@@ -1774,10 +1768,6 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
 
     int sampling_model = paraRdr->getVal("dN_dy_sampling_model");
     double sampling_para1 = paraRdr->getVal("dN_dy_sampling_para1");
-    double sampling_para2 = paraRdr->getVal("dN_dy_sampling_para2");
-    double sampling_para3 = paraRdr->getVal("dN_dy_sampling_para3");
-    double sampling_para4 = paraRdr->getVal("dN_dy_sampling_para4");
-    double sampling_para5 = paraRdr->getVal("dN_dy_sampling_para5");
 
     // get y range for sampling
     double y_LB = paraRdr->getVal("y_LB");
@@ -1798,9 +1788,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     for (long sampling_idx=1; sampling_idx<=number_of_repeated_sampling; 
          sampling_idx++) {
         long number_to_sample = determine_number_to_sample(
-            dN, sampling_model, sampling_para1, sampling_para2, sampling_para3, 
-            sampling_para4, sampling_para5);
-
+                                    dN, sampling_model, sampling_para1);
         // write to control file
         sprintf(line_buffer, "%lu\n", number_to_sample);
         control_str_buffer << line_buffer;
@@ -2172,13 +2160,10 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
 
 //***************************************************************************
 inline long EmissionFunctionArray::determine_number_to_sample(
-    double dN_dy_in, int model, double para1, double para2, 
-    double para3, double para4, double para5)
+    double dN_dy_in, int model, double para1) {
 // From a non-integer averaged particles number dN, return an actual interger
 // particle number that can be used in sampling.
-{
-    if (dN_dy_in<0)
-    {
+    if (dN_dy_in < 0) {
         cout << "EmissionFunctionArray::"
              << "determine_number_to_sample error: "
              << "dN_dy should be positive but receives " << dN_dy_in << endl;
@@ -3259,10 +3244,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     // control variables
     int sampling_model    = paraRdr->getVal("dN_dy_sampling_model");
     double sampling_para1 = paraRdr->getVal("dN_dy_sampling_para1");
-    double sampling_para2 = paraRdr->getVal("dN_dy_sampling_para2");
-    double sampling_para3 = paraRdr->getVal("dN_dy_sampling_para3");
-    double sampling_para4 = paraRdr->getVal("dN_dy_sampling_para4");
-    double sampling_para5 = paraRdr->getVal("dN_dy_sampling_para5");
 
     int flag_sample_upto_desired_particle_number = paraRdr->getVal(
                                     "sample_upto_desired_particle_number");
@@ -3405,8 +3386,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
              repeated_sampling_idx <= number_of_repeated_sampling;
              repeated_sampling_idx++) {
             long number_to_sample = determine_number_to_sample(
-                dN, sampling_model, sampling_para1, sampling_para2, 
-                sampling_para3, sampling_para4, sampling_para5);
+                dN, sampling_model, sampling_para1);
 
             control_writing_signal++;
             if (flag_output_samples_into_files == 1) {
