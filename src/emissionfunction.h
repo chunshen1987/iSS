@@ -266,11 +266,11 @@ class EmissionFunctionArray {
         TableFunction &z_exp_m_z,
         const double *bulkvisCoefficients, const double deltaf_qmu_coeff);
     std::string add_one_sampled_particle(
-                const int repeated_sampling_idx, 
-                const double y_LB, const double y_RB,
-                const unsigned long FO_idx, const FO_surf *surf,
-                const int particle_monval, const double mass,
-                const double pT, const double phi, const double y_minus_eta_s);
+        const int repeated_sampling_idx, 
+        const unsigned long FO_idx, const FO_surf *surf,
+        const int particle_monval, const double mass,
+        const double pT, const double phi,
+        const double y_minus_eta_s, const double eta_s);
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_

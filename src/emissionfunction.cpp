@@ -3440,9 +3440,16 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 }
                 number_of_success++; // to track success rate
                 
+                double eta_s = surf->eta;
+                if (hydro_mode != 2) {
+                    double rap = (y_LB + (y_RB - y_LB)
+                                         *ran_gen_ptr.lock()->rand_uniform());
+                    eta_s = rap - y_minus_eta_s;
+                }
+                
                 std::string particle_string = add_one_sampled_particle(
-                        repeated_sampling_idx, y_LB, y_RB, FO_idx, surf,
-                        particle->monval, mass, pT, phi, y_minus_eta_s);
+                        repeated_sampling_idx, FO_idx, surf,
+                        particle->monval, mass, pT, phi, y_minus_eta_s, eta_s);
 
                 if (flag_output_samples_into_files == 1) {
                     sample_str_buffer << particle_string;
@@ -3466,8 +3473,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                                 pT2, phi2, y_minus_eta_s2);
                     } while (status2 == 0);
                     std::string particle_string2 = add_one_sampled_particle(
-                        repeated_sampling_idx, y_LB, y_RB, FO_idx, surf,
-                        -particle->monval, mass, pT2, phi2, y_minus_eta_s2);
+                                    repeated_sampling_idx, FO_idx, surf,
+                                    -particle->monval, mass,
+                                    pT2, phi2, y_minus_eta_s2, eta_s);
                     
                     if (flag_output_samples_into_files == 1) {
                         sample_str_buffer << particle_string2;
@@ -4351,22 +4359,13 @@ double EmissionFunctionArray::estimate_maximum(
 
 std::string EmissionFunctionArray::add_one_sampled_particle(
                 const int repeated_sampling_idx, 
-                const double y_LB, const double y_RB,
                 const unsigned long FO_idx, const FO_surf *surf,
                 const int particle_monval, const double mass,
-                const double pT, const double phi, const double y_minus_eta_s
-                ) {
+                const double pT, const double phi,
+                const double y_minus_eta_s, const double eta_s) {
     std::string text_string;
     char line_buffer[500];
-    double rapidity_y;
-    double eta_s = surf->eta;
-    if (hydro_mode != 2) {
-        rapidity_y = (y_LB + (y_RB - y_LB)
-                             *ran_gen_ptr.lock()->rand_uniform());
-        eta_s = rapidity_y - y_minus_eta_s;
-    } else {
-        rapidity_y  = y_minus_eta_s + eta_s;
-    }
+    double rapidity_y = y_minus_eta_s + eta_s;
 
     const double px = pT*cos(phi);
     const double py = pT*sin(phi);
