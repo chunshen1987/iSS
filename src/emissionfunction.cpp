@@ -3453,6 +3453,32 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                         sample_writing_signal=0;
                     }
                 }
+
+                if (local_charge_conservation == 1 && particle->charge > 0) {
+                    // sample a negative particle from the same fluid cell
+                    double pT2, phi2, y_minus_eta_s2;
+                    int status2 = 0;
+                    do {
+                        status2 = sample_momemtum_from_a_fluid_cell(
+                                mass, degen, sign, -baryon,
+                                pT_to, y_minus_eta_s_range, maximum_guess,
+                                surf, bulkvisCoefficients, deltaf_qmu_coeff,
+                                pT2, phi2, y_minus_eta_s2);
+                    } while (status2 == 0);
+                    std::string particle_string2 = add_one_sampled_particle(
+                        repeated_sampling_idx, y_LB, y_RB, FO_idx, surf,
+                        -particle->monval, mass, pT2, phi2, y_minus_eta_s2);
+                    
+                    if (flag_output_samples_into_files == 1) {
+                        sample_str_buffer << particle_string2;
+                        sample_writing_signal++;
+                        if (sample_writing_signal == NUMBER_OF_LINES_TO_WRITE) {
+                            of_sample << sample_str_buffer.str();
+                            sample_str_buffer.str("");
+                            sample_writing_signal=0;
+                        }
+                    }
+                }
             }
 
             if (AMOUNT_OF_OUTPUT>0) {
@@ -4370,16 +4396,16 @@ std::string EmissionFunctionArray::add_one_sampled_particle(
 
     if (flag_store_samples_in_memory == 1) {
         iSS_Hadron *temp_hadron = new iSS_Hadron;
-        temp_hadron->pid = particle_monval;
-        temp_hadron->mass = mass;
-        temp_hadron->E = E;
-        temp_hadron->px = px;
-        temp_hadron->py = py;
-        temp_hadron->pz = p_z;
-        temp_hadron->t = t;
-        temp_hadron->x = surf->xpt;
-        temp_hadron->y = surf->ypt;
-        temp_hadron->z = z;
+        temp_hadron->pid        = particle_monval;
+        temp_hadron->mass       = mass;
+        temp_hadron->E          = E;
+        temp_hadron->px         = px;
+        temp_hadron->py         = py;
+        temp_hadron->pz         = p_z;
+        temp_hadron->t          = t;
+        temp_hadron->x          = surf->xpt;
+        temp_hadron->y          = surf->ypt;
+        temp_hadron->z          = z;
         (*Hadron_list)[repeated_sampling_idx-1]->push_back(
                                                     *temp_hadron);
     }

@@ -28,7 +28,7 @@ use_gzip_format = 1          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
 perform_decays = 0           # flag to perform resonance decay
 
-local_charge_conservation = 0  # flag to impose local charge conservation
+local_charge_conservation = 1  # flag to impose local charge conservation
 
 calculate_vn = 0         # 1/0: whether to calculate the 
                          # dN/(pt dpt dphi dy) and v_n flows 
