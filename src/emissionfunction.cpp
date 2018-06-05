@@ -1442,7 +1442,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
                 // refer to calculate_dNArrays function to see how the rate 
                 // is calculated
                 // Basically it is "just Cooper-Frye"
-                pT = pT_to*ran_gen_ptr.lock()->rand_uniform(); // sample according to pT dpT
+                pT = sqrt(pT_to*pT_to*ran_gen_ptr.lock()->rand_uniform());
                 mT = sqrt(mass*mass + pT*pT);
 
                 double pt = (
