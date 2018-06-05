@@ -1,8 +1,11 @@
 
-#include <sys/time.h>
-#include "./Table.h"
-#include "./arsenal.h"
-#include "./iSS.h"
+#include <memory>
+
+#include "Table.h"
+#include "arsenal.h"
+#include "iSS.h"
+#include "Random.h"
+
 
 using namespace std;
 
@@ -47,19 +50,11 @@ int iSS::read_in_FO_surface() {
     return(0);
 }
 
-void iSS::set_random_seed(int randomSeed_in) {
-    randomSeed = randomSeed_in;
-    srand48(randomSeed);
-}
 
 void iSS::set_random_seed() {
-    randomSeed = paraRdr_ptr->getVal("randomSeed");
-    if (randomSeed < 0) {
-        timeval a;
-        gettimeofday(&a, 0);
-        randomSeed = a.tv_usec;
-    }
-    srand48(randomSeed);
+    randomSeed  = paraRdr_ptr->getVal("randomSeed");
+    ran_gen_ptr = std::shared_ptr<RandomUtil::Random>(
+                                        new RandomUtil::Random(randomSeed));
 }
 
 int iSS::generate_samples() {
@@ -72,7 +67,7 @@ int iSS::generate_samples() {
     Table eta_tab(table_path + "/bin_tables/eta_uni_table.dat");
     // Table eta_tab("tables/eta_gauss_table_30_full.dat");
 
-    efa = new EmissionFunctionArray(
+    efa = new EmissionFunctionArray(ran_gen_ptr,
             &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
             particle, FOsurf_ptr, flag_PCE, paraRdr_ptr, path);
     efa->shell();

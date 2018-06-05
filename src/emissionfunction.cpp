@@ -43,11 +43,13 @@ using std::setw;
 // Class EmissionFunctionArray ------------------------------------------
 //***************************************************************************
 EmissionFunctionArray::EmissionFunctionArray(
+    std::shared_ptr<RandomUtil::Random> ran_gen,
     Table* chosen_particles_in, Table* pt_tab_in, Table* phi_tab_in,
     Table* y_minus_eta_tab_in, std::vector<particle_info> particles_in,
     std::vector<FO_surf> FOsurf_ptr_in, int flag_PCE_in,
     ParameterReader* paraRdr_in, string path_in) {
 
+    ran_gen_ptr = ran_gen;
     path = path_in;
     // get info
     flag_PCE = flag_PCE_in;
@@ -106,7 +108,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     
     flag_perform_decays = paraRdr->getVal("perform_decays");
     if (flag_perform_decays == 1) {
-        decayer_ptr = new particle_decay;
+        decayer_ptr = new particle_decay(ran_gen_ptr.lock());
     }
 
     // allocate internal buffer
@@ -1292,7 +1294,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
                             dN_dxtdetady[k][l]*delta_y_minus_eta_tab[k]);
 
     RandomVariable2DArray rand2D(dN_dxtdetady_with_weight, FO_length, 
-                                 y_minus_eta_tab_length, zero);
+                                 y_minus_eta_tab_length, ran_gen_ptr.lock(),
+                                 zero);
 
     // first calcualte total number of particles
     double dN_dy = 0.0;
@@ -1509,7 +1512,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
                 if (AMOUNT_OF_OUTPUT>1 && test > 1.)
                     cout << "WTH?!" << endl; 
 
-                if (drand48() < test) 
+                if (ran_gen_ptr.lock()->rand_uniform() < test) 
                     break;  // accept sample! 
 
                 tries ++;
@@ -1527,7 +1530,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
             if (positive_y_minus_eta_table_only)
                 y_minus_eta_s = irand(0,1)==0 ? y_minus_eta_s : -y_minus_eta_s;
 
-            double y = y_LB + drand48()*(y_RB-y_LB);
+            double y = y_LB + ran_gen_ptr.lock()->rand_uniform()*(y_RB-y_LB);
             double eta_s = y - y_minus_eta_s;
             double p_z = mT*sinh(y);
             double E = mT*cosh(y);
@@ -1714,7 +1717,8 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     // create random variable using inverse CDF
     RandomVariable2DArray rand2D(dN_pTdpTdphidy_with_weight_4Sampling, 
                                  phi_tab4Sampling_length, 
-                                 pT_tab4Sampling_length, zero);
+                                 pT_tab4Sampling_length,
+                                 ran_gen_ptr.lock(), zero);
 
     //-----------------------------------------------------------------------
     // start sampling
@@ -1820,7 +1824,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                 bool found_sample = false;
 
                 // get a surface index
-                FO_idx = floor(drand48()*(FO_length-1e-30));
+                FO_idx = floor(ran_gen_ptr.lock()->rand_uniform()*(FO_length-1e-30));
 
                 surf = &FOsurf_ptr[FO_idx];
 
@@ -1946,7 +1950,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                     total_violation++;
                 } 
                 
-                if (drand48() > results_max/dN_max_sampling) {
+                if (ran_gen_ptr.lock()->rand_uniform() > results_max/dN_max_sampling) {
                     tries++; 
                     continue;
                 } // discard this freeze-out cell
@@ -1954,8 +1958,9 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                 for (int sub_try=0; sub_try<y_minus_eta_tab_length/2; 
                      sub_try++) {
                     // get a y-eta_s index
-                    y_minus_eta_s_idx = (floor(drand48()
-                                         *(y_minus_eta_tab_length-1e-30))); 
+                    y_minus_eta_s_idx = (
+                        floor(ran_gen_ptr.lock()->rand_uniform()
+                              *(y_minus_eta_tab_length-1e-30))); 
                     double pt = (
                         mT*hypertrig_y_minus_eta_table[y_minus_eta_s_idx][0]);
                     double pz = (
@@ -2012,7 +2017,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                         total_violation++;
                     } 
                     
-                    if (drand48()<result/results_max) {
+                    if (ran_gen_ptr.lock()->rand_uniform() < result/results_max) {
                         found_sample=true; 
                         break;
                     } // accept sample! 
@@ -2040,7 +2045,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
             if (positive_y_minus_eta_table_only)
                 y_minus_eta_s = irand(0,1)==0 ? y_minus_eta_s : -y_minus_eta_s;
 
-            double y = y_LB + drand48()*(y_RB-y_LB);
+            double y = y_LB + ran_gen_ptr.lock()->rand_uniform()*(y_RB-y_LB);
             double eta_s = y - y_minus_eta_s;
             double p_z = mT*sinh(y);
             double E = mT*cosh(y);
@@ -2178,7 +2183,7 @@ inline long EmissionFunctionArray::determine_number_to_sample(
         case 1: // with possibly 1 more particle
             number_to_sample = dN_dy_int;
             // lucky! 1 more particle...
-            if (drand48() < dN_dy_fraction)
+            if (ran_gen_ptr.lock()->rand_uniform() < dN_dy_fraction)
                 number_to_sample++; 
             break;
         case 10: // use NBD
@@ -3330,7 +3335,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
             dN_dxtdy_single_particle[l] = (
                                     dN_dxtdy_for_one_particle_species[l]);
         }
-        RandomVariable1DArray rand1D(&dN_dxtdy_single_particle, 0);
+        RandomVariable1DArray rand1D(&dN_dxtdy_single_particle, ran_gen_ptr.lock(), 0);
 
         // first get total number of particles
         double dN_dy = rand1D.return_sum();
@@ -3551,7 +3556,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 
                 double rapidity_y;
                 if (hydro_mode != 2) {
-                    rapidity_y = y_LB + drand48()*(y_RB-y_LB);
+                    rapidity_y = y_LB + ran_gen_ptr.lock()->rand_uniform()*(y_RB-y_LB);
                     eta_s = rapidity_y - y_minus_eta_s;
                 } else {
                     rapidity_y = y_minus_eta_s + eta_s;
@@ -4345,7 +4350,7 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
                  << "than 1: " << accept_prob << endl;
         }
 
-        if (drand48() < accept_prob) {
+        if (ran_gen_ptr.lock()->rand_uniform() < accept_prob) {
             return(1);
         }
         tries++;

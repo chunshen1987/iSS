@@ -3,16 +3,19 @@
 #define SRC_particle_decay_h_
 
 #include <vector>
-#include <cstring>
+#include <string>
+#include <memory>
 
 #include "data_struct.h"
+#include "Random.h"
 
 class particle_decay {
  private:
-     std::vector<particle_decay_info*> resonance_table;
+    std::vector<particle_decay_info*> resonance_table;
+    std::weak_ptr<RandomUtil::Random> ran_gen_ptr;
 
  public:
-    particle_decay();
+    particle_decay(std::shared_ptr<RandomUtil::Random> ran_gen);
     ~particle_decay();
 
     //! This function reads in resonance decay table

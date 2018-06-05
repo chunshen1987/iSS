@@ -11,6 +11,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "Table.h"
 #include "TableFunction.h"
@@ -18,6 +19,7 @@
 #include "particle_decay.h"
 #include "data_struct.h"
 #include "data_struct.h"
+#include "Random.h"
 
 class EmissionFunctionArray {
  private:
@@ -27,6 +29,8 @@ class EmissionFunctionArray {
     double deltaf_max_ratio;
 
     std::string path;
+
+    std::weak_ptr<RandomUtil::Random> ran_gen_ptr;
 
     int MC_sampling;
     int number_of_repeated_sampling;
@@ -139,7 +143,8 @@ class EmissionFunctionArray {
     particle_decay *decayer_ptr;
 
  public:
-    EmissionFunctionArray(Table* chosen_particle, Table* pt_tab_in,
+    EmissionFunctionArray(std::shared_ptr<RandomUtil::Random> ran_gen,
+                          Table* chosen_particle, Table* pt_tab_in,
                           Table* phi_tab_in, Table* eta_tab_in,
                           std::vector<particle_info> particles_in,
                           std::vector<FO_surf> FOsurf_ptr_in,

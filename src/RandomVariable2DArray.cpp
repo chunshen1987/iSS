@@ -23,44 +23,46 @@ using namespace std;
 // Constructors:
 //----------------------------------------------------------------------
 //----------------------------------------------------------------------
-RandomVariable2DArray::RandomVariable2DArray(double **data_in, long size_right_in, long size_left_in, double zero)
+RandomVariable2DArray::RandomVariable2DArray(
+                    double **data_in, long size_right_in, long size_left_in,
+                    std::shared_ptr<RandomUtil::Random> ran_gen, double zero) {
 // Initilize from a given double** array data_in.
 // Values smaller than "zero" will be set to "zero".
 // If elements of data_in are data_in[i][j], then size_right_in
 // is the allowed max range of j and size_left_in is for i.
-{
-  // get data info
-  size_right = size_right_in;
-  size_left = size_left_in;
-  data_size = size_right*size_left;
+    // get data info
+    size_right = size_right_in;
+    size_left = size_left_in;
+    data_size = size_right*size_left;
 
-  // allocate memory
-  invCDF = new vector<double>(data_size+1, zero);
+    ran_gen_ptr = ran_gen;
 
-  // copy data; find max and sum at the same time
-  // also flatten it into 2 1d arrays: pdf and cdf
-  data_max = zero; data_sum = zero;
-  long current_index = 0;
-  (*invCDF)[0] = 0.0;
-  current_index ++;
-  
-  for (long i=0; i<size_left; i++)
-  for (long j=0; j<size_right; j++)
-  {
-    double val = data_in[i][j];
-    
-    // enforce positiveness
-    if (val<zero) val = zero;
+    // allocate memory
+    invCDF = new vector<double>(data_size+1, zero);
 
-    data_sum += val;
-
-    // copy to data
-    (*invCDF)[current_index] = data_sum;
-
-    // index increment
+    // copy data; find max and sum at the same time
+    // also flatten it into 2 1d arrays: pdf and cdf
+    data_max = zero; data_sum = zero;
+    long current_index = 0;
+    (*invCDF)[0] = 0.0;
     current_index ++;
-  }
+    
+    for (long i=0; i<size_left; i++) {
+        for (long j=0; j<size_right; j++) {
+            double val = data_in[i][j];
+      
+            // enforce positiveness
+            if (val<zero) val = zero;
 
+            data_sum += val;
+
+            // copy to data
+            (*invCDF)[current_index] = data_sum;
+
+            // index increment
+            current_index ++;
+        }
+    }
 }
 
 
@@ -76,7 +78,7 @@ void RandomVariable2DArray::sampleAccToInvCDF(long* idx_left, long* idx_right)
 // Sample according to inverse CDF, which gives a (left, right) pair.
 // indices start with 0.
 {
-  long l = binarySearch(invCDF, (*invCDF)[0]+(data_sum-(*invCDF)[0]-1e-15)*drand48());
+  long l = binarySearch(invCDF, (*invCDF)[0]+(data_sum-(*invCDF)[0]-1e-15)*ran_gen_ptr.lock()->rand_uniform());
   *idx_right = l % size_right;
   *idx_left = (l-*idx_right) / size_right;
 }

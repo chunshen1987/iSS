@@ -3,17 +3,20 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "data_struct.h"
 #include "ParameterReader.h"
 #include "readindata.h"
 #include "emissionfunction.h"
+#include "Random.h"
 
 class iSS {
  private:
     std::string path;
     
     std::vector<FO_surf> FOsurf_ptr;
+    std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
 
     int Nparticle;
     int flag_PCE;
@@ -31,7 +34,6 @@ class iSS {
     ParameterReader *paraRdr_ptr;
 
     void set_random_seed();
-    void set_random_seed(int randomSeed_in);
 
     int shell();
     int read_in_FO_surface();
