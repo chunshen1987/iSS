@@ -24,7 +24,6 @@
 #include "emissionfunction.h"
 #include "RandomVariable1DArray.h"
 #include "RandomVariable2DArray.h"
-#include "RandomVariableNDArray.h"
 #include "ParameterReader.h"
 #include "arsenal.h"
 #include "Stopwatch.h"
