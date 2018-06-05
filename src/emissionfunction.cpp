@@ -3295,10 +3295,10 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         int real_particle_idx = chosen_particles_sampling_table[n];
         calculate_dN_dxtdy_for_one_particle_species(real_particle_idx);
         const particle_info *particle = &particles[real_particle_idx];
-        double mass = particle->mass;
-        int sign    = particle->sign;
-        int degen   = particle->gspin;
-        int baryon  = particle->baryon;
+        const double mass = particle->mass;
+        const int sign    = particle->sign;
+        const int degen   = particle->gspin;
+        const int baryon  = particle->baryon;
         cout << "Index: " << n << ", Name: " << particle->name
              << ", Monte-carlo index: " << particle->monval << endl;
 
@@ -3331,10 +3331,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         std::stringstream sample_str_buffer;   // to speed up outputing process
         std::stringstream control_str_buffer;
 
-        // get y range for sampling
-        double y_LB = paraRdr->getVal("y_LB");
-        double y_RB = paraRdr->getVal("y_RB");
-
         // prepare the inverse CDF
         for (long l = 0; l < FO_length; l++) {
             //dN_dxtdy_single_particle[l] = dN_dxtdy_4all[l][n];
@@ -3345,12 +3341,14 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
 
         // first get total number of particles
         double dN_dy = rand1D.return_sum();
-
         cout << " -- Sampling using dN_dy=" << dN_dy << ", ";
 
+        // get y range for sampling
+        const double y_LB = paraRdr->getVal("y_LB");
+        const double y_RB = paraRdr->getVal("y_RB");
         double dN;
         if (hydro_mode != 2) {
-            dN = (y_RB-y_LB)*dN_dy;
+            dN = (y_RB - y_LB)*dN_dy;
         } else {
             // for (3+1)-d case, dN_dy is total N (summing over all etas)
             dN = dN_dy;
@@ -3404,22 +3402,16 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
             long sample_idx = 1;
             while (sample_idx <= number_to_sample) {
                 // first, sample eta and freeze-out cell index
-                //long FO_idx =  sorted_FZ[rand1D.rand()];
                 long FO_idx = rand1D.rand();
-
                 const FO_surf *surf = &FOsurf_ptr[FO_idx];
 
-                double Tdec     = surf->Tdec;
-                double inv_Tdec = 1.0/Tdec;
-                double Pdec     = surf->Pdec;
-                double Edec     = surf->Edec;
+                const double Tdec     = surf->Tdec;
+                const double inv_Tdec = 1.0/Tdec;
+                const double Pdec     = surf->Pdec;
+                const double Edec     = surf->Edec;
 
-                double tau = surf->tau;
-                Vec4 u;
-                u[0] = surf->u0;
-                u[1] = surf->u1;
-                u[2] = surf->u2;
-                u[3] = surf->u3;
+                const double tau = surf->tau;
+                const Vec4 u = {surf->u0, surf->u1, surf->u2, surf->u3};
 
                 double mu = baryon*surf->muB;
                 if (flag_PCE == 1) {
@@ -3428,11 +3420,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                     mu += mu_PCE;
                 }
 
-                Vec4 da;
-                da[0] = surf->da0;
-                da[1] = surf->da1;
-                da[2] = surf->da2;
-                da[3] = surf->da3;
+                const Vec4 da = {surf->da0, surf->da1, surf->da2, surf->da3};
 
                 double eta_s;
                 if (hydro_mode == 2)
@@ -3440,17 +3428,10 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 else
                     eta_s = 0.0;
                     
-                ViscousVec pi;
-                pi[0] = surf->pi00;
-                pi[1] = surf->pi01;
-                pi[2] = surf->pi02;
-                pi[3] = surf->pi03;
-                pi[4] = surf->pi11;
-                pi[5] = surf->pi12;
-                pi[6] = surf->pi13;
-                pi[7] = surf->pi22;
-                pi[8] = surf->pi23;
-                pi[9] = surf->pi33;
+                const ViscousVec pi = {surf->pi00, surf->pi01, surf->pi02,
+                                       surf->pi03, surf->pi11, surf->pi12,
+                                       surf->pi13, surf->pi22, surf->pi23,
+                                       surf->pi33};
 
                 double deltaf_prefactor = 0.0;
                 if (INCLUDE_DELTAF)
@@ -3484,16 +3465,16 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
 
                 // calculate maximum value for p*dsigma f, 
                 // used in PDF accept/reject sampling
-                double u_dot_dsigma = tau*(
+                const double u_dot_dsigma = tau*(
                     u[0]*da[0] + u[1]*da[1] + u[2]*da[2] + u[3]*da[3]/tau);
-                double dsigma_sq = tau*tau*(  da[0]*da[0] - da[1]*da[1]
-                                            - da[2]*da[2]
-                                            - da[3]*da[3]/(tau*tau));
-                double dsigmaT = sqrt(std::abs(dsigma_sq 
-                                               - u_dot_dsigma*u_dot_dsigma));
-                double dsigma_all = std::abs(u_dot_dsigma) + dsigmaT;
+                const double dsigma_sq = tau*tau*(  da[0]*da[0] - da[1]*da[1]
+                                                  - da[2]*da[2]
+                                                  - da[3]*da[3]/(tau*tau));
+                const double dsigmaT = sqrt(
+                        std::abs(dsigma_sq - u_dot_dsigma*u_dot_dsigma));
+                const double dsigma_all = std::abs(u_dot_dsigma) + dsigmaT;
 
-                double f0_mass = 1./(exp((mass - mu)*inv_Tdec) + sign);
+                const double f0_mass = 1./(exp((mass - mu)*inv_Tdec) + sign);
 
                 // ideal first, p*dsigma pT f < dsgima_all*E^2*f0
                 // Here pT is involved because instead of sampling pT^2 
@@ -3503,18 +3484,18 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 // solve (1 -+ f0) = A/(beta E) 
                 // (A= power of E, for ideal case A=2), which gives
                 // (beta*E-A)*exp(beta*E-A) = +- A*exp(beta*mu-A) --- (*)
-                double guess_ideal = estimate_ideal_maximum(
+                const double guess_ideal = estimate_ideal_maximum(
                                     sign, mass, Tdec, mu, f0_mass, z_exp_m_z);
                 
                 // next viscous part
                 // p*dsigma pT f < dsgima_all*tmp_factor*sqrt(3)
                 //                 *E^3*f0*trace_Pi2/(2*T^2*(e+p))
-                double trace_Pi2 = (
+                const double trace_Pi2 = (
                     pi[0]*pi[0] + pi[4]*pi[4] + pi[7]*pi[7] + pi[9]*pi[9]
                     - 2.*pi[1]*pi[1] - 2.*pi[2]*pi[2] - 2.*pi[3]*pi[3]
                     + 2.*pi[5]*pi[5] + 2.*pi[6]*pi[6] + 2.*pi[8]*pi[8]);
-                double pi_size = sqrt(trace_Pi2)/(Edec + Pdec);
-                double guess_viscous = estimate_shear_viscous_maximum(
+                const double pi_size = sqrt(trace_Pi2)/(Edec + Pdec);
+                const double guess_viscous = estimate_shear_viscous_maximum(
                         sign, mass, Tdec, mu, f0_mass, z_exp_m_z, pi_size);
 
                 // bulk delta f
@@ -3538,9 +3519,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 }
                 
                 // combine
-                double maximum_guess = (prefactor*degen*dsigma_all
-                                        *(guess_ideal + guess_viscous 
-                                          + guess_bulk + guess_qmu));
+                const double maximum_guess = (prefactor*degen*dsigma_all
+                                              *(guess_ideal + guess_viscous 
+                                                + guess_bulk + guess_qmu));
 
                 // next sample pt and phi
                 double pT, phi, y_minus_eta_s;
@@ -3562,19 +3543,20 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 
                 double rapidity_y;
                 if (hydro_mode != 2) {
-                    rapidity_y = y_LB + ran_gen_ptr.lock()->rand_uniform()*(y_RB-y_LB);
+                    rapidity_y = (y_LB + (y_RB - y_LB)
+                                         *ran_gen_ptr.lock()->rand_uniform());
                     eta_s = rapidity_y - y_minus_eta_s;
                 } else {
                     rapidity_y = y_minus_eta_s + eta_s;
                 }
 
-                double px = pT*cos(phi);
-                double py = pT*sin(phi);
-                double mT = sqrt(mass*mass + pT*pT);
-                double p_z = mT*sinh(rapidity_y);
-                double E = mT*cosh(rapidity_y);
-                double z = surf->tau*sinh(eta_s);
-                double t = surf->tau*cosh(eta_s);
+                const double px = pT*cos(phi);
+                const double py = pT*sin(phi);
+                const double mT = sqrt(mass*mass + pT*pT);
+                const double p_z = mT*sinh(rapidity_y);
+                const double E = mT*cosh(rapidity_y);
+                const double z = surf->tau*sinh(eta_s);
+                const double t = surf->tau*cosh(eta_s);
 
                 // write to sample file
                 if (!USE_OSCAR_FORMAT) {
