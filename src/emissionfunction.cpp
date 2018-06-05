@@ -38,6 +38,9 @@ using std::endl;
 using std::string;
 using std::ostream;
 using std::vector;
+using std::ofstream;
+using std::ifstream;
+using std::setw;
 
 // Class EmissionFunctionArray ------------------------------------------
 //***************************************************************************
@@ -111,7 +114,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     // allocate internal buffer
     dN_pTdpTdphidy = new Table(pT_tab_length, phi_tab_length);
     dN_pTdpTdphidy_max = new Table(pT_tab_length, phi_tab_length);
-    ostringstream filename_stream;
+    std::ostringstream filename_stream;
     dN_pTdpTdphidy_filename = path + "/dN_pTdpTdphidy.dat";
   
     if (MC_sampling == 1) {
@@ -585,7 +588,8 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
                       double ratio_max = deltaf_max_ratio;
                       double deltaf_size = fabs(delta_f_shear + delta_f_bulk 
                                                 + delta_f_qmu);
-                      resize_factor = min(1., ratio_max/(deltaf_size + 1e-10));
+                      resize_factor = (
+                              std::min(1., ratio_max/(deltaf_size + 1e-10)));
                   }
                   result = (prefactor*degen*f0*pdsigma*tau
                          *(1. + (delta_f_shear + delta_f_bulk + delta_f_qmu)
@@ -799,7 +803,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
                         double deltaf_size = fabs(delta_f_shear + delta_f_bulk
                                                   + delta_f_qmu);
                         resize_factor = (
-                                min(1., ratio_max/(deltaf_size + 1e-10)));
+                                std::min(1., ratio_max/(deltaf_size + 1e-10)));
                     }
                     result = (prefactor*degen*f0*pdsigma*tau
                             *(1. + (delta_f_shear + delta_f_bulk + delta_f_qmu)
@@ -847,7 +851,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
 void EmissionFunctionArray::write_dN_pTdpTdphidy_toFile()
 // Append the dN_pTdpTdphidy results to file.
 {
-  ofstream of1(dN_pTdpTdphidy_filename.c_str(), ios_base::app);
+  ofstream of1(dN_pTdpTdphidy_filename.c_str(), std::ios_base::app);
   dN_pTdpTdphidy->printTable(of1);
   of1.close();
 }
@@ -859,12 +863,13 @@ void EmissionFunctionArray::write_dN_pTdpTdphidy_toFile()
 void EmissionFunctionArray::write_dN_dxtdetady_toFile()
 // Append the dN_pTdpTdphidy results to file.
 {
-  ofstream of1(dN_dxtdetady_filename.c_str(), ios_base::app);
+  ofstream of1(dN_dxtdetady_filename.c_str(), std::ios_base::app);
   for (int k=0; k<y_minus_eta_tab_length; k++)
   {
     for (long l=0; l<FO_length; l++)
     {
-         of1 << scientific << setprecision(12) << dN_dxtdetady[k][l] << "   ";
+         of1 << std::scientific << std::setprecision(12)
+             << dN_dxtdetady[k][l] << "   ";
     }
     of1 << endl;
   }
@@ -1012,11 +1017,11 @@ void EmissionFunctionArray::calculate_flows(
 
   // save to files
   //cout << "Writing to files... ";
-  ofstream of1(flow_differential_filename_in.c_str(), ios_base::app);
+  ofstream of1(flow_differential_filename_in.c_str(), std::ios_base::app);
   vn_diff.printTable(of1);
   of1.close();
 
-  ofstream of2(flow_integrated_filename_in.c_str(), ios_base::app);
+  ofstream of2(flow_integrated_filename_in.c_str(), std::ios_base::app);
   vn_inte.printTable(of2);
   of2.close();
   //cout << "done." << endl;
@@ -1102,12 +1107,12 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all_old_output(
 
         // next flows:
 
-        ofstream of1(flow_differential_filename_old.c_str(), ios_base::app);
+        ofstream of1(flow_differential_filename_old.c_str(), std::ios_base::app);
         of1 << "# Output for particle: " << particle->name << endl;
         of1 << "#                 " << particle->monval << endl;
         of1.close();
 
-        ofstream of2(flow_integrated_filename_old.c_str(), ios_base::app);
+        ofstream of2(flow_integrated_filename_old.c_str(), std::ios_base::app);
         of2 << "# For: " << particle->name << endl;
         of2.close();
         calculate_flows(to_order, flow_differential_filename_old, 
@@ -1197,7 +1202,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(
 
     // write out dN / (ptdpt dphi dy) matrices
     remove(dN_pTdpTdphidy_filename.c_str());
-    ofstream of(dN_pTdpTdphidy_filename.c_str(), ios_base::app);
+    ofstream of(dN_pTdpTdphidy_filename.c_str(), std::ios_base::app);
     Table zero(dN_pTdpTdphidy->getNumberOfCols(), 
                dN_pTdpTdphidy->getNumberOfRows(), 0);
     for (int n=0; n<Nparticles; n++)
@@ -1319,8 +1324,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
 
     // buffers are used to speed up the output process
     char line_buffer[500]; // only used in text mode
-    stringstream sample_str_buffer; // to speed up outputing process
-    stringstream control_str_buffer;
+    std::stringstream sample_str_buffer; // to speed up outputing process
+    std::stringstream control_str_buffer;
 
     int sampling_model    = paraRdr->getVal("dN_dy_sampling_model");
     double sampling_para1 = paraRdr->getVal("dN_dy_sampling_para1");
@@ -1496,7 +1501,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
                     double ratio_max = deltaf_max_ratio;
                     double deltaf_size = fabs(delta_f_shear + delta_f_bulk
                                               + delta_f_qmu);
-                    resize_factor = min(1., ratio_max/(deltaf_size + 1e-10));
+                    resize_factor = (
+                            std::min(1., ratio_max/(deltaf_size + 1e-10)));
                 }
                 result = (prefactor*degen*f0*pdsigma*tau
                           *(1. + (delta_f_shear + delta_f_bulk + delta_f_qmu)
@@ -1765,8 +1771,8 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
 
     // buffers are used to speed up the output process
     char line_buffer[500]; // only used in text mode
-    stringstream sample_str_buffer; // to speed up outputing process
-    stringstream control_str_buffer;
+    std::stringstream sample_str_buffer; // to speed up outputing process
+    std::stringstream control_str_buffer;
 
     int sampling_model = paraRdr->getVal("dN_dy_sampling_model");
     double sampling_para1 = paraRdr->getVal("dN_dy_sampling_para1");
@@ -1944,9 +1950,9 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                 }
                 
                 double results_max;
-                delta_f_shear = max(delta_f_shear, 0.0);
-                delta_f_bulk = max(delta_f_bulk, 0.0);
-                delta_f_qmu = max(delta_f_qmu, 0.0);
+                delta_f_shear = std::max(delta_f_shear, 0.0);
+                delta_f_bulk = std::max(delta_f_bulk, 0.0);
+                delta_f_qmu = std::max(delta_f_qmu, 0.0);
                 results_max = (prefactor*degen*f0_max
                          *(1. + delta_f_shear + delta_f_bulk + delta_f_qmu)
                          *pdsigma_max*tau);
@@ -2012,8 +2018,8 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                         double ratio_max = deltaf_max_ratio;
                         double deltaf_size = fabs(delta_f_shear + delta_f_bulk
                                                   + delta_f_qmu);
-                        resize_factor = min(1.,
-                                            ratio_max/(deltaf_size + 1e-10));
+                        resize_factor = (
+                                std::min(1., ratio_max/(deltaf_size + 1e-10)));
                     }
                     result = (prefactor*degen*f0*pdsigma*tau*(1. 
                               + (delta_f_shear + delta_f_bulk + delta_f_qmu)
@@ -3335,8 +3341,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
 
         // buffers are used to speed up the output process
         char line_buffer[500];            // only used in text mode
-        stringstream sample_str_buffer;   // to speed up outputing process
-        stringstream control_str_buffer;
+        std::stringstream sample_str_buffer;   // to speed up outputing process
+        std::stringstream control_str_buffer;
 
         // get y range for sampling
         double y_LB = paraRdr->getVal("y_LB");
