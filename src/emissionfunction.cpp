@@ -1340,16 +1340,14 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
     long control_writing_signal = 0;
     long maximum_impatience = 5000; // used in pt-phi sampling
     for (long sampling_idx=1; sampling_idx<=number_of_repeated_sampling; 
-         sampling_idx++)
-    {
+         sampling_idx++) {
         long number_to_sample = determine_number_to_sample(
                                         dN, sampling_model, sampling_para1);
         // write to control file
         sprintf(line_buffer, "%lu\n", number_to_sample);
         control_str_buffer << line_buffer;
         control_writing_signal++;
-        if (control_writing_signal==NUMBER_OF_LINES_TO_WRITE)
-        {
+        if (control_writing_signal==NUMBER_OF_LINES_TO_WRITE) {
             of_control << control_str_buffer.str();
             control_str_buffer.str("");
             control_writing_signal=0;
@@ -1357,8 +1355,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
 
         long y_minus_eta_s_idx, FO_idx;
         long sample_idx = 1;
-        while (sample_idx <= number_to_sample)
-        {
+        while (sample_idx <= number_to_sample) {
             // first, sample eta and freeze-out cell index
             rand2D.sampleAccToInvCDF(&y_minus_eta_s_idx, &FO_idx);
             const FO_surf *surf = &FOsurf_ptr[FO_idx];
@@ -3279,8 +3276,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     // dN_dxtdy for 1 particle
     vector<double> dN_dxtdy_single_particle(FO_length, 0);
     cout << endl << "Sampling using dN/dy with "
-        << "sample_using_dN_dxtdy_4all_particles function."
-        << endl << endl;
+         << "sample_using_dN_dxtdy_4all_particles function."
+         << endl << endl;
     cout << "number of repeated sampling = " << number_of_repeated_sampling
          << endl;
     for (int n = 0; n < number_of_chosen_particles; n++) {
@@ -3365,15 +3362,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         // maximum_guess to maximum_guess*maximum_ratio*adjust_maximum_to
         // for the rest of sampling. Note that you want to set
         // adjust_maximum_to to be slightly larger than 1 to avoid errors.
-        int use_dynamic_maximum   = paraRdr->getVal("use_dynamic_maximum");
-        long adjust_maximum_after = paraRdr->getVal("adjust_maximum_after");
-        double adjust_maximum_to  = paraRdr->getVal("adjust_maximum_to");
         long number_of_tries      = 0;
         int number_of_success     = 0;
-        long maximum_impatience = 5000;
-        double maximum_ratio      = 0;
-        bool has_adjusted_maximum = false;
-        double actual_adjusted_maximum_factor = 1.0;
 
         long sample_writing_signal  = 0;
         long control_writing_signal = 0;
@@ -3400,17 +3390,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 }
             }
             
-            if (control_writing_signal == NUMBER_OF_LINES_TO_WRITE) {
-                if (use_dynamic_maximum && !has_adjusted_maximum) {
-                    if (number_of_tries > adjust_maximum_after) {
-                        // adjust maximum
-                        actual_adjusted_maximum_factor = (
-                                        maximum_ratio*adjust_maximum_to);
-                        has_adjusted_maximum = true;
-                    }
-                }
-            }
-
             long sample_idx = 1;
             while (sample_idx <= number_to_sample) {
                 // first, sample eta and freeze-out cell index
@@ -3629,16 +3608,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 }
             }
 
-            // check whether to adjust maximum
-            if (use_dynamic_maximum && !has_adjusted_maximum) {
-                if (number_of_tries > adjust_maximum_after) {
-                    // adjust maximum
-                    actual_adjusted_maximum_factor = (
-                                    maximum_ratio*adjust_maximum_to);
-                    has_adjusted_maximum = true;
-                }
-            }
-
             if (AMOUNT_OF_OUTPUT>0) {
                 print_progressbar(
                         static_cast<double>(repeated_sampling_idx)
@@ -3666,8 +3635,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
             cout << endl << " -- -- Number of tries: " << number_of_tries 
                  << ", number of success: " << number_of_success << endl
                  << " -- -- Success rate: " 
-                 << (double) number_of_success/number_of_tries << ", " 
-                 << "maximum accept rate: " << maximum_ratio << endl;
+                 << static_cast<double>(number_of_success)/static_cast<double>(number_of_tries)
+                 << endl;
         }
 
         sw.toc();
@@ -4297,14 +4266,12 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
         Vec4 qmu, double prefactor_qmu, double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s
         ) {
-    long tries              = 1;
+    int tries               = 1;
     double accept_prob_max  = 0.0;
-    long number_of_tries    = 0;
-    int number_of_success   = 0;
-    long maximum_impatience = 5000;
     double inv_Tdec         = 1./Tdec;
     double prefactor        = 1.0/(8.0*(M_PI*M_PI*M_PI)*(hbarC*hbarC*hbarC));
     double actual_adjusted_maximum_factor = 1.0;
+    const int maximum_impatience = 5000;
     while (tries < maximum_impatience) {
         // refer to calculate_dNArrays function to see how 
         // the rate is calculated
@@ -4369,9 +4336,6 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
             if(accept_prob > accept_prob_max)
                 accept_prob_max = accept_prob;
         }
-
-        // to track success rate
-        number_of_tries ++;
 
         // for debugging
         if (accept_prob > 1 && AMOUNT_OF_OUTPUT > 1) {
