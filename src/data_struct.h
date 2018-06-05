@@ -3,6 +3,7 @@
 
 #include <string>
 #include <array>
+#include <vector>
 
 const double hbarC=0.197327053;  //GeV*fm
 
@@ -46,5 +47,35 @@ typedef struct {
     double *particle_mu_PCE;
 } FO_surf;
 
+typedef struct {
+    int decay_Npart;
+    double branching_ratio;
+    int decay_part[5];
+} decay_channel_info;
+
+typedef struct {
+    int monval;     // Monte Carlo number according PDG
+    std::string name;
+    double mass;
+    double width;
+    int gspin;      // spin degeneracy
+    int baryon;
+    int strange;
+    int charm;
+    int bottom;
+    int gisospin;   // isospin degeneracy
+    int charge;
+    int decays;     // amount of decays listed for this resonance
+    int stable;     // defines whether this particle is considered as stable
+    std::vector<decay_channel_info*> decay_channels;
+    int sign;                   // Bose-Einstein or Dirac-Fermi statistics
+} particle_decay_info;
+
+struct iSS_Hadron {
+     int pid;
+     double mass;
+     double E, px, py, pz;
+     double t, x, y, z;
+};
 
 #endif  // DATA_STRUCT_H_

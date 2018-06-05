@@ -15,7 +15,6 @@
 #include "Table.h"
 #include "TableFunction.h"
 #include "ParameterReader.h"
-#include "iSS_hadron.h"
 #include "particle_decay.h"
 #include "data_struct.h"
 #include "data_struct.h"
