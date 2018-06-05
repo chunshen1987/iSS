@@ -4153,7 +4153,7 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
         double *bulkvisCoefficients, const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s
         ) {
-    const double Tdec      = surf->Tdec;
+    const double Tdec = surf->Tdec;
     const double mu = baryon*surf->muB;
     const double inv_Tdec  = 1./Tdec;
     const double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI)*(hbarC*hbarC*hbarC));
@@ -4172,14 +4172,13 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
 
         // sample according to pT dpT
         pT = sqrt(pT_to*pT_to*ran_gen_ptr.lock()->rand_uniform());
-        double mT = sqrt(mass*mass + pT*pT);
-
         phi = 2*M_PI*ran_gen_ptr.lock()->rand_uniform();
-        double px = pT*cos(phi);
-        double py = pT*sin(phi);
-
         y_minus_eta_s = ((1. - 2.*ran_gen_ptr.lock()->rand_uniform())
                          *y_minus_eta_s_range);
+        
+        double mT = sqrt(mass*mass + pT*pT);
+        double px = pT*cos(phi);
+        double py = pT*sin(phi);
 
         double p0 = mT*cosh(y_minus_eta_s);  // p0 = p^tau
         double p3 = mT*sinh(y_minus_eta_s);  // p3 = tau p^eta
@@ -4201,8 +4200,8 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
                                 *deltaf_prefactor);
 
         double delta_f_bulk = get_deltaf_bulk(
-                                        mass, pdotu, surf->bulkPi, Tdec, sign,
-                                        f0, bulkvisCoefficients);
+                                        mass, pdotu, surf->bulkPi/hbarC,
+                                        Tdec, sign, f0, bulkvisCoefficients);
         // delta f for diffusion
         double delta_f_qmu = 0.0;
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
