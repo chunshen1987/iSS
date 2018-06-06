@@ -50,6 +50,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     ParameterReader* paraRdr_in, string path_in) {
 
     ran_gen_ptr = ran_gen;
+
     path = path_in;
     // get info
     flag_PCE = flag_PCE_in;
@@ -288,6 +289,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     gsl_rng_env_setup();
     gsl_type_random_number = gsl_rng_default;
     gsl_random_r = gsl_rng_alloc(gsl_type_random_number);
+    gsl_rng_set(gsl_random_r, ran_gen_ptr.lock()->get_seed());
 
     // arrays for bulk delta f coefficients
     if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0) {
