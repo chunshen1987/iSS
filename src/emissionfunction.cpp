@@ -2731,30 +2731,26 @@ void EmissionFunctionArray::combine_samples_to_gzip_file() {
     cout << " -- Now combine sample files to a gzip file..." << endl;
 
     // open file for output
-    string gzip_output_filename = "particle_samples.gz";
+    std::string gzip_output_filename = "particle_samples.gz";
     remove(gzip_output_filename.c_str());
     gzFile fp_gz = gzopen(gzip_output_filename.c_str(), "wb");
 
     if (flag_store_samples_in_memory == 1) {
-        for (unsigned int iev = 0; iev < Hadron_list->size(); iev++) {
-            int total_number_of_particles = (*Hadron_list)[iev]->size();
+        for (auto const &ev_i: (*Hadron_list)) {
+            int total_number_of_particles = ev_i->size();
             gzprintf(fp_gz, "%d \n", total_number_of_particles);
-            for (int ipart = 0; ipart < total_number_of_particles; ipart++) {
-                gzprintf(fp_gz, "%d ", (*(*Hadron_list)[iev])[ipart].pid);
+            for (auto &part_i: (*ev_i)) {
+                cout << "check " << part_i.pid << ", " << part_i.mass << endl;
+                gzprintf(fp_gz, "%d ", part_i.pid);
                 gzprintf(fp_gz,
                          "%.7e %.7e %.7e %.7e %.7e %.7e %.7e %.7e %.7e\n",
-                         (*(*Hadron_list)[iev])[ipart].mass,
-                         (*(*Hadron_list)[iev])[ipart].t,
-                         (*(*Hadron_list)[iev])[ipart].x,
-                         (*(*Hadron_list)[iev])[ipart].y,
-                         (*(*Hadron_list)[iev])[ipart].z,
-                         (*(*Hadron_list)[iev])[ipart].E,
-                         (*(*Hadron_list)[iev])[ipart].px,
-                         (*(*Hadron_list)[iev])[ipart].py,
-                         (*(*Hadron_list)[iev])[ipart].pz);
+                         part_i.mass,
+                         part_i.t, part_i.x, part_i.y, part_i.z,
+                         part_i.E, part_i.px, part_i.py, part_i.pz);
             }
         }
     }
+    gzclose(fp_gz);
 
     sw.toc();
     cout << endl
