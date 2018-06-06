@@ -2740,7 +2740,6 @@ void EmissionFunctionArray::combine_samples_to_gzip_file() {
             int total_number_of_particles = ev_i->size();
             gzprintf(fp_gz, "%d \n", total_number_of_particles);
             for (auto &part_i: (*ev_i)) {
-                cout << "check " << part_i.pid << ", " << part_i.mass << endl;
                 gzprintf(fp_gz, "%d ", part_i.pid);
                 gzprintf(fp_gz,
                          "%.7e %.7e %.7e %.7e %.7e %.7e %.7e %.7e %.7e\n",
