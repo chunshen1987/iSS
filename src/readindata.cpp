@@ -366,8 +366,8 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     while (!surfdat.eof()) {
         FO_surf surf_elem;
         if (surface_in_binary) {
-            float array[32];
-            for (int ii = 0; ii < 32; ii++) {
+            float array[34];
+            for (int ii = 0; ii < 34; ii++) {
                 float temp = 0.;
                 surfdat.read((char*)&temp, sizeof(float));
                 array[ii] = temp;
@@ -388,27 +388,29 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             surf_elem.Edec = array[12]*hbarC;   
             surf_elem.Tdec = array[13]*hbarC;
             surf_elem.muB  = array[14]*hbarC;
-            surf_elem.Pdec = array[15]*surf_elem.Tdec - surf_elem.Edec;
+            surf_elem.muS  = array[15]*hbarC;
+            surf_elem.muC  = array[16]*hbarC;
+            surf_elem.Pdec = array[17]*surf_elem.Tdec - surf_elem.Edec;
             surf_elem.muS  = 0.0;
             
-            surf_elem.pi00 = array[16]*hbarC;  // GeV/fm^3
-            surf_elem.pi01 = array[17]*hbarC;  // GeV/fm^3
-            surf_elem.pi02 = array[18]*hbarC;  // GeV/fm^3
-            surf_elem.pi03 = array[19]*hbarC;  // GeV/fm^3
-            surf_elem.pi11 = array[20]*hbarC;  // GeV/fm^3
-            surf_elem.pi12 = array[21]*hbarC;  // GeV/fm^3
-            surf_elem.pi13 = array[22]*hbarC;  // GeV/fm^3
-            surf_elem.pi22 = array[23]*hbarC;  // GeV/fm^3
-            surf_elem.pi23 = array[24]*hbarC;  // GeV/fm^3
-            surf_elem.pi33 = array[25]*hbarC;  // GeV/fm^3
+            surf_elem.pi00 = array[18]*hbarC;  // GeV/fm^3
+            surf_elem.pi01 = array[19]*hbarC;  // GeV/fm^3
+            surf_elem.pi02 = array[20]*hbarC;  // GeV/fm^3
+            surf_elem.pi03 = array[21]*hbarC;  // GeV/fm^3
+            surf_elem.pi11 = array[22]*hbarC;  // GeV/fm^3
+            surf_elem.pi12 = array[23]*hbarC;  // GeV/fm^3
+            surf_elem.pi13 = array[24]*hbarC;  // GeV/fm^3
+            surf_elem.pi22 = array[25]*hbarC;  // GeV/fm^3
+            surf_elem.pi23 = array[26]*hbarC;  // GeV/fm^3
+            surf_elem.pi33 = array[27]*hbarC;  // GeV/fm^3
 
-            surf_elem.bulkPi = array[26]*hbarC;   // GeV/fm^3
+            surf_elem.bulkPi = array[28]*hbarC;   // GeV/fm^3
 
-            surf_elem.Bn   = array[27];             // 1/fm^3
-            surf_elem.qmu0 = array[28]*hbarC;
-            surf_elem.qmu1 = array[29]*hbarC;
-            surf_elem.qmu2 = array[30]*hbarC;
-            surf_elem.qmu3 = array[31]*hbarC;
+            surf_elem.Bn   = array[29];             // 1/fm^3
+            surf_elem.qmu0 = array[30]*hbarC;
+            surf_elem.qmu1 = array[31]*hbarC;
+            surf_elem.qmu2 = array[32]*hbarC;
+            surf_elem.qmu3 = array[33]*hbarC;
         } else {
             getline(surfdat, input, '\n');
             stringstream ss(input);
@@ -434,15 +436,13 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             ss >> surf_elem.u3;
 
             // thermodynamic quantities at freeze out
-            ss >> dummy;
-            surf_elem.Edec = dummy*hbarC;   
-            ss >> dummy;
-            surf_elem.Tdec = dummy*hbarC;
-            ss >> dummy;
-            surf_elem.muB = dummy*hbarC;
+            ss >> dummy; surf_elem.Edec = dummy*hbarC;   
+            ss >> dummy; surf_elem.Tdec = dummy*hbarC;
+            ss >> dummy; surf_elem.muB = dummy*hbarC;
+            ss >> dummy; surf_elem.muS = dummy*hbarC;
+            ss >> dummy; surf_elem.muC = dummy*hbarC;
             ss >> dummy;              // (e+P)/T
             surf_elem.Pdec = dummy*surf_elem.Tdec - surf_elem.Edec;
-            surf_elem.muS = 0.0;
 
             // dissipative quantities at freeze out
             ss >> dummy;                       // 1/fm^4
@@ -580,8 +580,8 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
     while (!surfdat.eof()) {
         FO_surf surf_elem;
         if (surface_in_binary) {
-            float array[32];
-            for (int i = 0; i < 32; i++) {
+            float array[34];
+            for (int i = 0; i < 34; i++) {
                 float temp = 0.;
                 surfdat.read((char*)&temp, sizeof(float));
                 array[i] = temp;
@@ -602,27 +602,28 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
             surf_elem.Edec = array[12]*hbarC;   
             surf_elem.Tdec = array[13]*hbarC;
             surf_elem.muB  = array[14]*hbarC;
-            surf_elem.Pdec = array[15]*surf_elem.Tdec - surf_elem.Edec;
-            surf_elem.muS  = 0.0;
+            surf_elem.muS  = array[15]*hbarC;
+            surf_elem.muC  = array[16]*hbarC;
+            surf_elem.Pdec = array[17]*surf_elem.Tdec - surf_elem.Edec;
             
-            surf_elem.pi00 = array[16]*hbarC;  // GeV/fm^3
-            surf_elem.pi01 = array[17]*hbarC;  // GeV/fm^3
-            surf_elem.pi02 = array[18]*hbarC;  // GeV/fm^3
-            surf_elem.pi03 = array[19]*hbarC;  // GeV/fm^3
-            surf_elem.pi11 = array[20]*hbarC;  // GeV/fm^3
-            surf_elem.pi12 = array[21]*hbarC;  // GeV/fm^3
-            surf_elem.pi13 = array[22]*hbarC;  // GeV/fm^3
-            surf_elem.pi22 = array[23]*hbarC;  // GeV/fm^3
-            surf_elem.pi23 = array[24]*hbarC;  // GeV/fm^3
-            surf_elem.pi33 = array[25]*hbarC;  // GeV/fm^3
+            surf_elem.pi00 = array[18]*hbarC;  // GeV/fm^3
+            surf_elem.pi01 = array[19]*hbarC;  // GeV/fm^3
+            surf_elem.pi02 = array[20]*hbarC;  // GeV/fm^3
+            surf_elem.pi03 = array[21]*hbarC;  // GeV/fm^3
+            surf_elem.pi11 = array[22]*hbarC;  // GeV/fm^3
+            surf_elem.pi12 = array[23]*hbarC;  // GeV/fm^3
+            surf_elem.pi13 = array[24]*hbarC;  // GeV/fm^3
+            surf_elem.pi22 = array[25]*hbarC;  // GeV/fm^3
+            surf_elem.pi23 = array[26]*hbarC;  // GeV/fm^3
+            surf_elem.pi33 = array[27]*hbarC;  // GeV/fm^3
 
-            surf_elem.bulkPi = array[26]*hbarC;   // GeV/fm^3
+            surf_elem.bulkPi = array[28]*hbarC;   // GeV/fm^3
 
-            surf_elem.Bn   = array[27];             // 1/fm^3
-            surf_elem.qmu0 = array[28]*hbarC;
-            surf_elem.qmu1 = array[29]*hbarC;
-            surf_elem.qmu2 = array[30]*hbarC;
-            surf_elem.qmu3 = array[31]*hbarC;
+            surf_elem.Bn   = array[29];             // 1/fm^3
+            surf_elem.qmu0 = array[30]*hbarC;
+            surf_elem.qmu1 = array[31]*hbarC;
+            surf_elem.qmu2 = array[32]*hbarC;
+            surf_elem.qmu3 = array[33]*hbarC;
         } else {
             // freeze out position
             surfdat >> surf_elem.tau;
@@ -646,9 +647,10 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
             surfdat >> dummy; surf_elem.Edec = dummy*hbarC;
             surfdat >> dummy; surf_elem.Tdec = dummy*hbarC;
             surfdat >> dummy; surf_elem.muB = dummy*hbarC;
+            surfdat >> dummy; surf_elem.muS = dummy*hbarC;
+            surfdat >> dummy; surf_elem.muC = dummy*hbarC;
             surfdat >> dummy;                    //(e+p)/T
             surf_elem.Pdec = dummy*surf_elem.Tdec - surf_elem.Edec;
-            surf_elem.muS = 0.0;
 
             // dissipative quantities at freeze out
             surfdat >> dummy; surf_elem.pi00 = dummy*hbarC;

@@ -40,7 +40,7 @@ typedef struct {
     double da0, da1, da2, da3;
     double u0, u1, u2, u3;
     double Edec, Tdec, Pdec;
-    double Bn, muB, muS;
+    double Bn, muB, muS, muC;
     double pi00, pi01, pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33;
     double bulkPi;
     double qmu0, qmu1, qmu2, qmu3;
