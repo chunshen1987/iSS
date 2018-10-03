@@ -256,13 +256,15 @@ class EmissionFunctionArray {
         double f0, double *bulkvisCoefficients);
     int sample_momemtum_from_a_fluid_cell(
         const double mass, const double degen, const int sign,
-        const int baryon, const double pT_to, const double y_minus_eta_s_range,
+        const int baryon, const int strange, const int charge,
+        const double pT_to, const double y_minus_eta_s_range,
         const double maximum_guess, const FO_surf *surf,
         double *bulkvisCoefficients, const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s);
     double estimate_maximum(
         const FO_surf *surf, const int real_particle_idx, const double mass,
-        const double sign, const double degen, const double baryon,
+        const double sign, const double degen,
+        const int baryon, const int strange, const int charge,
         TableFunction &z_exp_m_z,
         const double *bulkvisCoefficients, const double deltaf_qmu_coeff);
     std::string add_one_sampled_particle(

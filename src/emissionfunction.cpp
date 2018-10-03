@@ -415,10 +415,12 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
 
   const particle_info* particle = &particles[particle_idx];
 
-  double mass = particle->mass;
-  double sign = particle->sign;
-  double degen = particle->gspin;
-  double baryon = particle->baryon;
+  const double mass  = particle->mass;
+  const double sign  = particle->sign;
+  const double degen = particle->gspin;
+  const int baryon   = particle->baryon;
+  const int strange  = particle->strange;
+  const int charge   = particle->charge;
 
   double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
   
@@ -469,7 +471,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
         double uy = surf->u2;
         double tau_ueta = surf->u3;
 
-        double mu = baryon*surf->muB;
+        double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
         if (flag_PCE == 1) {
             double mu_PCE =  surf->particle_mu_PCE[particle_idx];
             mu += mu_PCE;
@@ -641,10 +643,12 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
 
     const particle_info* particle = &particles[particle_idx];
 
-    double mass = particle->mass;
-    double sign = particle->sign;
-    double degen = particle->gspin;
-    double baryon = particle->baryon;
+    const double mass  = particle->mass;
+    const double sign  = particle->sign;
+    const double degen = particle->gspin;
+    const int baryon   = particle->baryon;
+    const int strange  = particle->strange;
+    const int charge   = particle->charge;
 
     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
 
@@ -704,7 +708,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
                 double uy = surf->u2;
                 double tau_ueta = surf->u3;
 
-                double mu = baryon*surf->muB;
+                double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
                 if (flag_PCE == 1) {
                     double mu_PCE = surf->particle_mu_PCE[particle_idx];
                     mu += mu_PCE;
@@ -1269,10 +1273,12 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
 
     const particle_info* particle = &particles[last_particle_idx];
 
-    double mass = particle->mass;
-    double sign = particle->sign;
-    double degen = particle->gspin;
-    double baryon = particle->baryon;
+    const double mass  = particle->mass;
+    const double sign  = particle->sign;
+    const double degen = particle->gspin;
+    const int baryon   = particle->baryon;
+    const int strange  = particle->strange;
+    const int charge   = particle->charge;
 
     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
 
@@ -1380,7 +1386,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
             double uy = surf->u2;
             double tau_ueta = surf->u3;
 
-            double mu = baryon*surf->muB;
+            double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
             if (flag_PCE == 1) {
                 double mu_PCE = surf->particle_mu_PCE[last_particle_idx];
                 mu += mu_PCE;
@@ -1678,10 +1684,12 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
 
     const particle_info* particle = &particles[last_particle_idx];
 
-    double mass = particle->mass;
-    double sign = particle->sign;
-    double degen = particle->gspin;
-    double baryon = particle->baryon;
+    const double mass  = particle->mass;
+    const double sign  = particle->sign;
+    const double degen = particle->gspin;
+    const int baryon   = particle->baryon;
+    const int strange  = particle->strange;
+    const int charge   = particle->charge;
 
     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
 
@@ -1845,7 +1853,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                 double uy = surf->u2;
                 double uz = surf->u3;
 
-                double mu = baryon*surf->muB;
+                double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
                 if (flag_PCE == 1) {
                     double mu_PCE = surf->particle_mu_PCE[last_particle_idx];
                     mu += mu_PCE;
@@ -2533,6 +2541,10 @@ bool EmissionFunctionArray::particles_are_the_same(int idx1, int idx2)
         return false;
     if (particles[idx1].baryon != particles[idx2].baryon)
         return false;
+    if (particles[idx1].strange != particles[idx2].strange)
+        return false;
+    if (particles[idx1].charge != particles[idx2].charge)
+        return false;
     double tolerance = paraRdr->getVal("grouping_tolerance");
     if (abs((particles[idx1].mass-particles[idx2].mass)
             /(particles[idx2].mass+1e-30)) > tolerance)
@@ -2856,11 +2868,13 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
             int real_particle_idx = chosen_particles_sampling_table[n];
             const particle_info *particle = &particles[real_particle_idx];
 
-            int sign = particle->sign;
-            int degen = particle->gspin;
-            double mass = particle->mass;
-            int baryon = particle->baryon;
-            double mu = baryon*surf->muB;
+            const int sign    = particle->sign;
+            const int degen   = particle->gspin;
+            const double mass = particle->mass;
+            const int baryon  = particle->baryon;
+            const int strange = particle->strange;
+            const int charge  = particle->charge;
+            double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
             if (flag_PCE == 1) {
                 double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
                 mu += mu_PCE;
@@ -3018,10 +3032,12 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
         const particle_info *particle = &particles[real_particle_idx];
 
         //int sign = particle->sign;
-        int degen = particle->gspin;
+        const int degen = particle->gspin;
         //double mass = particle->mass;
-        int baryon = particle->baryon;
-        double mu = baryon*surf->muB;
+        const int baryon  = particle->baryon;
+        const int strange = particle->strange;
+        const int charge  = particle->charge;
+        double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
         if (flag_PCE == 1) {
             double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
             mu += mu_PCE;
@@ -3292,6 +3308,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         const int sign    = particle->sign;
         const int degen   = particle->gspin;
         const int baryon  = particle->baryon;
+        const int strange = particle->strange;
+        const int charge  = particle->charge;
         cout << "Index: " << n << ", Name: " << particle->name
              << ", Monte-carlo index: " << particle->monval << endl;
         if (local_charge_conservation == 1) {
@@ -3419,13 +3437,14 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                                                             surf->muB);
                 
                 const double maximum_guess = estimate_maximum(
-                        surf, real_particle_idx, mass, sign, degen, baryon,
+                        surf, real_particle_idx, mass, sign, degen,
+                        baryon, strange, charge,
                         z_exp_m_z, bulkvisCoefficients, deltaf_qmu_coeff);
 
                 // next sample pt and phi
                 double pT, phi, y_minus_eta_s;
                 int status = sample_momemtum_from_a_fluid_cell(
-                                mass, degen, sign, baryon,
+                                mass, degen, sign, baryon, strange, charge,
                                 pT_to, y_minus_eta_s_range, maximum_guess,
                                 surf, bulkvisCoefficients, deltaf_qmu_coeff,
                                 pT, phi, y_minus_eta_s);
@@ -3464,7 +3483,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                     int status2 = 0;
                     do {
                         status2 = sample_momemtum_from_a_fluid_cell(
-                                mass, degen, sign, -baryon,
+                                mass, degen, sign, -baryon, -strange, -charge,
                                 pT_to, y_minus_eta_s_range, maximum_guess,
                                 surf, bulkvisCoefficients, deltaf_qmu_coeff,
                                 pT2, phi2, y_minus_eta_s2);
@@ -4137,13 +4156,14 @@ double EmissionFunctionArray::get_deltaf_bulk(
 
 int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
         const double mass, const double degen, const int sign,
-        const int baryon, const double pT_to, const double y_minus_eta_s_range,
+        const int baryon, const int strange, const int charge,
+        const double pT_to, const double y_minus_eta_s_range,
         const double maximum_guess, const FO_surf *surf,
         double *bulkvisCoefficients, const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s
         ) {
     const double Tdec = surf->Tdec;
-    const double mu = baryon*surf->muB;
+    const double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
     const double inv_Tdec  = 1./Tdec;
     const double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI)*(hbarC*hbarC*hbarC));
     const double deltaf_prefactor = (
@@ -4247,7 +4267,8 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
 
 double EmissionFunctionArray::estimate_maximum(
         const FO_surf *surf, const int real_particle_idx, const double mass,
-        const double sign, const double degen, const double baryon,
+        const double sign, const double degen,
+        const int baryon, const int strange, const int charge,
         TableFunction &z_exp_m_z,
         const double *bulkvisCoefficients, const double deltaf_qmu_coeff) {
     const double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
@@ -4257,7 +4278,7 @@ double EmissionFunctionArray::estimate_maximum(
     const double Pdec     = surf->Pdec;
     const double Edec     = surf->Edec;
 
-    double mu = baryon*surf->muB;
+    double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
     if (flag_PCE == 1) {
         double mu_PCE = (
                     surf->particle_mu_PCE[real_particle_idx]);
