@@ -211,7 +211,9 @@ void read_FOdata::read_in_chemical_potentials(string path,
             N_stableparticle = 0;
         } else if (IEOS_music == 9) {        // hotQCD
             N_stableparticle = 0;
-        } else if (IEOS_music == 10) {       // AK
+        } else if (IEOS_music >= 10 && IEOS_music <=14) {       // AK
+            N_stableparticle = 0;
+        } else if (IEOS_music == 17) {       // BEST
             N_stableparticle = 0;
         } else {
             cout << "invalid IEOS_music: " << IEOS_music << endl;
