@@ -10,7 +10,7 @@
 ##			distclean	remove all objectsfiles and binaries
 ##  
 
-CC := icpc
+CC := g++
 CFLAGS= -O3 -Wall $(shell gsl-config --cflags) -lz
 
 RM		=	rm -f
@@ -24,17 +24,17 @@ ifeq "$(MAIN)" ""
 MAIN		=	iSS.e
 endif
 
-SRC		=	main.cpp arsenal.cpp ParameterReader.cpp \
+SRC		=	main.cpp Random.cpp arsenal.cpp ParameterReader.cpp \
 			RandomVariable1DArray.cpp RandomVariable2DArray.cpp \
-			RandomVariable.cpp NBD.cpp TableFunction.cpp Table.cpp \
-			emissionfunction.cpp readindata.cpp Poisson.cpp particle_decay.cpp \
+			TableFunction.cpp Table.cpp \
+			emissionfunction.cpp readindata.cpp particle_decay.cpp \
 			iSS.cpp
 
-INC		= 	main.h arsenal.h ParameterReader.h \
+INC		=   Random.h arsenal.h ParameterReader.h \
 			RandomVariable1DArray.h RandomVariable2DArray.h \
-			RandomVariable.h NBD.h TableFunction.h Table.h \
+			TableFunction.h Table.h \
 			emissionfunction.h readindata.h Stopwatch.h \
-            Poisson.h particle_decay.h iSS_hadron.h iSS.h
+            particle_decay.h iSS_hadron.h iSS.h
 
 # -------------------------------------------------
 
@@ -80,16 +80,3 @@ install:	$(TARGET)
 		cp $(TARGET) $(INSTPATH)
 
 # --------------- Dependencies -------------------
-
-./NBD.cpp:  arsenal.h RandomVariable.h Table.h TableFunction.h
-./Poisson.cpp:  arsenal.h RandomVariable.h Table.h TableFunction.h
-./ParameterReader.cpp:  arsenal.h
-./RandomVariable.cpp:  arsenal.h TableFunction.h
-./RandomVariable1DArray.cpp:  arsenal.h
-./RandomVariable2DArray.cpp:  arsenal.h
-./RandomVariableNDArray.cpp:  arsenal.h
-./Table.cpp:  arsenal.h
-./TableFunction.cpp:  arsenal.h
-./emissionfunction.cpp: main.h readindata.h RandomVariable1DArray.h RandomVariable2DArray.h RandomVariableNDArray.h NBD.h ParameterReader.h arsenal.h Stopwatch.h Table.h Poisson.h 
-./main.cpp: ParameterReader.h Table.h readindata.h emissionfunction.h arsenal.h
-./readindata.cpp: main.h arsenal.h Table.h
