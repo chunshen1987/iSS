@@ -391,7 +391,6 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             surf_elem.muS  = array[15]*hbarC;
             surf_elem.muC  = array[16]*hbarC;
             surf_elem.Pdec = array[17]*surf_elem.Tdec - surf_elem.Edec;
-            surf_elem.muS  = 0.0;
             
             surf_elem.pi00 = array[18]*hbarC;  // GeV/fm^3
             surf_elem.pi01 = array[19]*hbarC;  // GeV/fm^3
