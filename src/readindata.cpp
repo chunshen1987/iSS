@@ -134,7 +134,7 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
         surface_file.read((char*) &temp, sizeof(float));
         count++;
     }
-    int counted_line = count/32;
+    int counted_line = count/34;
     surface_file.close();
     return(counted_line);
 }
