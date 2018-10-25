@@ -886,6 +886,9 @@ int read_FOdata::read_resonances_list(particle_info* particle) {
          particle[i].sign=1;
       }
    }
+   for (int i = 0; i < Nparticle; i++) {
+       cout << particle[i].monval << "  " << particle[i].name << endl;
+   }
    return(Nparticle);
 }
 
