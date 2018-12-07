@@ -65,7 +65,7 @@ double interpCubicDirect(std::vector< double >* x, std::vector< double >* y, dou
     double dx = (*x)[1]-(*x)[0]; // increment in x
 
     // if close to left end:
-    if (abs(xx-(*x)[0])<dx*1e-30) return (*y)[0];
+    if (std::abs(xx-(*x)[0])<dx*1e-30) return (*y)[0];
 
     // find x's integer index
     long idx = floor((xx-(*x)[0])/dx);
@@ -123,7 +123,7 @@ double interpLinearDirect(std::vector< double >* x, std::vector< double >* y, do
     double dx = (*x)[1]-(*x)[0]; // increment in x
 
     // if close to left end:
-    if (abs(xx-(*x)[0])<dx*1e-30) return (*y)[0];
+    if (std::abs(xx-(*x)[0])<dx*1e-30) return (*y)[0];
 
     // find x's integer index
     long idx = floor((xx-(*x)[0])/dx);
@@ -162,7 +162,7 @@ double interpNearestDirect(std::vector< double >* x, std::vector< double >* y, d
     double dx = (*x)[1]-(*x)[0]; // increment in x
 
     // if close to left end:
-    if (abs(xx-(*x)[0])<dx*1e-30) return (*y)[0];
+    if (std::abs(xx-(*x)[0])<dx*1e-30) return (*y)[0];
 
     // find x's integer index
     long idx = floor((xx-(*x)[0])/dx);
@@ -201,7 +201,7 @@ double interpCubicMono(std::vector< double >* x, std::vector< double >* y, doubl
     if (size==1) {cout<<"interpCubicMono warning: table size = 1"<<endl; return (*y)[0];}
 
     // if close to left end:
-    if (abs(xx-(*x)[0])<((*x)[1]-(*x)[0])*1e-30) return (*y)[0];
+    if (std::abs(xx-(*x)[0])<((*x)[1]-(*x)[0])*1e-30) return (*y)[0];
 
     // find x's integer index
     long idx = binarySearch(x, xx, true);
@@ -292,7 +292,7 @@ double interpLinearMono(std::vector< double >* x, std::vector< double >* y, doub
     if (size==1) {cout<<"interpLinearMono warning: table size = 1"<<endl; return (*y)[0];}
 
     // if close to left end:
-    if (abs(xx-(*x)[0])<((*x)[1]-(*x)[0])*1e-30) return (*y)[0];
+    if (std::abs(xx-(*x)[0])<((*x)[1]-(*x)[0])*1e-30) return (*y)[0];
 
     // find x's integer index
     long idx = binarySearch(x, xx, true);
@@ -330,7 +330,7 @@ double interpNearestMono(std::vector< double >* x, std::vector< double >* y, dou
     if (size==1) {cout<<"interpNearestMono warning: table size = 1"<<endl; return (*y)[0];}
 
     // if close to left end:
-    if (abs(xx-(*x)[0])<((*x)[1]-(*x)[0])*1e-30) return (*y)[0];
+    if (std::abs(xx-(*x)[0])<((*x)[1]-(*x)[0])*1e-30) return (*y)[0];
 
     // find x's integer index
     long idx = binarySearch(x, xx, true);
@@ -389,7 +389,7 @@ double invertFunc(double (*func)(double), double y, double xL, double xR, double
   XX2 = x0;
   XX1 = XX2-10*accuracy; // this value 10*accuracy is meanless, just to make sure the check in the while statement goes through
 
-  while (abs(XX2-XX1)>accuracy)
+  while (std::abs(XX2-XX1)>accuracy)
   {
     XX1 = XX2; // copy values
 
@@ -552,7 +552,7 @@ double adaptiveSimpsonsAux(double (*f)(double), double a, double b, double epsil
   double Sleft = (h/12)*(fa + 4*fd + fc);
   double Sright = (h/12)*(fc + 4*fe + fb);
   double S2 = Sleft + Sright;
-  if (bottom <= 0 || fabs(S2 - S) <= 15*epsilon)
+  if (bottom <= 0 || std::abs(S2 - S) <= 15*epsilon)
     return S2 + (S2 - S)/15;
   return adaptiveSimpsonsAux(f, a, c, epsilon/2, Sleft,  fa, fc, fd, bottom-1) +
          adaptiveSimpsonsAux(f, c, b, epsilon/2, Sright, fc, fb, fe, bottom-1);
@@ -609,7 +609,7 @@ double qiu_simpsons(double (*f)(double), // ptr to function
     }
     else currentRecursionDepth++;
 
-  } while (abs(sum_current-sum_previous)>epsilon);
+  } while (std::abs(sum_current-sum_previous)>epsilon);
 
   return sum_current;
 }
@@ -730,8 +730,8 @@ long double gamma_function(long double x)
       ga = 1e308;
    }
    else {
-    if (fabs(x) > 1.0) {
-      z = fabs(x);
+    if (std::abs(x) > 1.0) {
+      z = std::abs(x);
       m = (int)z;
       r = 1.0;
       for (k=1;k<=m;k++) {
@@ -746,7 +746,7 @@ long double gamma_function(long double x)
       gr = gr*z+g[k];
     }
     ga = 1.0/(gr*z);
-    if (fabs(x) > 1.0) {
+    if (std::abs(x) > 1.0) {
       ga *= r;
       if (x < 0.0) {
         ga = -M_PI/(x*ga*sin(M_PI*x));
@@ -1038,7 +1038,7 @@ void GaussLegendre_getWeight(int npts,double* xg,double* wg, double A, double B,
         pp=npts*(t*p1-p2)/(t*t-1.0);
         t1=t;
         t=t1-p1/pp;
-    } while(abs(t-t1)>EPS);
+    } while(std::abs(t-t1)>EPS);
     xg[i]=-t;
     xg[npts-1-i]=t;
     wg[i]=2.0/((1.0-t*t)*pp*pp);
@@ -1089,9 +1089,9 @@ void GaussLegendre_getWeight(int npts,double* xg,double* wg, double A, double B,
           //...... -A to A , scale B 
           //xp=A*pow(abs(xg[i]),B) *sign(1.0,xg(i));
           double tmp = xg[i] >= 0 ? 1.0 : -1.0;
-          xp=A*pow(abs(xg[i]),B) * tmp;
+          xp=A*pow(std::abs(xg[i]),B) * tmp;
           //xp=A*pow(abs(xg[i]),B) *sign(1.0,xg(i));
-          wp=A*B*pow(abs(xg[i]),(B-1))*wg[i];
+          wp=A*B*pow(std::abs(xg[i]),(B-1))*wg[i];
       } else if(iop ==  6) {
           //...... 0 to B , AB/(A+B) is midpoint
           xp=A*B*(1+xg[i])/(B+A-(B-A)*xg[i]);
