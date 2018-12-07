@@ -793,7 +793,7 @@ void read_FOdata::read_chemical_potentials_music(
     double edec_pre = 0.0e0;
     for (int j = 0; j < FO_length; j++) {
         double edec = FOsurf_ptr[j].Edec;
-        if (fabs(edec - edec_pre) > 1e-15) {
+        if (std::abs(edec - edec_pre) > 1e-15) {
             edec_pre = edec;
             for (int i = 0; i < N_stable; i++) {
                 particle_mu[i][j] = mu_table.interp(1, i+2, edec);
@@ -993,7 +993,7 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle,
     for (int i = 0; i < Nparticle; i++) {
         if (particle[i].stable == 0) {
             for (int j = 0; j < particle[i].decays; j++) {
-                for (int k = 0; k < abs(particle[i].decays_Npart[j]); k++) {
+                for (int k = 0; k < std::abs(particle[i].decays_Npart[j]); k++) {
                     for (int l = 0; l < Nparticle; l++) {
                         if (particle[i].decays_part[j][k]
                             == particle[l].monval) {

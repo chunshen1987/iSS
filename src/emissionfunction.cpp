@@ -590,7 +590,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
                   if (flag_restrict_deltaf) {
                       // restrict the size of delta f to be smaller than f_0
                       double ratio_max = deltaf_max_ratio;
-                      double deltaf_size = fabs(delta_f_shear + delta_f_bulk 
+                      double deltaf_size = std::abs(delta_f_shear + delta_f_bulk 
                                                 + delta_f_qmu);
                       resize_factor = (
                               std::min(1., ratio_max/(deltaf_size + 1e-10)));
@@ -806,7 +806,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
                     if (flag_restrict_deltaf == 1) {
                         // restrict the size of delta f to be smaller than f_0
                         double ratio_max = deltaf_max_ratio;
-                        double deltaf_size = fabs(delta_f_shear + delta_f_bulk
+                        double deltaf_size = std::abs(delta_f_shear + delta_f_bulk
                                                   + delta_f_qmu);
                         resize_factor = (
                                 std::min(1., ratio_max/(deltaf_size + 1e-10)));
@@ -1499,7 +1499,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
                 if (flag_restrict_deltaf == 1) {
                     // restrict the size of delta f to be smaller than f_0
                     double ratio_max = deltaf_max_ratio;
-                    double deltaf_size = fabs(delta_f_shear + delta_f_bulk
+                    double deltaf_size = std::abs(delta_f_shear + delta_f_bulk
                                               + delta_f_qmu);
                     resize_factor = (
                             std::min(1., ratio_max/(deltaf_size + 1e-10)));
@@ -2017,7 +2017,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                     if (flag_restrict_deltaf == 1) {
                         // restrict the size of delta f to be smaller than f_0
                         double ratio_max = deltaf_max_ratio;
-                        double deltaf_size = fabs(delta_f_shear + delta_f_bulk
+                        double deltaf_size = std::abs(delta_f_shear + delta_f_bulk
                                                   + delta_f_qmu);
                         resize_factor = (
                                 std::min(1., ratio_max/(deltaf_size + 1e-10)));
@@ -2410,7 +2410,7 @@ void EmissionFunctionArray::calculate_dN_dx_using_dN_dxtdetady(
     {
         double x_local = FOsurf_ptr[l].xpt;
         double y_local = FOsurf_ptr[l].ypt;
-        if(fabs(y_local) < 0.5)
+        if(std::abs(y_local) < 0.5)
         {
             long idx = binarySearch(&bins, x_local, true);
             if (idx==-1)
@@ -2420,7 +2420,7 @@ void EmissionFunctionArray::calculate_dN_dx_using_dN_dxtdetady(
             count1[idx] ++;
         }
 
-        if(fabs(x_local) < 0.5)
+        if(std::abs(x_local) < 0.5)
         {
             long idx = binarySearch(&bins, y_local, true);
             if (idx==-1)
@@ -2546,14 +2546,14 @@ bool EmissionFunctionArray::particles_are_the_same(int idx1, int idx2)
     if (particles[idx1].charge != particles[idx2].charge)
         return false;
     double tolerance = paraRdr->getVal("grouping_tolerance");
-    if (abs((particles[idx1].mass-particles[idx2].mass)
+    if (std::abs((particles[idx1].mass-particles[idx2].mass)
             /(particles[idx2].mass+1e-30)) > tolerance)
         return false;
     if (flag_PCE == 1) {
         for (long l = 0; l < FO_length; l++) {
             double chem1 = FOsurf_ptr[l].particle_mu_PCE[idx1];
             double chem2 = FOsurf_ptr[l].particle_mu_PCE[idx2];
-            if (abs((chem1-chem2)/(chem2+1e-30)) > tolerance) {
+            if (std::abs((chem1-chem2)/(chem2+1e-30)) > tolerance) {
                 return false;
             }
         }
@@ -2884,9 +2884,9 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
 
             if (n > 0 && last_particle_sign == sign
                  && last_particle_degen == degen
-                 && abs((last_particle_mass - mass)
+                 && std::abs((last_particle_mass - mass)
                          /(last_particle_mass+1e-30)) < tolerance
-                 && abs((last_particle_mu - mu)
+                 && std::abs((last_particle_mu - mu)
                          /(last_particle_mu+1e-30)) < tolerance) {
                 // skip calculation for the current particle
                 integral_laststep[n] = total_N;
@@ -4361,7 +4361,7 @@ double EmissionFunctionArray::estimate_maximum(
         double qmu_sq = (qmu[0]*qmu[0] - qmu[1]*qmu[1]
                          - qmu[2]*qmu[2] - qmu[3]*qmu[3]);
         double qmu_mag_over_kappa_hat = (
-                            sqrt(fabs(qmu_sq))/deltaf_qmu_coeff);
+                            sqrt(std::abs(qmu_sq))/deltaf_qmu_coeff);
         guess_qmu = estimate_diffusion_maximum(
             sign, baryon, mass, Tdec, mu, f0_mass, z_exp_m_z,
             prefactor_qmu, guess_ideal, qmu_mag_over_kappa_hat);
