@@ -67,7 +67,7 @@ void display_logo(int which=1);
 inline bool is_integer(double x, double tolerance=1e-30)
 // Check if a double number is close to an integer
 {
-  if (abs(x-round(x))<tolerance) return true;
+  if (std::abs(x-round(x))<tolerance) return true;
   else return false;
 }
 
