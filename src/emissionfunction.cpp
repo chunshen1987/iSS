@@ -4264,10 +4264,10 @@ double EmissionFunctionArray::estimate_maximum(
         mu += mu_PCE;
     }
 
-    const ViscousVec pi = {surf->pi00, surf->pi01, surf->pi02,
-                           surf->pi03, surf->pi11, surf->pi12,
-                           surf->pi13, surf->pi22, surf->pi23,
-                           surf->pi33};
+    const iSS_data::ViscousVec pi = {surf->pi00, surf->pi01, surf->pi02,
+                                     surf->pi03, surf->pi11, surf->pi12,
+                                     surf->pi13, surf->pi22, surf->pi23,
+                                     surf->pi33};
 
     double bulkPi = 0.0;
     if (INCLUDE_BULK_DELTAF == 1) {
@@ -4278,7 +4278,7 @@ double EmissionFunctionArray::estimate_maximum(
     }
 
     // diffusion delta f
-    Vec4 qmu = {0.};
+    iSS_data::Vec4 qmu = {0.};
     double prefactor_qmu = 0.0;
     if (INCLUDE_DIFFUSION_DELTAF == 1) {
         qmu[0] = surf->qmu0;
