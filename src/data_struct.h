@@ -12,8 +12,10 @@ const int Maxdecaychannel=20;
 const int Maxdecaypart=5;
 const std::string table_path="iSS_tables";
 
-typedef std::array<double, 4> Vec4;
-typedef std::array<double, 10> ViscousVec;
+namespace iSS_data {
+    typedef std::array<double, 4> Vec4;
+    typedef std::array<double, 10> ViscousVec;
+}
 
 typedef struct {
     int monval;     // Monte Carlo number according PDG
