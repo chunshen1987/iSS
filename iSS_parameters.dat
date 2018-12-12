@@ -8,8 +8,8 @@ turn_on_bulk = 0         # read in bulk viscous pressure
 turn_on_rhob = 0         # read in net baryon chemical potential
 turn_on_diff = 0         # read in baryon diffusion current
 
-include_deltaf_shear = 1      # include delta f contribution from shear
-include_deltaf_bulk = 1       # include delta f contribution from bulk
+include_deltaf_shear = 0      # include delta f contribution from shear
+include_deltaf_bulk = 0       # include delta f contribution from bulk
 include_deltaf_diffusion = 0  # include delta f contribution from diffusion
 
 bulk_deltaf_kind = 1     # 0 : 14-momentum approximation
@@ -23,12 +23,12 @@ f0_is_not_small = 1      # include (1 \pm f_0) factor in delta f
 output_samples_into_files = 0  # output particle samples into individual files
                                # for individual particle species
 store_samples_in_memory = 1  # flag to store particle samples in memory
-use_OSCAR_format = 0         # output results in OSCAR format
-use_gzip_format = 1          # output results in gzip format (only works with
+use_OSCAR_format = 1         # output results in OSCAR format
+use_gzip_format = 0          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
 perform_decays = 0           # flag to perform resonance decay
 
-local_charge_conservation = 1  # flag to impose local charge conservation
+local_charge_conservation = 0  # flag to impose local charge conservation
 
 calculate_vn = 0         # 1/0: whether to calculate the 
                          # dN/(pt dpt dphi dy) and v_n flows 
@@ -126,7 +126,7 @@ use_historic_flow_output_format = 0    # 1/0: The "historical flow format"
 
 calculate_vn_to_order = 9              # v_n's are calculated up to this order
 
-sample_upto_desired_particle_number = 1  # flag to run sampling until desired
+sample_upto_desired_particle_number = 0  # flag to run sampling until desired
                                          # particle numbers is reached
 number_of_particles_needed = 100000      # number of hadrons to sample
 number_of_repeated_sampling = 10      # How many times should the sampling be 
