@@ -11,16 +11,15 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
-#include "./Table.h"
-#include "./NBD.h"
-#include "./Poisson.h"
-#include "./ParameterReader.h"
-#include "./iSS_hadron.h"
-#include "./particle_decay.h"
-#include "./main.h"
-
-using namespace std;
+#include "Table.h"
+#include "TableFunction.h"
+#include "ParameterReader.h"
+#include "particle_decay.h"
+#include "data_struct.h"
+#include "data_struct.h"
+#include "Random.h"
 
 class EmissionFunctionArray {
  private:
@@ -29,10 +28,13 @@ class EmissionFunctionArray {
     int flag_restrict_deltaf;
     double deltaf_max_ratio;
 
-    string path;
+    std::string path;
+
+    std::weak_ptr<RandomUtil::Random> ran_gen_ptr;
 
     int MC_sampling;
     int number_of_repeated_sampling;
+    int local_charge_conservation;
 
     Table *pT_tab, *phi_tab, *y_minus_eta_tab;
     int pT_tab_length, phi_tab_length;
@@ -93,22 +95,19 @@ class EmissionFunctionArray {
 
     // list for information for all particles
     int Nparticles;
-    particle_info* particles;
+    std::vector<particle_info> particles;
 
     // list for information for all fluid cells
     long FO_length;
-    FO_surf* FOsurf_ptr;
+    std::vector<FO_surf> FOsurf_ptr;
 
     // store the last particle index being used by calculate_dNArrays function
     int last_particle_idx;
 
     double **trig_phi_table, **hypertrig_y_minus_eta_table;
     inline long determine_number_to_sample(
-                    double dN, int model=1, double para1=0, double para2=0, 
-                    double para3=0, double para4=0, double para5=0);
+                    double dN, int model=1, double para1=0);
 
-    NBD nbd;  // NBD random sample generator
-    Poisson poissonDistribution;
     const gsl_rng_type *gsl_type_random_number;
     gsl_rng *gsl_random_r;
 
@@ -144,15 +143,16 @@ class EmissionFunctionArray {
     particle_decay *decayer_ptr;
 
  public:
-    EmissionFunctionArray(Table* chosen_particle, Table* pt_tab_in,
+    EmissionFunctionArray(std::shared_ptr<RandomUtil::Random> ran_gen,
+                          Table* chosen_particle, Table* pt_tab_in,
                           Table* phi_tab_in, Table* eta_tab_in,
-                          particle_info* particles_in, int Nparticles,
-                          FO_surf* FOsurf_ptr_in, long FO_length_in,
+                          std::vector<particle_info> particles_in,
+                          std::vector<FO_surf> FOsurf_ptr_in,
                           int flag_PCE_in, ParameterReader* paraRdr_in,
-                          string path_in);
+                          std::string path_in);
     ~EmissionFunctionArray();
 
-    vector< vector<iSS_Hadron>* >* Hadron_list;
+    std::vector< std::vector<iSS_Hadron>* >* Hadron_list;
 
     void initialize_special_function_arrays();
     double get_special_function_K1(double arg);
@@ -164,14 +164,14 @@ class EmissionFunctionArray {
     void calculate_dN_dxtdetady(int);
     void calculate_dN_pTdpTdphidy(int);
     void write_dN_pTdpTdphidy_toFile();
-    string dN_pTdpTdphidy_filename;  // where to save
+    std::string dN_pTdpTdphidy_filename;  // where to save
     void write_dN_dxtdetady_toFile();
-    string dN_dxtdetady_filename;
+    std::string dN_dxtdetady_filename;
 
-    void calculate_flows(int to_order, string flow_diff_filename,
-                         string flow_inte_filename);
-    string flow_differential_filename_old, flow_integrated_filename_old;
-    string flow_differential_filename, flow_integrated_filename;
+    void calculate_flows(int to_order, std::string flow_diff_filename,
+                         std::string flow_inte_filename);
+    std::string flow_differential_filename_old, flow_integrated_filename_old;
+    std::string flow_differential_filename, flow_integrated_filename;
 
     void calculate_dN_pTdpTdphidy_and_flows_4all_old_output(
                                                     int perform_sampling = 0);
@@ -181,33 +181,33 @@ class EmissionFunctionArray {
     void shell();  // it all starts here...
 
     void combine_samples_to_OSCAR();
-    string OSCAR_header_filename, OSCAR_output_filename;
+    std::string OSCAR_header_filename, OSCAR_output_filename;
     void combine_samples_to_gzip_file();
 
     // Sample files
     // where samples, its control informations, and its "format file" 
     // are stored; 
     // the first two can contain a "%d" string to generate multiple files
-    string samples_filename;
-    string samples_control_filename, samples_format_filename; 
+    std::string samples_filename;
+    std::string samples_control_filename, samples_format_filename; 
 
     // First sampling method
     void sample_using_dN_dxtdetady_smooth_pT_phi();
     void calculate_dN_dtau_using_dN_dxtdetady(
                     double tau0 = 0, double dtau = 0.5, double tau_max = 17);
-    string dN_dtau_filename;
+    std::string dN_dtau_filename;
     void calculate_dN_dphi_using_dN_pTdpTdphidy();
-    string dN_dphi_filename;
+    std::string dN_dphi_filename;
     void calculate_dN_deta_using_dN_dxtdetady();
-    string dN_deta_filename;
+    std::string dN_deta_filename;
     void calculate_dN_dxt_using_dN_dxtdetady();
-    string dN_dxt_filename;
+    std::string dN_dxt_filename;
     void calculate_dN_dx_using_dN_dxtdetady(
                     double x_min, double x_max, double dx);
-    string dN_dx_filename;
+    std::string dN_dx_filename;
 
     // Second sampling method
-    void calculate_dN_analytic(particle_info* particle, double mu,
+    void calculate_dN_analytic(const particle_info* particle, double mu,
                                double Temperature, double* results);
 
     // the following variables need to be set first in order to 
@@ -227,7 +227,7 @@ class EmissionFunctionArray {
     double** trig_phi_tab4Sampling;
 
     void getbulkvisCoefficients(double Tdec, double* bulkvisCoefficients);
-    void load_deltaf_qmu_coeff_table(string filename);
+    void load_deltaf_qmu_coeff_table(std::string filename);
     double get_deltaf_qmu_coeff(double T, double muB);
 
     void check_samples_in_memory();
@@ -239,8 +239,40 @@ class EmissionFunctionArray {
         return((*(*Hadron_list)[iev])[ipart]);
     };
     void perform_resonance_feed_down(
-                vector< vector<iSS_Hadron>* >* input_particle_list);
+                std::vector< std::vector<iSS_Hadron>* >* input_particle_list);
     int compute_number_of_sampling_needed(int number_of_particles_needed);
+    double estimate_ideal_maximum(
+        int sign, double mass, double Tdec, double mu, double f0_mass,
+        TableFunction &z_exp_m_z);
+    double estimate_shear_viscous_maximum(
+        int sign, double mass, double Tdec, double mu, double f0_mass,
+        TableFunction &z_exp_m_z, double pi_size);
+    double estimate_diffusion_maximum(
+        int sign, int baryon, double mass, double Tdec, double mu,
+        double f0_mass, TableFunction &z_exp_m_z,
+        double prefactor_qmu, double guess_ideal, double q_size);
+    double get_deltaf_bulk(
+        double mass, double pdotu, double bulkPi, double Tdec, int sign,
+        double f0, double *bulkvisCoefficients);
+    int sample_momemtum_from_a_fluid_cell(
+        const double mass, const double degen, const int sign,
+        const int baryon, const int strange, const int charge,
+        const double pT_to, const double y_minus_eta_s_range,
+        const double maximum_guess, const FO_surf *surf,
+        double *bulkvisCoefficients, const double deltaf_qmu_coeff,
+        double &pT, double &phi, double &y_minus_eta_s);
+    double estimate_maximum(
+        const FO_surf *surf, const int real_particle_idx, const double mass,
+        const double sign, const double degen,
+        const int baryon, const int strange, const int charge,
+        TableFunction &z_exp_m_z,
+        const double *bulkvisCoefficients, const double deltaf_qmu_coeff);
+    std::string add_one_sampled_particle(
+        const int repeated_sampling_idx, 
+        const unsigned long FO_idx, const FO_surf *surf,
+        const int particle_monval, const double mass,
+        const double pT, const double phi,
+        const double y_minus_eta_s, const double eta_s);
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_

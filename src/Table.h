@@ -8,7 +8,6 @@
 #ifndef Table_h
 #define Table_h
 
-using namespace std;
 
 class Table
 {
@@ -17,13 +16,13 @@ class Table
     long numberOfCols, numberOfRows;
   public:
     Table();
-    Table(string);
+    Table(std::string);
     Table(Table&);
     Table(long,long,double defaultValue=0.0);
     Table(double**, long, long);
     ~Table();
     void deleteTable();
-    void loadTableFromFile(string);
+    void loadTableFromFile(std::string);
     void loadTableFromDoubleArray(double**, long, long);
     void extendTable(long, long, double defaultValue=0);
     double get(long, long);
@@ -34,7 +33,7 @@ class Table
     long getNumberOfCols();
     long getSizeDim1() {return getNumberOfCols();};
     long getSizeDim2() {return getNumberOfRows();};
-    void printTable(ostream& os=std::cout);
+    void printTable(std::ostream& os=std::cout);
     double getFirst(long);
     double getLast(long);
     double interp(long, long, double, int mode=6, bool allowExtrapolation=false);

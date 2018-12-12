@@ -4,15 +4,16 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 #include <fstream>
 #include <cmath>
 #include <iomanip>
 
-#include "./main.h"
-#include "./readindata.h"
-#include "./arsenal.h"
-#include "./ParameterReader.h"
-#include "./Table.h"
+#include "data_struct.h"
+#include "readindata.h"
+#include "arsenal.h"
+#include "ParameterReader.h"
+#include "Table.h"
 
 using namespace std;
 
@@ -133,26 +134,26 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
         surface_file.read((char*) &temp, sizeof(float));
         count++;
     }
-    int counted_line = count/32;
+    int counted_line = count/34;
     surface_file.close();
     return(counted_line);
 }
 
-void read_FOdata::read_in_freeze_out_data(int length, FO_surf* surf_ptr) {
+void read_FOdata::read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr) {
     if (mode == 0)     // VISH2+1 outputs
-        read_FOsurfdat_VISH2p1(length, surf_ptr);
+        read_FOsurfdat_VISH2p1(surf_ptr);
     else if (mode == 1)   // MUSIC boost invariant outputs
-        read_FOsurfdat_MUSIC_boost_invariant(length, surf_ptr);
+        read_FOsurfdat_MUSIC_boost_invariant(surf_ptr);
     else if (mode == 2)   // MUSIC full (3+1)-d outputs
-        read_FOsurfdat_MUSIC(length, surf_ptr);
+        read_FOsurfdat_MUSIC(surf_ptr);
     else if (mode == 10)   // MUSIC boost invariant outputs
-        read_FOsurfdat_hydro_analysis_boost_invariant(length, surf_ptr);
-    regulate_surface_cells(length, surf_ptr);
+        read_FOsurfdat_hydro_analysis_boost_invariant(surf_ptr);
+    regulate_surface_cells(surf_ptr);
 }
 
-int read_FOdata::read_in_chemical_potentials(string path, int FO_length,
-                                             FO_surf* surf_ptr,
-                                             particle_info* particle_ptr) {
+void read_FOdata::read_in_chemical_potentials(string path,
+                                              std::vector<FO_surf> &surf_ptr,
+                                              std::vector<particle_info> &particle_ptr) {
     int Nparticle = 0;
     int N_stableparticle;
     Table mu_table;
@@ -206,7 +207,13 @@ int read_FOdata::read_in_chemical_potentials(string path, int FO_length,
             particletable.close();
         } else if (IEOS_music == 7) {        // s95p-v1.2 for UrQMD
             N_stableparticle = 0;
-        } else if (IEOS_music == 10) {
+        } else if (IEOS_music == 8) {        // WB
+            N_stableparticle = 0;
+        } else if (IEOS_music == 9) {        // hotQCD
+            N_stableparticle = 0;
+        } else if (IEOS_music >= 10 && IEOS_music <=14) {       // AK
+            N_stableparticle = 0;
+        } else if (IEOS_music == 17) {       // BEST
             N_stableparticle = 0;
         } else {
             cout << "invalid IEOS_music: " << IEOS_music << endl;
@@ -220,14 +227,13 @@ int read_FOdata::read_in_chemical_potentials(string path, int FO_length,
     }
 
     // read particle resonance decay table
-    for (int i = 0; i < Maxparticle; i++)
-        particle_ptr[i].decays = 0;            // to avoid infinite loop
     Nparticle = read_resonances_list(particle_ptr);
     cout << "total number of particle species: " << Nparticle << endl;
 
     if (N_stableparticle > 0) {
         cout << " -- EOS is partially chemical equilibrium " << endl;
         flag_PCE = 1;
+        int FO_length = surf_ptr.size();
         double** particle_mu = new double* [N_stableparticle];
         for (int i = 0; i < N_stableparticle; i++)
             particle_mu[i] = new double[FO_length];
@@ -247,76 +253,84 @@ int read_FOdata::read_in_chemical_potentials(string path, int FO_length,
         cout << " -- EOS is chemical equilibrium. " << endl;
         flag_PCE = 0;
     }
-    return(Nparticle);
 }
 
-void read_FOdata::read_decdat(int length, FO_surf* surf_ptr) {
+void read_FOdata::read_decdat(std::vector<FO_surf> &surf_ptr) {
     double temp, temp_vx, temp_vy;
     cout <<" -- Read in information on freeze out surface...";
     ostringstream decdat_stream;
     decdat_stream << path << "/decdat2.dat";
     ifstream decdat(decdat_stream.str().c_str());
-    for (int i = 0; i < length; i++) {
-        decdat >> surf_ptr[i].tau;
-        surf_ptr[i].eta = 0.0;
+    string input;
+    getline(decdat, input, '\n');
+    while (!decdat.eof()) {
+        stringstream ss(input);
 
-        decdat >> surf_ptr[i].da0;
-        decdat >> surf_ptr[i].da1;
-        decdat >> surf_ptr[i].da2;
-        surf_ptr[i].da3 = 0.0;
+        FO_surf surf_elem;
 
-        decdat >> temp_vx;
-        decdat >> temp_vy;
-        surf_ptr[i].u0 = 1./sqrt(1. - temp_vx*temp_vx - temp_vy*temp_vy);
-        surf_ptr[i].u1 = surf_ptr[i].u0*temp_vx;
-        surf_ptr[i].u2 = surf_ptr[i].u0*temp_vy;
-        surf_ptr[i].u3 = 0.0;
+        ss >> surf_elem.tau;
+        surf_elem.eta = 0.0;
 
-        decdat >> surf_ptr[i].Edec;
-        decdat >> surf_ptr[i].Bn;
-        decdat >> surf_ptr[i].Tdec;
-        decdat >> surf_ptr[i].muB;
-        decdat >> surf_ptr[i].muS;
-        decdat >> surf_ptr[i].Pdec;
+        ss >> surf_elem.da0;
+        ss >> surf_elem.da1;
+        ss >> surf_elem.da2;
+        surf_elem.da3 = 0.0;
 
-        decdat >> surf_ptr[i].pi33;
-        decdat >> surf_ptr[i].pi00;
-        decdat >> surf_ptr[i].pi01;
-        decdat >> surf_ptr[i].pi02;
-        surf_ptr[i].pi03 = 0.0;
-        decdat >> surf_ptr[i].pi11;
-        decdat >> surf_ptr[i].pi12;
-        surf_ptr[i].pi13 = 0.0;
-        decdat >> surf_ptr[i].pi22;
-        surf_ptr[i].pi23 = 0.0;
+        ss >> temp_vx;
+        ss >> temp_vy;
+        surf_elem.u0 = 1./sqrt(1. - temp_vx*temp_vx - temp_vy*temp_vy);
+        surf_elem.u1 = surf_elem.u0*temp_vx;
+        surf_elem.u2 = surf_elem.u0*temp_vy;
+        surf_elem.u3 = 0.0;
 
-        decdat >> temp;
+        ss >> surf_elem.Edec;
+        ss >> surf_elem.Bn;
+        ss >> surf_elem.Tdec;
+        ss >> surf_elem.muB;
+        ss >> surf_elem.muS;
+        ss >> surf_elem.Pdec;
+
+        ss >> surf_elem.pi33;
+        ss >> surf_elem.pi00;
+        ss >> surf_elem.pi01;
+        ss >> surf_elem.pi02;
+        surf_elem.pi03 = 0.0;
+        ss >> surf_elem.pi11;
+        ss >> surf_elem.pi12;
+        surf_elem.pi13 = 0.0;
+        ss >> surf_elem.pi22;
+        surf_elem.pi23 = 0.0;
+
+        ss >> temp;
         if (turn_on_bulk == 1)
-            surf_ptr[i].bulkPi = temp;
+            surf_elem.bulkPi = temp;
         else
-            surf_ptr[i].bulkPi = 0.0;
+            surf_elem.bulkPi = 0.0;
 
-        surf_ptr[i].qmu0 = 0.0e0;
-        surf_ptr[i].qmu1 = 0.0e0;
-        surf_ptr[i].qmu2 = 0.0e0;
-        surf_ptr[i].qmu3 = 0.0e0;
+        surf_elem.qmu0 = 0.0e0;
+        surf_elem.qmu1 = 0.0e0;
+        surf_elem.qmu2 = 0.0e0;
+        surf_elem.qmu3 = 0.0e0;
+
+        surf_ptr.push_back(surf_elem);
+        getline(decdat, input, '\n');
     }
     decdat.close();
     cout << "done" << endl;
     return;
 }
 
-void read_FOdata::read_surfdat(int length, FO_surf* surf_ptr) {
+void read_FOdata::read_surfdat(std::vector<FO_surf> &surf_ptr) {
     cout<<" -- Read spatial positions of freeze out surface...";
     ostringstream surfdat_stream;
     double dummy;
     char rest_dummy[512];
     surfdat_stream << path << "/surface.dat";
     ifstream surfdat(surfdat_stream.str().c_str());
-    for (int i = 0; i < length; i++) {
+    for (auto &surf_i: surf_ptr) {
         surfdat >> dummy >> dummy;
-        surfdat >> surf_ptr[i].xpt;
-        surfdat >> surf_ptr[i].ypt;
+        surfdat >> surf_i.xpt;
+        surfdat >> surf_i.ypt;
         surfdat.getline(rest_dummy, 512);
     }
     surfdat.close();
@@ -324,17 +338,17 @@ void read_FOdata::read_surfdat(int length, FO_surf* surf_ptr) {
     return;
 }
 
-void read_FOdata::read_FOsurfdat_VISH2p1(int length, FO_surf* surf_ptr) {
+void read_FOdata::read_FOsurfdat_VISH2p1(std::vector<FO_surf> &surf_ptr) {
     cout << " -- Loading the decoupling data from VISH2+1 ...." << endl;
     // read the data arrays for the decoupling information
-    read_decdat(length, surf_ptr);
+    read_decdat(surf_ptr);
     // read the positions of the freeze out surface
-    read_surfdat(length, surf_ptr);
+    read_surfdat(surf_ptr);
     return;
 }
 
-void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
-                                                       FO_surf* surf_ptr) {
+void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
+                                std::vector<FO_surf> &surf_ptr) {
     cout << " -- Read spatial positions of freeze out surface from MUSIC "
          << "(boost-invariant) ...";
     ostringstream surfdat_stream;
@@ -349,122 +363,125 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
     } else {
         surfdat.open(surfdat_stream.str().c_str());
     }
-    for (int i = 0; i < length*n_eta_skip; i++) {
+    while (!surfdat.eof()) {
+        FO_surf surf_elem;
         if (surface_in_binary) {
-            float array[32];
-            for (int ii = 0; ii < 32; ii++) {
+            float array[34];
+            for (int ii = 0; ii < 34; ii++) {
                 float temp = 0.;
                 surfdat.read((char*)&temp, sizeof(float));
                 array[ii] = temp;
             }
-            surf_ptr[idx].tau = array[0];
-            surf_ptr[idx].xpt = array[1];
-            surf_ptr[idx].ypt = array[2];
-            surf_ptr[idx].eta = 0.0;
-            surf_ptr[idx].da0 = array[4];
-            surf_ptr[idx].da1 = array[5];
-            surf_ptr[idx].da2 = array[6];
-            surf_ptr[idx].da3 = 0.0;
-            surf_ptr[idx].u0  = array[8];
-            surf_ptr[idx].u1  = array[9];
-            surf_ptr[idx].u2  = array[10];
-            surf_ptr[idx].u3  = array[11];
+            surf_elem.tau = array[0];
+            surf_elem.xpt = array[1];
+            surf_elem.ypt = array[2];
+            surf_elem.eta = 0.0;
+            surf_elem.da0 = array[4];
+            surf_elem.da1 = array[5];
+            surf_elem.da2 = array[6];
+            surf_elem.da3 = 0.0;
+            surf_elem.u0  = array[8];
+            surf_elem.u1  = array[9];
+            surf_elem.u2  = array[10];
+            surf_elem.u3  = array[11];
 
-            surf_ptr[idx].Edec = array[12]*hbarC;   
-            surf_ptr[idx].Tdec = array[13]*hbarC;
-            surf_ptr[idx].muB  = array[14]*hbarC;
-            surf_ptr[idx].Pdec = array[15]*surf_ptr[idx].Tdec - surf_ptr[idx].Edec;
-            surf_ptr[idx].muS  = 0.0;
+            surf_elem.Edec = array[12]*hbarC;   
+            surf_elem.Tdec = array[13]*hbarC;
+            surf_elem.muB  = array[14]*hbarC;
+            surf_elem.muS  = array[15]*hbarC;
+            surf_elem.muC  = array[16]*hbarC;
+            surf_elem.Pdec = array[17]*surf_elem.Tdec - surf_elem.Edec;
             
-            surf_ptr[idx].pi00 = array[16]*hbarC;  // GeV/fm^3
-            surf_ptr[idx].pi01 = array[17]*hbarC;  // GeV/fm^3
-            surf_ptr[idx].pi02 = array[18]*hbarC;  // GeV/fm^3
-            surf_ptr[idx].pi03 = array[19]*hbarC;  // GeV/fm^3
-            surf_ptr[idx].pi11 = array[20]*hbarC;  // GeV/fm^3
-            surf_ptr[idx].pi12 = array[21]*hbarC;  // GeV/fm^3
-            surf_ptr[idx].pi13 = array[22]*hbarC;  // GeV/fm^3
-            surf_ptr[idx].pi22 = array[23]*hbarC;  // GeV/fm^3
-            surf_ptr[idx].pi23 = array[24]*hbarC;  // GeV/fm^3
-            surf_ptr[idx].pi33 = array[25]*hbarC;  // GeV/fm^3
+            surf_elem.pi00 = array[18]*hbarC;  // GeV/fm^3
+            surf_elem.pi01 = array[19]*hbarC;  // GeV/fm^3
+            surf_elem.pi02 = array[20]*hbarC;  // GeV/fm^3
+            surf_elem.pi03 = array[21]*hbarC;  // GeV/fm^3
+            surf_elem.pi11 = array[22]*hbarC;  // GeV/fm^3
+            surf_elem.pi12 = array[23]*hbarC;  // GeV/fm^3
+            surf_elem.pi13 = array[24]*hbarC;  // GeV/fm^3
+            surf_elem.pi22 = array[25]*hbarC;  // GeV/fm^3
+            surf_elem.pi23 = array[26]*hbarC;  // GeV/fm^3
+            surf_elem.pi33 = array[27]*hbarC;  // GeV/fm^3
 
-            surf_ptr[idx].bulkPi = array[26]*hbarC;   // GeV/fm^3
+            surf_elem.bulkPi = array[28]*hbarC;   // GeV/fm^3
 
-            surf_ptr[idx].Bn   = array[27];             // 1/fm^3
-            surf_ptr[idx].qmu0 = array[28]*hbarC;
-            surf_ptr[idx].qmu1 = array[29]*hbarC;
-            surf_ptr[idx].qmu2 = array[30]*hbarC;
-            surf_ptr[idx].qmu3 = array[31]*hbarC;
+            surf_elem.Bn   = array[29];             // 1/fm^3
+            surf_elem.qmu0 = array[30]*hbarC;
+            surf_elem.qmu1 = array[31]*hbarC;
+            surf_elem.qmu2 = array[32]*hbarC;
+            surf_elem.qmu3 = array[33]*hbarC;
         } else {
             getline(surfdat, input, '\n');
             stringstream ss(input);
 
             ss >> temp_tau >> temp_xpt >> temp_ypt >> temp_eta;
             // freeze out position
-            surf_ptr[idx].tau = temp_tau;
-            surf_ptr[idx].xpt = temp_xpt;
-            surf_ptr[idx].ypt = temp_ypt;
-            surf_ptr[idx].eta = 0.0;
+            surf_elem.tau = temp_tau;
+            surf_elem.xpt = temp_xpt;
+            surf_elem.ypt = temp_ypt;
+            surf_elem.eta = 0.0;
 
             // freeze out normal vectors
-            ss >> surf_ptr[idx].da0;
-            ss >> surf_ptr[idx].da1;
-            ss >> surf_ptr[idx].da2;
-            ss >> surf_ptr[idx].da3;
-            surf_ptr[idx].da3 = 0.0;
+            ss >> surf_elem.da0;
+            ss >> surf_elem.da1;
+            ss >> surf_elem.da2;
+            ss >> surf_elem.da3;
+            surf_elem.da3 = 0.0;
 
             // flow velocity
-            ss >> surf_ptr[idx].u0;
-            ss >> surf_ptr[idx].u1;
-            ss >> surf_ptr[idx].u2;
-            ss >> surf_ptr[idx].u3;
+            ss >> surf_elem.u0;
+            ss >> surf_elem.u1;
+            ss >> surf_elem.u2;
+            ss >> surf_elem.u3;
 
             // thermodynamic quantities at freeze out
-            ss >> dummy;
-            surf_ptr[idx].Edec = dummy*hbarC;   
-            ss >> dummy;
-            surf_ptr[idx].Tdec = dummy*hbarC;
-            ss >> dummy;
-            surf_ptr[idx].muB = dummy*hbarC;
+            ss >> dummy; surf_elem.Edec = dummy*hbarC;   
+            ss >> dummy; surf_elem.Tdec = dummy*hbarC;
+            ss >> dummy; surf_elem.muB = dummy*hbarC;
+            ss >> dummy; surf_elem.muS = dummy*hbarC;
+            ss >> dummy; surf_elem.muC = dummy*hbarC;
             ss >> dummy;              // (e+P)/T
-            surf_ptr[idx].Pdec = dummy*surf_ptr[idx].Tdec - surf_ptr[idx].Edec;
-            surf_ptr[idx].muS = 0.0;
+            surf_elem.Pdec = dummy*surf_elem.Tdec - surf_elem.Edec;
 
             // dissipative quantities at freeze out
             ss >> dummy;                       // 1/fm^4
-            surf_ptr[idx].pi00 = dummy*hbarC;  // GeV/fm^3
-            ss >> dummy; surf_ptr[idx].pi01 = dummy*hbarC;
-            ss >> dummy; surf_ptr[idx].pi02 = dummy*hbarC;
-            ss >> dummy; surf_ptr[idx].pi03 = dummy*hbarC;
-            ss >> dummy; surf_ptr[idx].pi11 = dummy*hbarC;
-            ss >> dummy; surf_ptr[idx].pi12 = dummy*hbarC;
-            ss >> dummy; surf_ptr[idx].pi13 = dummy*hbarC;
-            ss >> dummy; surf_ptr[idx].pi22 = dummy*hbarC;
-            ss >> dummy; surf_ptr[idx].pi23 = dummy*hbarC;
-            ss >> dummy; surf_ptr[idx].pi33 = dummy*hbarC;
+            surf_elem.pi00 = dummy*hbarC;  // GeV/fm^3
+            ss >> dummy; surf_elem.pi01 = dummy*hbarC;
+            ss >> dummy; surf_elem.pi02 = dummy*hbarC;
+            ss >> dummy; surf_elem.pi03 = dummy*hbarC;
+            ss >> dummy; surf_elem.pi11 = dummy*hbarC;
+            ss >> dummy; surf_elem.pi12 = dummy*hbarC;
+            ss >> dummy; surf_elem.pi13 = dummy*hbarC;
+            ss >> dummy; surf_elem.pi22 = dummy*hbarC;
+            ss >> dummy; surf_elem.pi23 = dummy*hbarC;
+            ss >> dummy; surf_elem.pi33 = dummy*hbarC;
 
             if (turn_on_bulk == 1) {
-                ss >> dummy; surf_ptr[idx].bulkPi = dummy*hbarC;  // GeV/fm^3
+                ss >> dummy; surf_elem.bulkPi = dummy*hbarC;  // GeV/fm^3
             } else {
-                surf_ptr[idx].bulkPi = 0.0;
+                surf_elem.bulkPi = 0.0;
             }
             if (turn_on_rhob == 1) {
-                ss >> dummy; surf_ptr[idx].Bn = dummy;   // 1/fm^3
+                ss >> dummy; surf_elem.Bn = dummy;   // 1/fm^3
             } else {
-                surf_ptr[idx].Bn = 0.0;
+                surf_elem.Bn = 0.0;
             }
             if (turn_on_diff == 1) {
-                ss >> dummy; surf_ptr[idx].qmu0 = dummy*hbarC;
-                ss >> dummy; surf_ptr[idx].qmu1 = dummy*hbarC;
-                ss >> dummy; surf_ptr[idx].qmu2 = dummy*hbarC;
-                ss >> dummy; surf_ptr[idx].qmu3 = dummy*hbarC;
+                ss >> dummy; surf_elem.qmu0 = dummy*hbarC;
+                ss >> dummy; surf_elem.qmu1 = dummy*hbarC;
+                ss >> dummy; surf_elem.qmu2 = dummy*hbarC;
+                ss >> dummy; surf_elem.qmu3 = dummy*hbarC;
             } else {
-                surf_ptr[idx].qmu0 = 0.0e0;
-                surf_ptr[idx].qmu1 = 0.0e0;
-                surf_ptr[idx].qmu2 = 0.0e0;
-                surf_ptr[idx].qmu3 = 0.0e0;
+                surf_elem.qmu0 = 0.0e0;
+                surf_elem.qmu1 = 0.0e0;
+                surf_elem.qmu2 = 0.0e0;
+                surf_elem.qmu3 = 0.0e0;
             }
         }
         idx++;
+        if (!surfdat.eof()) {
+            surf_ptr.push_back(surf_elem);
+        }
     }
     surfdat.close();
     cout << "done" << endl;
@@ -472,7 +489,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(int length,
 }
 
 void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
-                                            int length, FO_surf* surf_ptr) {
+                                        std::vector<FO_surf> &surf_ptr) {
   cout << " -- Read spatial positions of freeze out surface from "
        << "hydro_analysis (boost-invariant) ...";
   ostringstream surfdat_stream;
@@ -482,61 +499,65 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
   int idx = 0;
   surfdat_stream << path << "/hyper_surface_2+1d.dat";
   ifstream surfdat(surfdat_stream.str().c_str());
-  for(int i = 0; i < length; i++)
-  {
-     getline(surfdat, input, '\n' );
+  getline(surfdat, input, '\n' );
+  while (!surfdat.eof()) {
      stringstream ss(input);
      ss >> temp_tau >> temp_xpt >> temp_ypt;
 
+     FO_surf surf_elem;
+
      // freeze out position
-     surf_ptr[idx].tau = temp_tau;
-     surf_ptr[idx].xpt = temp_xpt;
-     surf_ptr[idx].ypt = temp_ypt;
-     surf_ptr[idx].eta = 0.0;
+     surf_elem.tau = temp_tau;
+     surf_elem.xpt = temp_xpt;
+     surf_elem.ypt = temp_ypt;
+     surf_elem.eta = 0.0;
 
      // freeze out normal vectors
-     ss >> surf_ptr[idx].da0;
-     ss >> surf_ptr[idx].da1;
-     ss >> surf_ptr[idx].da2;
-     surf_ptr[idx].da3 = 0.0;
+     ss >> surf_elem.da0;
+     ss >> surf_elem.da1;
+     ss >> surf_elem.da2;
+     surf_elem.da3 = 0.0;
 
      // thermodynamic quantities at freeze out
-     ss >> surf_ptr[idx].Tdec;
+     ss >> surf_elem.Tdec;
 
      // flow velocity
      ss >> temp_vx >> temp_vy;
 
-     surf_ptr[idx].u0 = 1./sqrt(1. - temp_vx*temp_vx - temp_vy*temp_vy);
-     surf_ptr[idx].u1 = surf_ptr[idx].u0*temp_vx;
-     surf_ptr[idx].u2 = surf_ptr[idx].u0*temp_vy;
-     surf_ptr[idx].u3 = 0.0;
+     surf_elem.u0 = 1./sqrt(1. - temp_vx*temp_vx - temp_vy*temp_vy);
+     surf_elem.u1 = surf_elem.u0*temp_vx;
+     surf_elem.u2 = surf_elem.u0*temp_vy;
+     surf_elem.u3 = 0.0;
 
-     surf_ptr[idx].Edec = 0.0;   
-     surf_ptr[idx].muB = 0.0;
-     surf_ptr[idx].Pdec = 0.0;
-     surf_ptr[idx].muS = 0.0;
+     surf_elem.Edec = 0.0;   
+     surf_elem.muB = 0.0;
+     surf_elem.Pdec = 0.0;
+     surf_elem.muS = 0.0;
 
      // dissipative quantities at freeze out
-     surf_ptr[idx].pi00 = 0.0;  // GeV/fm^3
-     surf_ptr[idx].pi01 = 0.0;
-     surf_ptr[idx].pi02 = 0.0;
-     surf_ptr[idx].pi03 = 0.0;
-     surf_ptr[idx].pi11 = 0.0;
-     surf_ptr[idx].pi12 = 0.0;
-     surf_ptr[idx].pi13 = 0.0;
-     surf_ptr[idx].pi22 = 0.0;
-     surf_ptr[idx].pi23 = 0.0;
-     surf_ptr[idx].pi33 = 0.0;
+     surf_elem.pi00 = 0.0;  // GeV/fm^3
+     surf_elem.pi01 = 0.0;
+     surf_elem.pi02 = 0.0;
+     surf_elem.pi03 = 0.0;
+     surf_elem.pi11 = 0.0;
+     surf_elem.pi12 = 0.0;
+     surf_elem.pi13 = 0.0;
+     surf_elem.pi22 = 0.0;
+     surf_elem.pi23 = 0.0;
+     surf_elem.pi33 = 0.0;
 
-     surf_ptr[idx].bulkPi = 0.0;
-     surf_ptr[idx].Bn = 0.0;
+     surf_elem.bulkPi = 0.0;
+     surf_elem.Bn = 0.0;
 
-     surf_ptr[i].qmu0 = 0.0e0;
-     surf_ptr[i].qmu1 = 0.0e0;
-     surf_ptr[i].qmu2 = 0.0e0;
-     surf_ptr[i].qmu3 = 0.0e0;
+     surf_elem.qmu0 = 0.0e0;
+     surf_elem.qmu1 = 0.0e0;
+     surf_elem.qmu2 = 0.0e0;
+     surf_elem.qmu3 = 0.0e0;
+
+     surf_ptr.push_back(surf_elem);
 
      idx++;
+     getline(surfdat, input, '\n' );
   }
   surfdat.close();
 
@@ -544,7 +565,7 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
   return;
 }
 
-void read_FOdata::read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr) {
+void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
     cout << " -- Read spatial positions of freeze out surface from MUSIC...";
     ostringstream surfdat_stream;
     double dummy;
@@ -555,160 +576,166 @@ void read_FOdata::read_FOsurfdat_MUSIC(int length, FO_surf* surf_ptr) {
     } else {
         surfdat.open(surfdat_stream.str().c_str());
     }
-    for (int i=0; i<length; i++) {
+    while (!surfdat.eof()) {
+        FO_surf surf_elem;
         if (surface_in_binary) {
-            float array[32];
-            for (int ii = 0; ii < 32; ii++) {
+            float array[34];
+            for (int i = 0; i < 34; i++) {
                 float temp = 0.;
                 surfdat.read((char*)&temp, sizeof(float));
-                array[ii] = temp;
+                array[i] = temp;
             }
-            surf_ptr[i].tau = array[0];
-            surf_ptr[i].xpt = array[1];
-            surf_ptr[i].ypt = array[2];
-            surf_ptr[i].eta = array[3];
-            surf_ptr[i].da0 = array[4];
-            surf_ptr[i].da1 = array[5];
-            surf_ptr[i].da2 = array[6];
-            surf_ptr[i].da3 = array[7];
-            surf_ptr[i].u0  = array[8];
-            surf_ptr[i].u1  = array[9];
-            surf_ptr[i].u2  = array[10];
-            surf_ptr[i].u3  = array[11];
+            surf_elem.tau = array[0];
+            surf_elem.xpt = array[1];
+            surf_elem.ypt = array[2];
+            surf_elem.eta = array[3];
+            surf_elem.da0 = array[4];
+            surf_elem.da1 = array[5];
+            surf_elem.da2 = array[6];
+            surf_elem.da3 = array[7];
+            surf_elem.u0  = array[8];
+            surf_elem.u1  = array[9];
+            surf_elem.u2  = array[10];
+            surf_elem.u3  = array[11];
 
-            surf_ptr[i].Edec = array[12]*hbarC;   
-            surf_ptr[i].Tdec = array[13]*hbarC;
-            surf_ptr[i].muB  = array[14]*hbarC;
-            surf_ptr[i].Pdec = array[15]*surf_ptr[i].Tdec - surf_ptr[i].Edec;
-            surf_ptr[i].muS  = 0.0;
+            surf_elem.Edec = array[12]*hbarC;   
+            surf_elem.Tdec = array[13]*hbarC;
+            surf_elem.muB  = array[14]*hbarC;
+            surf_elem.muS  = array[15]*hbarC;
+            surf_elem.muC  = array[16]*hbarC;
+            surf_elem.Pdec = array[17]*surf_elem.Tdec - surf_elem.Edec;
             
-            surf_ptr[i].pi00 = array[16]*hbarC;  // GeV/fm^3
-            surf_ptr[i].pi01 = array[17]*hbarC;  // GeV/fm^3
-            surf_ptr[i].pi02 = array[18]*hbarC;  // GeV/fm^3
-            surf_ptr[i].pi03 = array[19]*hbarC;  // GeV/fm^3
-            surf_ptr[i].pi11 = array[20]*hbarC;  // GeV/fm^3
-            surf_ptr[i].pi12 = array[21]*hbarC;  // GeV/fm^3
-            surf_ptr[i].pi13 = array[22]*hbarC;  // GeV/fm^3
-            surf_ptr[i].pi22 = array[23]*hbarC;  // GeV/fm^3
-            surf_ptr[i].pi23 = array[24]*hbarC;  // GeV/fm^3
-            surf_ptr[i].pi33 = array[25]*hbarC;  // GeV/fm^3
+            surf_elem.pi00 = array[18]*hbarC;  // GeV/fm^3
+            surf_elem.pi01 = array[19]*hbarC;  // GeV/fm^3
+            surf_elem.pi02 = array[20]*hbarC;  // GeV/fm^3
+            surf_elem.pi03 = array[21]*hbarC;  // GeV/fm^3
+            surf_elem.pi11 = array[22]*hbarC;  // GeV/fm^3
+            surf_elem.pi12 = array[23]*hbarC;  // GeV/fm^3
+            surf_elem.pi13 = array[24]*hbarC;  // GeV/fm^3
+            surf_elem.pi22 = array[25]*hbarC;  // GeV/fm^3
+            surf_elem.pi23 = array[26]*hbarC;  // GeV/fm^3
+            surf_elem.pi33 = array[27]*hbarC;  // GeV/fm^3
 
-            surf_ptr[i].bulkPi = array[26]*hbarC;   // GeV/fm^3
+            surf_elem.bulkPi = array[28]*hbarC;   // GeV/fm^3
 
-            surf_ptr[i].Bn   = array[27];             // 1/fm^3
-            surf_ptr[i].qmu0 = array[28]*hbarC;
-            surf_ptr[i].qmu1 = array[29]*hbarC;
-            surf_ptr[i].qmu2 = array[30]*hbarC;
-            surf_ptr[i].qmu3 = array[31]*hbarC;
+            surf_elem.Bn   = array[29];             // 1/fm^3
+            surf_elem.qmu0 = array[30]*hbarC;
+            surf_elem.qmu1 = array[31]*hbarC;
+            surf_elem.qmu2 = array[32]*hbarC;
+            surf_elem.qmu3 = array[33]*hbarC;
         } else {
             // freeze out position
-            surfdat >> surf_ptr[i].tau;
-            surfdat >> surf_ptr[i].xpt;
-            surfdat >> surf_ptr[i].ypt;
-            surfdat >> surf_ptr[i].eta;
+            surfdat >> surf_elem.tau;
+            surfdat >> surf_elem.xpt;
+            surfdat >> surf_elem.ypt;
+            surfdat >> surf_elem.eta;
 
             // freeze out normal vectors
-            surfdat >> surf_ptr[i].da0;
-            surfdat >> surf_ptr[i].da1;
-            surfdat >> surf_ptr[i].da2;
-            surfdat >> surf_ptr[i].da3;
+            surfdat >> surf_elem.da0;
+            surfdat >> surf_elem.da1;
+            surfdat >> surf_elem.da2;
+            surfdat >> surf_elem.da3;
 
             // flow velocity
-            surfdat >> surf_ptr[i].u0;
-            surfdat >> surf_ptr[i].u1;
-            surfdat >> surf_ptr[i].u2;
-            surfdat >> surf_ptr[i].u3;
+            surfdat >> surf_elem.u0;
+            surfdat >> surf_elem.u1;
+            surfdat >> surf_elem.u2;
+            surfdat >> surf_elem.u3;
 
             // thermodynamic quantities at freeze out
-            surfdat >> dummy; surf_ptr[i].Edec = dummy*hbarC;
-            surfdat >> dummy; surf_ptr[i].Tdec = dummy*hbarC;
-            surfdat >> dummy; surf_ptr[i].muB = dummy*hbarC;
+            surfdat >> dummy; surf_elem.Edec = dummy*hbarC;
+            surfdat >> dummy; surf_elem.Tdec = dummy*hbarC;
+            surfdat >> dummy; surf_elem.muB = dummy*hbarC;
+            surfdat >> dummy; surf_elem.muS = dummy*hbarC;
+            surfdat >> dummy; surf_elem.muC = dummy*hbarC;
             surfdat >> dummy;                    //(e+p)/T
-            surf_ptr[i].Pdec = dummy*surf_ptr[i].Tdec - surf_ptr[i].Edec;
-            surf_ptr[i].muS = 0.0;
+            surf_elem.Pdec = dummy*surf_elem.Tdec - surf_elem.Edec;
 
             // dissipative quantities at freeze out
-            surfdat >> dummy; surf_ptr[i].pi00 = dummy*hbarC;
-            surfdat >> dummy; surf_ptr[i].pi01 = dummy*hbarC;
-            surfdat >> dummy; surf_ptr[i].pi02 = dummy*hbarC;
-            surfdat >> dummy; surf_ptr[i].pi03 = dummy*hbarC;
-            surfdat >> dummy; surf_ptr[i].pi11 = dummy*hbarC;
-            surfdat >> dummy; surf_ptr[i].pi12 = dummy*hbarC;
-            surfdat >> dummy; surf_ptr[i].pi13 = dummy*hbarC;
-            surfdat >> dummy; surf_ptr[i].pi22 = dummy*hbarC;
-            surfdat >> dummy; surf_ptr[i].pi23 = dummy*hbarC;
-            surfdat >> dummy; surf_ptr[i].pi33 = dummy*hbarC;
+            surfdat >> dummy; surf_elem.pi00 = dummy*hbarC;
+            surfdat >> dummy; surf_elem.pi01 = dummy*hbarC;
+            surfdat >> dummy; surf_elem.pi02 = dummy*hbarC;
+            surfdat >> dummy; surf_elem.pi03 = dummy*hbarC;
+            surfdat >> dummy; surf_elem.pi11 = dummy*hbarC;
+            surfdat >> dummy; surf_elem.pi12 = dummy*hbarC;
+            surfdat >> dummy; surf_elem.pi13 = dummy*hbarC;
+            surfdat >> dummy; surf_elem.pi22 = dummy*hbarC;
+            surfdat >> dummy; surf_elem.pi23 = dummy*hbarC;
+            surfdat >> dummy; surf_elem.pi33 = dummy*hbarC;
             if (turn_on_bulk == 1) {
-                surfdat >> dummy; surf_ptr[i].bulkPi = dummy*hbarC;
+                surfdat >> dummy; surf_elem.bulkPi = dummy*hbarC;
             } else {
-                surf_ptr[i].bulkPi = 0.0;
+                surf_elem.bulkPi = 0.0;
             }
             if (turn_on_rhob == 1) {
-                surfdat >> dummy; surf_ptr[i].Bn = dummy;   // 1/fm^3
+                surfdat >> dummy; surf_elem.Bn = dummy;   // 1/fm^3
             } else {
-                surf_ptr[i].Bn = 0.0;
+                surf_elem.Bn = 0.0;
             }
             if (turn_on_diff == 1) {
-                surfdat >> dummy; surf_ptr[i].qmu0 = dummy*hbarC;
-                surfdat >> dummy; surf_ptr[i].qmu1 = dummy*hbarC;
-                surfdat >> dummy; surf_ptr[i].qmu2 = dummy*hbarC;
-                surfdat >> dummy; surf_ptr[i].qmu3 = dummy*hbarC;
+                surfdat >> dummy; surf_elem.qmu0 = dummy*hbarC;
+                surfdat >> dummy; surf_elem.qmu1 = dummy*hbarC;
+                surfdat >> dummy; surf_elem.qmu2 = dummy*hbarC;
+                surfdat >> dummy; surf_elem.qmu3 = dummy*hbarC;
             } else {
-                surf_ptr[i].qmu0 = 0.0e0;
-                surf_ptr[i].qmu1 = 0.0e0;
-                surf_ptr[i].qmu2 = 0.0e0;
-                surf_ptr[i].qmu3 = 0.0e0;
+                surf_elem.qmu0 = 0.0e0;
+                surf_elem.qmu1 = 0.0e0;
+                surf_elem.qmu2 = 0.0e0;
+                surf_elem.qmu3 = 0.0e0;
             }
+        }
+        if (!surfdat.eof()) {
+            surf_ptr.push_back(surf_elem);
         }
     }
     surfdat.close();
     cout << "done" << endl;
 }
 
-void read_FOdata::regulate_surface_cells(int length, FO_surf* surf_ptr) {
+void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
     double pi_init[4][4];
     double pi_reg[4][4];
     double u_flow[4];
-    for (int i = 0; i < length; i++) {
-        surf_ptr[i].u0 = sqrt(1. + surf_ptr[i].u1*surf_ptr[i].u1
-                                 + surf_ptr[i].u2*surf_ptr[i].u2
-                                 + surf_ptr[i].u3*surf_ptr[i].u3);
-        surf_ptr[i].qmu0 = ((  surf_ptr[i].u1*surf_ptr[i].qmu1
-                             + surf_ptr[i].u2*surf_ptr[i].qmu2
-                             + surf_ptr[i].u3*surf_ptr[i].qmu3)/surf_ptr[i].u0);
-        u_flow[0] = surf_ptr[i].u0;
-        u_flow[1] = surf_ptr[i].u1;
-        u_flow[2] = surf_ptr[i].u2;
-        u_flow[3] = surf_ptr[i].u3;
-        pi_init[0][0] = surf_ptr[i].pi00;
-        pi_init[0][1] = surf_ptr[i].pi01;
-        pi_init[0][2] = surf_ptr[i].pi02;
-        pi_init[0][3] = surf_ptr[i].pi03;
-        pi_init[1][0] = surf_ptr[i].pi01;
-        pi_init[1][1] = surf_ptr[i].pi11;
-        pi_init[1][2] = surf_ptr[i].pi12;
-        pi_init[1][3] = surf_ptr[i].pi13;
-        pi_init[2][0] = surf_ptr[i].pi02;
-        pi_init[2][1] = surf_ptr[i].pi12;
-        pi_init[2][2] = surf_ptr[i].pi22;
-        pi_init[2][3] = surf_ptr[i].pi23;
-        pi_init[3][0] = surf_ptr[i].pi03;
-        pi_init[3][1] = surf_ptr[i].pi13;
-        pi_init[3][2] = surf_ptr[i].pi23;
-        pi_init[3][3] = surf_ptr[i].pi33;
+    for (auto &surf_i: surf_ptr) {
+        surf_i.u0 = sqrt(1. + surf_i.u1*surf_i.u1
+                                 + surf_i.u2*surf_i.u2
+                                 + surf_i.u3*surf_i.u3);
+        surf_i.qmu0 = ((  surf_i.u1*surf_i.qmu1
+                             + surf_i.u2*surf_i.qmu2
+                             + surf_i.u3*surf_i.qmu3)/surf_i.u0);
+        u_flow[0] = surf_i.u0;
+        u_flow[1] = surf_i.u1;
+        u_flow[2] = surf_i.u2;
+        u_flow[3] = surf_i.u3;
+        pi_init[0][0] = surf_i.pi00;
+        pi_init[0][1] = surf_i.pi01;
+        pi_init[0][2] = surf_i.pi02;
+        pi_init[0][3] = surf_i.pi03;
+        pi_init[1][0] = surf_i.pi01;
+        pi_init[1][1] = surf_i.pi11;
+        pi_init[1][2] = surf_i.pi12;
+        pi_init[1][3] = surf_i.pi13;
+        pi_init[2][0] = surf_i.pi02;
+        pi_init[2][1] = surf_i.pi12;
+        pi_init[2][2] = surf_i.pi22;
+        pi_init[2][3] = surf_i.pi23;
+        pi_init[3][0] = surf_i.pi03;
+        pi_init[3][1] = surf_i.pi13;
+        pi_init[3][2] = surf_i.pi23;
+        pi_init[3][3] = surf_i.pi33;
 
         regulate_Wmunu(u_flow, pi_init, pi_reg);
 
-        surf_ptr[i].pi00 = pi_reg[0][0];
-        surf_ptr[i].pi01 = pi_reg[0][1];
-        surf_ptr[i].pi02 = pi_reg[0][2];
-        surf_ptr[i].pi03 = pi_reg[0][3];
-        surf_ptr[i].pi11 = pi_reg[1][1];
-        surf_ptr[i].pi12 = pi_reg[1][2];
-        surf_ptr[i].pi13 = pi_reg[1][3];
-        surf_ptr[i].pi22 = pi_reg[2][2];
-        surf_ptr[i].pi23 = pi_reg[2][3];
-        surf_ptr[i].pi33 = pi_reg[3][3];
+        surf_i.pi00 = pi_reg[0][0];
+        surf_i.pi01 = pi_reg[0][1];
+        surf_i.pi02 = pi_reg[0][2];
+        surf_i.pi03 = pi_reg[0][3];
+        surf_i.pi11 = pi_reg[1][1];
+        surf_i.pi12 = pi_reg[1][2];
+        surf_i.pi13 = pi_reg[1][3];
+        surf_i.pi22 = pi_reg[2][2];
+        surf_i.pi23 = pi_reg[2][3];
+        surf_i.pi33 = pi_reg[3][3];
     }
 }
 
@@ -744,7 +771,7 @@ void read_FOdata::read_decdat_mu(int FO_length, int N_stable,
 }
 
 void read_FOdata::read_chemical_potentials_music(
-    int FO_length, FO_surf* FOsurf_ptr, int N_stable, double** particle_mu) {
+    int FO_length, std::vector<FO_surf> &FOsurf_ptr, int N_stable, double** particle_mu) {
     cout << " -- Interpolating chemical potentials for stable particles "
          << "(MUSIC IEOS = " << IEOS_music << ") ...";
 
@@ -766,7 +793,7 @@ void read_FOdata::read_chemical_potentials_music(
     double edec_pre = 0.0e0;
     for (int j = 0; j < FO_length; j++) {
         double edec = FOsurf_ptr[j].Edec;
-        if (fabs(edec - edec_pre) > 1e-15) {
+        if (std::abs(edec - edec_pre) > 1e-15) {
             edec_pre = edec;
             for (int i = 0; i < N_stable; i++) {
                 particle_mu[i][j] = mu_table.interp(1, i+2, edec);
@@ -781,117 +808,124 @@ void read_FOdata::read_chemical_potentials_music(
     return;
 }
 
-int read_FOdata::read_resonances_list(particle_info* particle) {
-   double eps = 1e-15;
-   int Nparticle=0;
-   cout << " -- Read in particle resonance decay table...";
-   ifstream resofile(table_path + "/pdg.dat");
-   int local_i = 0;
-   int dummy_int;
-   while (!resofile.eof()) {
-      resofile >> particle[local_i].monval;
-      resofile >> particle[local_i].name;
-      resofile >> particle[local_i].mass;
-      resofile >> particle[local_i].width;
-      resofile >> particle[local_i].gspin;        //spin degeneracy
-      resofile >> particle[local_i].baryon;
-      resofile >> particle[local_i].strange;
-      resofile >> particle[local_i].charm;
-      resofile >> particle[local_i].bottom;
-      resofile >> particle[local_i].gisospin;     //isospin degeneracy
-      resofile >> particle[local_i].charge;
-      resofile >> particle[local_i].decays;
-      for (int j = 0; j < particle[local_i].decays; j++) {
-         resofile >> dummy_int;
-         resofile >> particle[local_i].decays_Npart[j];
-         resofile >> particle[local_i].decays_branchratio[j];
-         resofile >> particle[local_i].decays_part[j][0];
-         resofile >> particle[local_i].decays_part[j][1];
-         resofile >> particle[local_i].decays_part[j][2];
-         resofile >> particle[local_i].decays_part[j][3];
-         resofile >> particle[local_i].decays_part[j][4];
-      }
+int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
+    double eps = 1e-15;
+    cout << " -- Read in particle resonance decay table...";
+    ifstream resofile(table_path + "/pdg.dat");
+    int local_i = 0;
+    int dummy_int;
+    while (!resofile.eof()) {
+        particle_info particle_i;
 
-      //decide whether particle is stable under strong interactions
-      if (particle[local_i].decays_Npart[0] == 1) {
-         particle[local_i].stable = 1;
-      } else {
-         particle[local_i].stable = 0;
-      }
+        resofile >> particle_i.monval;
+        resofile >> particle_i.name;
+        resofile >> particle_i.mass;
+        resofile >> particle_i.width;
+        resofile >> particle_i.gspin;        //spin degeneracy
+        resofile >> particle_i.baryon;
+        resofile >> particle_i.strange;
+        resofile >> particle_i.charm;
+        resofile >> particle_i.bottom;
+        resofile >> particle_i.gisospin;     //isospin degeneracy
+        resofile >> particle_i.charge;
+        resofile >> particle_i.decays;
+        for (int j = 0; j < particle_i.decays; j++) {
+            resofile >> dummy_int;
+            resofile >> particle_i.decays_Npart[j];
+            resofile >> particle_i.decays_branchratio[j];
+            resofile >> particle_i.decays_part[j][0];
+            resofile >> particle_i.decays_part[j][1];
+            resofile >> particle_i.decays_part[j][2];
+            resofile >> particle_i.decays_part[j][3];
+            resofile >> particle_i.decays_part[j][4];
+        }
 
-      //add anti-particle entry
-      if (particle[local_i].baryon == 1) {
-         local_i++;
-         particle[local_i].monval = -particle[local_i-1].monval;
-         ostringstream antiname;
-         antiname << "Anti-" << particle[local_i-1].name;
-         particle[local_i].name = antiname.str();
-         particle[local_i].mass = particle[local_i-1].mass;
-         particle[local_i].width = particle[local_i-1].width;
-         particle[local_i].gspin = particle[local_i-1].gspin;
-         particle[local_i].baryon = -particle[local_i-1].baryon;
-         particle[local_i].strange = -particle[local_i-1].strange;
-         particle[local_i].charm = -particle[local_i-1].charm;
-         particle[local_i].bottom = -particle[local_i-1].bottom;
-         particle[local_i].gisospin = particle[local_i-1].gisospin;
-         particle[local_i].charge = -particle[local_i-1].charge;
-         particle[local_i].decays = particle[local_i-1].decays;
-         particle[local_i].stable = particle[local_i-1].stable;
-         for (int j = 0; j < particle[local_i].decays; j++) {
-            particle[local_i].decays_Npart[j] = 
-                                           particle[local_i-1].decays_Npart[j];
-            particle[local_i].decays_branchratio[j] = 
-                                     particle[local_i-1].decays_branchratio[j];
-            for (int k = 0; k < Maxdecaypart; k++) {
-               if (particle[local_i-1].decays_part[j][k] == 0) {
-                  particle[local_i].decays_part[j][k] = (
-                                  particle[local_i-1].decays_part[j][k]);
-               } else {
-                  int idx; 
-                  // find the index for decay particle
-                  for(idx = 0; idx < local_i; idx++) {
-                     if (particle[idx].monval 
-                            == particle[local_i-1].decays_part[j][k]) {
-                        break;
-                     }
-                  }
-                  if (idx == local_i && particle[local_i-1].stable == 0 
-                        && particle[local_i-1].decays_branchratio[j] > eps) {
-                     cout << "Error: can not find decay particle index for "
-                          << "anti-baryon!" << endl;
-                     cout << "particle monval : " 
-                          << particle[local_i-1].decays_part[j][k] << endl;
-                     exit(1);
-                  }
-                  if (particle[idx].baryon == 0 && particle[idx].charge == 0 
-                      && particle[idx].strange == 0) {
-                     particle[local_i].decays_part[j][k] = (
-                                     particle[local_i-1].decays_part[j][k]);
-                  } else {
-                     particle[local_i].decays_part[j][k] = (
-                                     - particle[local_i-1].decays_part[j][k]);
-                  }
-               }
+        //decide whether particle is stable under strong interactions
+        if (particle_i.decays_Npart[0] == 1) {
+            particle_i.stable = 1;
+        } else {
+            particle_i.stable = 0;
+        }
+
+        if (!resofile.eof()) {
+            particle.push_back(particle_i);
+        } else {
+            particle_i.baryon = 0;
+        }
+
+        //add anti-particle entry
+        if (particle_i.baryon == 1) {
+            local_i++;
+            particle_info particle_j;
+            particle_j.monval = -particle_i.monval;
+            ostringstream antiname;
+            antiname << "Anti-" << particle_i.name;
+            particle_j.name = antiname.str();
+            particle_j.mass = particle_i.mass;
+            particle_j.width = particle_i.width;
+            particle_j.gspin = particle_i.gspin;
+            particle_j.baryon = -particle_i.baryon;
+            particle_j.strange = -particle_i.strange;
+            particle_j.charm = -particle_i.charm;
+            particle_j.bottom = -particle_i.bottom;
+            particle_j.gisospin = particle_i.gisospin;
+            particle_j.charge = -particle_i.charge;
+            particle_j.decays = particle_i.decays;
+            particle_j.stable = particle_i.stable;
+            for (int j = 0; j < particle_j.decays; j++) {
+                particle_j.decays_Npart[j] = particle_i.decays_Npart[j];
+                particle_j.decays_branchratio[j] = 
+                                       particle_i.decays_branchratio[j];
+                for (int k = 0; k < Maxdecaypart; k++) {
+                    if (particle_i.decays_part[j][k] == 0) {
+                        particle_j.decays_part[j][k] = (
+                                       particle_i.decays_part[j][k]);
+                    } else {
+                        int idx; 
+                        // find the index for decay particle
+                        for (idx = 0; idx < local_i; idx++) {
+                           if (particle[idx].monval 
+                                  == particle_i.decays_part[j][k]) {
+                              break;
+                           }
+                        }
+                        if (idx == local_i && particle_i.stable == 0 
+                             && particle_i.decays_branchratio[j] > eps) {
+                            cout << "Error: can not find decay particle index for "
+                                 << "anti-baryon!" << endl;
+                            cout << "particle monval : " 
+                                 << particle_i.decays_part[j][k] << endl;
+                            exit(1);
+                        }
+                        if (particle[idx].baryon == 0 && particle[idx].charge == 0 
+                            && particle[idx].strange == 0) {
+                            particle_j.decays_part[j][k] = (
+                                           particle_i.decays_part[j][k]);
+                        } else {
+                            particle_j.decays_part[j][k] = (
+                                           - particle_i.decays_part[j][k]);
+                        }
+                    }
+                }
             }
-         }
+            particle.push_back(particle_j);
+        }
+        local_i++;   // Add one to the counting variable "i" for the meson/baryon
+    }
+    for (auto &particle_i: particle) {
+       if (particle_i.baryon == 0) {
+          particle_i.sign = -1;
+       } else {
+          particle_i.sign=1;
        }
-       local_i++;   // Add one to the counting variable "i" for the meson/baryon
-   }
-   resofile.close();
-   Nparticle=local_i-1; //take account the final fake one
-   for (int i=0; i < Nparticle; i++) {
-      if (particle[i].baryon==0) {
-         particle[i].sign = -1;
-      } else {
-         particle[i].sign=1;
-      }
-   }
-   return(Nparticle);
+    }
+    return(particle.size());
 }
 
-void read_FOdata::calculate_particle_mu_PCE(int Nparticle, FO_surf* FOsurf_ptr,
+void read_FOdata::calculate_particle_mu_PCE(int Nparticle,
+                                            std::vector<FO_surf> &FOsurf_ptr,
                                             int FO_length,
-                                            particle_info* particle,
+                                            std::vector<particle_info> &particle,
                                             double** particle_mu) {
     int Nstable_particle;
     int Idummy;
@@ -959,7 +993,7 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle, FO_surf* FOsurf_ptr,
     for (int i = 0; i < Nparticle; i++) {
         if (particle[i].stable == 0) {
             for (int j = 0; j < particle[i].decays; j++) {
-                for (int k = 0; k < abs(particle[i].decays_Npart[j]); k++) {
+                for (int k = 0; k < std::abs(particle[i].decays_Npart[j]); k++) {
                     for (int l = 0; l < Nparticle; l++) {
                         if (particle[i].decays_part[j][k]
                             == particle[l].monval) {

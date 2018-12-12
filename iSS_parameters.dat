@@ -23,10 +23,12 @@ f0_is_not_small = 1      # include (1 \pm f_0) factor in delta f
 output_samples_into_files = 0  # output particle samples into individual files
                                # for individual particle species
 store_samples_in_memory = 1  # flag to store particle samples in memory
-use_OSCAR_format = 1         # output results in OSCAR format
-use_gzip_format = 0          # output results in gzip format (only works with
+use_OSCAR_format = 0         # output results in OSCAR format
+use_gzip_format = 1          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
 perform_decays = 0           # flag to perform resonance decay
+
+local_charge_conservation = 1  # flag to impose local charge conservation
 
 calculate_vn = 0         # 1/0: whether to calculate the 
                          # dN/(pt dpt dphi dy) and v_n flows 
@@ -77,10 +79,6 @@ dN_dy_sampling_para1 = 0.16  # Additional parameters for dN/dy sampling.
                              # -- For dN_dy_sampling_model==10 or 20, 
                              #    this parameter sets the ratio k/n for NBD, 
                              #    see explanation for dN_dy_sampling_model.
-dN_dy_sampling_para2 = 0     # Additional parameters for dN/dy sampling. 
-dN_dy_sampling_para3 = 0     # Additional parameters for dN/dy sampling. 
-dN_dy_sampling_para4 = 0     # Additional parameters for dN/dy sampling. 
-dN_dy_sampling_para5 = 0     # Additional parameters for dN/dy sampling. 
 
 y_LB = -5.0                  # lower bound for y-sampling; 
                              # used in "conventional" sampling

@@ -4,13 +4,11 @@ set (SOURCES
   ParameterReader.cpp
   RandomVariable1DArray.cpp
   RandomVariable2DArray.cpp
-  RandomVariable.cpp
+  Random.cpp
   TableFunction.cpp
   Table.cpp
   emissionfunction.cpp
   readindata.cpp
-  Poisson.cpp
-  NBD.cpp
   particle_decay.cpp
   )
 

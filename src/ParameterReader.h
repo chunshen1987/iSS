@@ -9,15 +9,16 @@ Version 1.02 (03-14-2012) Zhi Qiu
 #include <vector>
 #include <string>
 
-using namespace std;
+using std::string;
 
 class ParameterReader
 {
   private:
-    vector<string>* names; vector<double>* values; // store all parameter names and values
-    string removeComments(string str, string commentSymbol); // all substring after "symbol" in "str" will be removed
+      std::vector<string>* names;
+      std::vector<double>* values; // store all parameter names and values
+      string removeComments(string str, string commentSymbol); // all substring after "symbol" in "str" will be removed
     void phraseEquationWithoutComments(string equation); // phrase an equation like "x=1", assume string has no comments
-    long find(string name); // give the index of parameter with "name", or -1 if it does not exist
+    long find(std::string name); // give the index of parameter with "name", or -1 if it does not exist
   public:
     ParameterReader();
     ~ParameterReader();

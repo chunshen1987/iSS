@@ -1,33 +1,25 @@
 
-#include <sys/time.h>
-#include "./Table.h"
-#include "./arsenal.h"
-#include "./iSS.h"
+#include <memory>
+
+#include "Table.h"
+#include "arsenal.h"
+#include "iSS.h"
+#include "Random.h"
+
 
 using namespace std;
 
 iSS::iSS(string path_in) {
     path = path_in;
-    FO_length = 0;
-    Nparticle = 0;
     flag_PCE = 0;
 
-    FOsurf_ptr = nullptr;
-    particle = nullptr;
     efa = nullptr;
-
     paraRdr_ptr = new ParameterReader;
 }
 
 iSS::~iSS() {
-    if (FOsurf_ptr != nullptr) {
-        delete[] FOsurf_ptr;
-    }
-
-    if (particle != nullptr) {
-        delete[] particle;
-    }
-
+    FOsurf_ptr.clear();
+    particle.clear();
     if (efa != nullptr) {
         delete efa;
     }
@@ -50,31 +42,19 @@ int iSS::shell() {
 
 int iSS::read_in_FO_surface() {
     read_FOdata freeze_out_data(paraRdr_ptr, path);
-    FO_length = freeze_out_data.get_number_of_freezeout_cells();
-    cout << "total number of cells: " <<  FO_length << endl;
-    FOsurf_ptr = new FO_surf[FO_length];
-    freeze_out_data.read_in_freeze_out_data(FO_length, FOsurf_ptr);
-    particle = new particle_info[Maxparticle];
-    Nparticle = freeze_out_data.read_in_chemical_potentials(
-                                    path, FO_length, FOsurf_ptr, particle);
+    freeze_out_data.read_in_freeze_out_data(FOsurf_ptr);
+    cout << "total number of cells: " <<  FOsurf_ptr.size() << endl;
+    freeze_out_data.read_in_chemical_potentials(path, FOsurf_ptr, particle);
     flag_PCE = freeze_out_data.get_flag_PCE();
     cout << endl << " -- Read in data finished!" << endl << endl;
     return(0);
 }
 
-void iSS::set_random_seed(int randomSeed_in) {
-    randomSeed = randomSeed_in;
-    srand48(randomSeed);
-}
 
 void iSS::set_random_seed() {
-    randomSeed = paraRdr_ptr->getVal("randomSeed");
-    if (randomSeed < 0) {
-        timeval a;
-        gettimeofday(&a, 0);
-        randomSeed = a.tv_usec;
-    }
-    srand48(randomSeed);
+    randomSeed  = paraRdr_ptr->getVal("randomSeed");
+    ran_gen_ptr = std::shared_ptr<RandomUtil::Random>(
+                                        new RandomUtil::Random(randomSeed));
 }
 
 int iSS::generate_samples() {
@@ -87,10 +67,9 @@ int iSS::generate_samples() {
     Table eta_tab(table_path + "/bin_tables/eta_uni_table.dat");
     // Table eta_tab("tables/eta_gauss_table_30_full.dat");
 
-    efa = new EmissionFunctionArray(
+    efa = new EmissionFunctionArray(ran_gen_ptr,
             &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
-            particle, Nparticle, FOsurf_ptr, FO_length,
-            flag_PCE, paraRdr_ptr, path);
+            particle, FOsurf_ptr, flag_PCE, paraRdr_ptr, path);
     efa->shell();
 
     return(0);
