@@ -57,6 +57,13 @@ void iSS::set_random_seed() {
                                         new RandomUtil::Random(randomSeed));
 }
 
+
+void iSS::set_random_seed(int randomSeed_in) {
+    randomSeed = randomSeed_in;
+    ran_gen_ptr = std::shared_ptr<RandomUtil::Random>(
+                                        new RandomUtil::Random(randomSeed));
+}
+
 int iSS::generate_samples() {
     // skip others except for these particle
     Table chosen_particles(table_path + "/chosen_particles.dat");

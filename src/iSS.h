@@ -34,6 +34,7 @@ class iSS {
     ParameterReader *paraRdr_ptr;
 
     void set_random_seed();
+    void set_random_seed(int randomSeed_in);
 
     int shell();
     int read_in_FO_surface();
