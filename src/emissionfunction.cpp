@@ -28,7 +28,7 @@
 #include "arsenal.h"
 #include "Stopwatch.h"
 
-#define AMOUNT_OF_OUTPUT 0                  // smaller value means less outputs
+#define AMOUNT_OF_OUTPUT 9                  // smaller value means less outputs
 #define NUMBER_OF_LINES_TO_WRITE   100000   // string buffer for sample files
 
 using std::cout;
@@ -4199,18 +4199,27 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
         double pdsigma = (p0*surf->da0 + px*surf->da1
                           + py*surf->da2 + p3*surf->da3/surf->tau);
 
-        double Wfactor = (
-              p0*p0*surf->pi00 - 2.0*p0*px*surf->pi01 - 2.0*p0*py*surf->pi02
-            - 2.0*p0*p3*surf->pi03 + px*px*surf->pi11 + 2.0*px*py*surf->pi12
-            + 2.0*px*p3*surf->pi13 + py*py*surf->pi22 + 2.0*py*p3*surf->pi23
-            + p3*p3*surf->pi33);
+        // delta f for shear viscosity
+        double delta_f_shear = 0.;
+        if (INCLUDE_DELTAF == 1) {
+            double Wfactor = (
+                  p0*p0*surf->pi00 - 2.0*p0*px*surf->pi01 - 2.0*p0*py*surf->pi02
+                - 2.0*p0*p3*surf->pi03 + px*px*surf->pi11 + 2.0*px*py*surf->pi12
+                + 2.0*px*p3*surf->pi13 + py*py*surf->pi22 + 2.0*py*p3*surf->pi23
+                + p3*p3*surf->pi33);
 
-        double delta_f_shear = ((1. - F0_IS_NOT_SMALL*sign*f0)*Wfactor
-                                *deltaf_prefactor);
+            delta_f_shear = ((1. - F0_IS_NOT_SMALL*sign*f0)*Wfactor
+                             *deltaf_prefactor);
+        }
 
-        double delta_f_bulk = get_deltaf_bulk(
+        // delta f for bulk viscosity
+        double delta_f_bulk = 0.;
+        if (INCLUDE_BULK_DELTAF == 1) {
+            delta_f_bulk = get_deltaf_bulk(
                                         mass, pdotu, surf->bulkPi/hbarC,
                                         Tdec, sign, f0, bulkvisCoefficients);
+        }
+
         // delta f for diffusion
         double delta_f_qmu = 0.0;
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
@@ -4337,15 +4346,18 @@ double EmissionFunctionArray::estimate_maximum(
                         sign, mass, Tdec, mu, f0_mass, z_exp_m_z);
     
     // next viscous part
-    // p*dsigma pT f < dsgima_all*tmp_factor*sqrt(3)
-    //                 *E^3*f0*trace_Pi2/(2*T^2*(e+p))
-    const double trace_Pi2 = (
-        pi[0]*pi[0] + pi[4]*pi[4] + pi[7]*pi[7] + pi[9]*pi[9]
-        - 2.*pi[1]*pi[1] - 2.*pi[2]*pi[2] - 2.*pi[3]*pi[3]
-        + 2.*pi[5]*pi[5] + 2.*pi[6]*pi[6] + 2.*pi[8]*pi[8]);
-    const double pi_size = sqrt(trace_Pi2)/(Edec + Pdec);
-    const double guess_viscous = estimate_shear_viscous_maximum(
-            sign, mass, Tdec, mu, f0_mass, z_exp_m_z, pi_size);
+    double guess_viscous = 0.0;
+    if (INCLUDE_DELTAF == 1) {
+        // p*dsigma pT f < dsgima_all*tmp_factor*sqrt(3)
+        //                 *E^3*f0*trace_Pi2/(2*T^2*(e+p))
+        const double trace_Pi2 = (
+            pi[0]*pi[0] + pi[4]*pi[4] + pi[7]*pi[7] + pi[9]*pi[9]
+            - 2.*pi[1]*pi[1] - 2.*pi[2]*pi[2] - 2.*pi[3]*pi[3]
+            + 2.*pi[5]*pi[5] + 2.*pi[6]*pi[6] + 2.*pi[8]*pi[8]);
+        const double pi_size = sqrt(trace_Pi2)/(Edec + Pdec);
+        guess_viscous = estimate_shear_viscous_maximum(
+                sign, mass, Tdec, mu, f0_mass, z_exp_m_z, pi_size);
+    }
 
     // bulk delta f
     double guess_bulk = 0.0;
