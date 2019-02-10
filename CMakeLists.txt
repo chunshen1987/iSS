@@ -1,8 +1,10 @@
-cmake_minimum_required (VERSION 2.6)
-project (iSS)
+cmake_minimum_required (VERSION 3.4)
+project (iSS LANGUAGES CXX)
 
-#for MacOSX
-cmake_policy(SET CMP0042 NEW)
+# require C++11
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_HOME_DIRECTORY}")
 set (CMAKE_INSTALL_PREFIX "${CMAKE_HOME_DIRECTORY}") 
