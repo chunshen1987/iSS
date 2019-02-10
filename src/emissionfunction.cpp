@@ -28,7 +28,7 @@
 #include "arsenal.h"
 #include "Stopwatch.h"
 
-#define AMOUNT_OF_OUTPUT 9                  // smaller value means less outputs
+#define AMOUNT_OF_OUTPUT 0                  // smaller value means less outputs
 #define NUMBER_OF_LINES_TO_WRITE   100000   // string buffer for sample files
 
 using std::cout;
