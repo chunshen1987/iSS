@@ -8,6 +8,7 @@
 
 #include "data_struct.h"
 #include "ParameterReader.h"
+#include "pretty_ostream.h"
 
 class read_FOdata {
  private:
@@ -24,6 +25,8 @@ class read_FOdata {
 
     int n_eta_skip;
     int IEOS_music;
+
+    pretty_ostream messager;
 
  public:
     read_FOdata(ParameterReader* paraRdr_in, std::string path);

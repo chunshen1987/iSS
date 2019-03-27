@@ -98,8 +98,9 @@ EmissionFunctionArray::EmissionFunctionArray(
                             paraRdr->getVal("output_samples_into_files"));
     flag_store_samples_in_memory = paraRdr->getVal("store_samples_in_memory");
     if (MC_sampling != 2) {
-        cout << "[Warning]: store_samples_in_memory is only supported for "
-             << "MC_sample == 2!" << endl;
+        messager << "store_samples_in_memory is only supported for "
+                 << "MC_sample == 2!";
+        messager.flush("warning");
         flag_store_samples_in_memory = 0;
     }
 
@@ -167,13 +168,18 @@ EmissionFunctionArray::EmissionFunctionArray(
     }
     // check whether all chosen particles are in the particle list
     if (number_of_chosen_particles != current_idx) {
-        cout << "Warning: not all chosen particles are "
-             << "in the pdg particle list!" << endl;
-        cout << "There are " << number_of_chosen_particles - current_idx 
-             << " particles can not be found in the pdg particle list!" << endl;
-        cout << "Their monte carlo numbers are:" << endl;
-        for (int i = 0; i < number_of_chosen_particles - current_idx ; i++)
-            cout << unidentifiedPid_table[i] << endl;
+        messager << "not all chosen particles are "
+                 << "in the pdg particle list!";
+        messager.flush("warning");
+        messager << "There are " << number_of_chosen_particles - current_idx 
+                 << " particles can not be found in the pdg particle list!";
+        messager.flush("warning");
+        messager << "Their monte carlo numbers are:";
+        messager.flush("warning");
+        for (int i = 0; i < number_of_chosen_particles - current_idx ; i++) {
+            messager << unidentifiedPid_table[i];
+            messager.flush("warning");
+        }
         number_of_chosen_particles = current_idx;
     }
     // next re-order them so that particles with similar mass are adjacent
@@ -622,9 +628,9 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
     delete [] bulkvisCoefficients;
 
   sw.toc();
-  cout << endl 
-       << " -- Calculate_dN_dxtdetady finished in " 
-       << sw.takeTime() << " seconds." << endl;
+  messager << " -- Calculate_dN_dxtdetady finished in " 
+           << sw.takeTime() << " seconds.";
+  messager.flush("info");
 }
 //***************************************************************************
 
@@ -846,9 +852,9 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
     delete [] bulkvisCoefficients;
 
     sw.toc();
-    cout << endl 
-        << " -- Calculate_dN_pTdpTdphidy finished in " 
-        << sw.takeTime() << " seconds." << endl;
+    messager << " -- Calculate_dN_pTdpTdphidy finished in " 
+             << sw.takeTime() << " seconds.";
+    messager.flush("info");
 }
 //***************************************************************************
 
@@ -1127,8 +1133,9 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all_old_output(
     } // n: particle loop
 
     sw.toc();
-    cout << " -- Calculate_dN_pTdpTdphidy_and_flows_4all finishes " 
-         << sw.takeTime() << " seconds." << endl;
+    messager << " -- Calculate_dN_pTdpTdphidy_and_flows_4all finishes " 
+             << sw.takeTime() << " seconds.";
+    messager.flush("info");
 }
 //***************************************************************************
 
@@ -1226,8 +1233,9 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(
     of.close();
 
     sw.toc();
-    cout << " -- Calculate_dN_pTdpTdphidy_and_flows_4all finishes " 
-         << sw.takeTime() << " seconds." << endl;
+    messager << " -- Calculate_dN_pTdpTdphidy_and_flows_4all finishes " 
+             << sw.takeTime() << " seconds.";
+    messager.flush("info");
 
 }
 //***************************************************************************
@@ -1343,9 +1351,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
     double y_LB = paraRdr->getVal("y_LB");
     double y_RB = paraRdr->getVal("y_RB");
 
-    cout << " dN_dy=" << dN_dy << ", ";
     double dN = (y_RB-y_LB)*dN_dy;
-    cout << "dN=" << dN << "..." << endl;
+    messager << " dN_dy=" << dN_dy << ", " << "dN=" << dN << "...";
+    messager.flush("info");
     if (AMOUNT_OF_OUTPUT>0) print_progressbar(-1);
     long sample_writing_signal = 0;
     long control_writing_signal = 0;
@@ -1641,8 +1649,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
     delete [] bulkvisCoefficients;
 
     sw.toc();
-    cout << endl 
-         << "Sampling finished in " << sw.takeTime() << " seconds." << endl;
+    messager << "Sampling finished in " << sw.takeTime() << " seconds.";
+    messager.flush("info");
 
 }
 //***************************************************************************
@@ -1787,10 +1795,11 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     double y_LB = paraRdr->getVal("y_LB");
     double y_RB = paraRdr->getVal("y_RB");
 
-    cout << " dN_dy = " << dN_dy << ", ";
-    cout << "dN_dy_CF =" << dN_dy_CF << ", ";
+    messager << " dN_dy = " << dN_dy << ", dN_dy_CF =" << dN_dy_CF << ", ";
+    messager.flush("info");
     double dN = (y_RB-y_LB)*dN_dy_CF;
-    cout << "dN = " << dN << "..." << endl;
+    messager << "dN = " << dN << "...";
+    messager.flush("info");
     if (AMOUNT_OF_OUTPUT>0) print_progressbar(-1);
     long sample_writing_signal = 0;
     long control_writing_signal = 0;
@@ -2170,8 +2179,8 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     delete [] bulkvisCoefficients;
 
     sw.toc();
-    cout << endl 
-         << "Sampling finished in " << sw.takeTime() << " seconds." << endl;
+    messager << "Sampling finished in " << sw.takeTime() << " seconds.";
+    messager.flush("info");
 }
 //***************************************************************************
 
@@ -2615,7 +2624,7 @@ void EmissionFunctionArray::shell() {
 void EmissionFunctionArray::combine_samples_to_OSCAR() {
     Stopwatch sw;
     sw.tic();
-    cout << " -- Now combine sample files to OSCAR file..." << endl;
+    messager.info(" -- Now combine sample files to OSCAR file...");
 
     char line_buffer[500];
 
@@ -2740,7 +2749,7 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
 void EmissionFunctionArray::combine_samples_to_gzip_file() {
     Stopwatch sw;
     sw.tic();
-    cout << " -- Now combine sample files to a gzip file..." << endl;
+    messager.info(" -- Now combine sample files to a gzip file...");
 
     // open file for output
     std::string gzip_output_filename = "particle_samples.gz";
@@ -3249,8 +3258,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
 */
     Stopwatch sw_total;
     sw_total.tic();
-    cout << " Function sample_using_dN_dxtdy_4all_particles started..."
-         << endl;
+    messager.info(" Function sample_using_dN_dxtdy_4all_particles started...");
 
     double *bulkvisCoefficients = new double[3];
 
@@ -3296,11 +3304,11 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     // reusable variables
     // dN_dxtdy for 1 particle
     vector<double> dN_dxtdy_single_particle(FO_length, 0);
-    cout << endl << "Sampling using dN/dy with "
-         << "sample_using_dN_dxtdy_4all_particles function."
-         << endl << endl;
-    cout << "number of repeated sampling = " << number_of_repeated_sampling
-         << endl;
+    messager << "Sampling using dN/dy with "
+             << "sample_using_dN_dxtdy_4all_particles function.";
+    messager.flush("info");
+    messager<< "number of repeated sampling = " << number_of_repeated_sampling;
+    messager.flush("info");
     for (int n = 0; n < number_of_chosen_particles; n++) {
         int real_particle_idx = chosen_particles_sampling_table[n];
         const particle_info *particle = &particles[real_particle_idx];
@@ -3310,8 +3318,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         const int baryon  = particle->baryon;
         const int strange = particle->strange;
         const int charge  = particle->charge;
-        cout << "Index: " << n << ", Name: " << particle->name
-             << ", Monte-carlo index: " << particle->monval << endl;
+        messager << "Index: " << n << ", Name: " << particle->name
+                 << ", Monte-carlo index: " << particle->monval;
+        messager.flush("info");
         if (local_charge_conservation == 1) {
             if (particle->charge < 0) {
                 cout << "local charge conservation is turn on~ "
@@ -3363,7 +3372,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
 
         // first get total number of particles
         double dN_dy = rand1D.return_sum();
-        cout << " -- Sampling using dN_dy=" << dN_dy << ", ";
 
         // get y range for sampling
         const double y_LB = paraRdr->getVal("y_LB");
@@ -3375,7 +3383,9 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
             // for (3+1)-d case, dN_dy is total N (summing over all etas)
             dN = dN_dy;
         }
-        cout << "dN=" << dN << "..." << endl;
+        messager << " -- Sampling using dN_dy=" << dN_dy << ", "
+                 << "dN=" << dN << "...";
+        messager.flush("info");
 
         Stopwatch sw;
         sw.tic();
@@ -3792,7 +3802,7 @@ double EmissionFunctionArray::get_deltaf_qmu_coeff(double T, double muB) {
 }
 
 void EmissionFunctionArray::initialize_special_function_arrays() {
-    cout << "Initializing special function arrays ... ";
+    messager.info("Initializing special function arrays ... ");
     sf_expint_truncate_order = 10;
     sf_x_min = 0.5;
     sf_x_max = 400;
@@ -3838,7 +3848,6 @@ void EmissionFunctionArray::initialize_special_function_arrays() {
         //      << lambert_x_local << "   " << lambert_W[i] << endl;
     }
     //check.close();
-    cout << "done!" << endl;
 }
 
 double EmissionFunctionArray::get_special_function_K2(double arg) {

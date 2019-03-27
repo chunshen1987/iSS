@@ -28,13 +28,14 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
 
     if (mode == 1 || mode == 2) {
         // determine read in format in surface.dat from MUSIC simulation
-        cout << "read in hyper-surface from MUSIC simulations ..." << endl;
+        messager.info("read in hyper-surface from MUSIC simulations ...");
         ostringstream config_file;
         config_file << path << "/music_input";
         ifstream configuration(config_file.str().c_str());
         if (!configuration.is_open()) {
-            cout << "read_FOdata::read_FOdata: can not find configuration file"
-                 << " " << config_file.str() << endl;
+            messager << "read_FOdata::read_FOdata: can not find configuration file"
+                     << " " << config_file.str();
+            messager.flush("error");
             exit(1);
         }
         string temp1;
@@ -61,13 +62,13 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
         }
         configuration.close();
         if (surface_in_binary)
-            cout << "the hyper-surface surface is in the binary format." << endl;
+            messager.info("the hyper-surface surface is in the binary format.");
         if (turn_on_bulk == 1)
-            cout << "the hyper-surface includes bulk viscosity." << endl;
+            messager.info("the hyper-surface includes bulk viscosity.");
         if (turn_on_rhob == 1)
-            cout << "the hyper-surface includes net baryon density." << endl;
+            messager.info("the hyper-surface includes net baryon density.");
         if (turn_on_diff == 1)
-            cout << "the hyper-surface includes baryon diffusion." << endl;
+            messager.info("the hyper-surface includes baryon diffusion.");
     }
     n_eta_skip = 0;
 }
@@ -216,7 +217,8 @@ void read_FOdata::read_in_chemical_potentials(string path,
         } else if (IEOS_music == 17) {       // BEST
             N_stableparticle = 0;
         } else {
-            cout << "invalid IEOS_music: " << IEOS_music << endl;
+            messager << "invalid IEOS_music: " << IEOS_music;
+            messager.flush("error");
             exit(-1);
         }
     }
@@ -228,10 +230,11 @@ void read_FOdata::read_in_chemical_potentials(string path,
 
     // read particle resonance decay table
     Nparticle = read_resonances_list(particle_ptr);
-    cout << "total number of particle species: " << Nparticle << endl;
+    messager << "total number of particle species: " << Nparticle;
+    messager.flush("info");
 
     if (N_stableparticle > 0) {
-        cout << " -- EOS is partially chemical equilibrium " << endl;
+        messager.info(" -- EOS is partially chemical equilibrium ");
         flag_PCE = 1;
         int FO_length = surf_ptr.size();
         double** particle_mu = new double* [N_stableparticle];
@@ -250,7 +253,7 @@ void read_FOdata::read_in_chemical_potentials(string path,
             delete [] particle_mu[i];
         delete [] particle_mu;
     } else {
-        cout << " -- EOS is chemical equilibrium. " << endl;
+        messager.info(" -- EOS is chemical equilibrium. ");
         flag_PCE = 0;
     }
 }
@@ -891,10 +894,12 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
                         }
                         if (idx == local_i && particle_i.stable == 0 
                              && particle_i.decays_branchratio[j] > eps) {
-                            cout << "Error: can not find decay particle index for "
-                                 << "anti-baryon!" << endl;
-                            cout << "particle monval : " 
-                                 << particle_i.decays_part[j][k] << endl;
+                            messager << "Can not find decay particle index for "
+                                     << "anti-baryon!";
+                            messager.flush("error");
+                            messager << "particle monval : " 
+                                     << particle_i.decays_part[j][k];
+                            messager.flush("error");
                             exit(1);
                         }
                         if (particle[idx].baryon == 0 && particle[idx].charge == 0 
@@ -919,6 +924,7 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
           particle_i.sign=1;
        }
     }
+    cout << "done." << endl;
     return(particle.size());
 }
 
@@ -953,11 +959,13 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle,
                 table_path
                 + "/EOS_tables/s95p-v1-PCE165/EOS_particletable.dat");
         } else {
-            cout << "invalid EOS option for MUSIC: " << IEOS_music << endl;
+            messager << "invalid EOS option for MUSIC: " << IEOS_music;
+            messager.flush("error");
             exit(-1);
         }
     } else {
-        cout << "invalid hydro mode: " << mode << endl;
+        messager << "invalid hydro mode: " << mode;
+        messager.flush("error");
         exit(-1);
     }
 
@@ -1003,9 +1011,11 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle,
                                             *FOsurf_ptr[m].particle_mu_PCE[l]);
                             break;
                         }
-                        if (l == Nparticle-1)
-                            cout << "warning: can not find particle"
-                                 <<  particle[i].name << endl;
+                        if (l == Nparticle-1) {
+                            messager << "warning: can not find particle"
+                                     <<  particle[i].name;
+                            messager.flush("error");
+                        }
                     }
                 }
             }

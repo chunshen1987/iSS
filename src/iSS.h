@@ -10,6 +10,7 @@
 #include "readindata.h"
 #include "emissionfunction.h"
 #include "Random.h"
+#include "pretty_ostream.h"
 
 class iSS {
  private:
@@ -26,6 +27,8 @@ class iSS {
     std::vector<particle_info> particle;
     
     EmissionFunctionArray *efa;
+
+    pretty_ostream messager;
 
  public:
     iSS(std::string path_in);

@@ -20,6 +20,7 @@
 #include "data_struct.h"
 #include "data_struct.h"
 #include "Random.h"
+#include "pretty_ostream.h"
 
 class EmissionFunctionArray {
  private:
@@ -27,6 +28,8 @@ class EmissionFunctionArray {
     int flag_PCE;
     int flag_restrict_deltaf;
     double deltaf_max_ratio;
+    
+    pretty_ostream messager;
 
     std::string path;
 
