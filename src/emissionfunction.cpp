@@ -135,7 +135,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     // deal with chosen_particle_xxx tables
     number_of_chosen_particles = chosen_particles_in->getNumberOfRows();
     // first, for spectra and flow calculations
-    chosen_particles_01_table = new int[Nparticles];
+    chosen_particles_01_table.resize(Nparticles, 0);
     for (int n = 0; n < Nparticles; n++)
         chosen_particles_01_table[n] = 0;
     for (int m = 0; m < number_of_chosen_particles; m++) {
@@ -148,8 +148,8 @@ EmissionFunctionArray::EmissionFunctionArray(
         }
     }
     // next, for sampling processes
-    chosen_particles_sampling_table = new int[number_of_chosen_particles];
-    unidentifiedPid_table = new int [number_of_chosen_particles];
+    chosen_particles_sampling_table.resize(number_of_chosen_particles, 0);
+    unidentifiedPid_table.resize(number_of_chosen_particles, 0);
     // first copy the chosen_particles table, but now using indecies 
     // instead of monval
     int current_idx = 0;
@@ -340,10 +340,6 @@ EmissionFunctionArray::~EmissionFunctionArray() {
         delete[] dN_dxtdetady_pT_max;
     }
 
-    delete[] chosen_particles_01_table;
-    delete[] chosen_particles_sampling_table;
-    delete[] unidentifiedPid_table;
-
     for (int j=0; j<phi_tab_length; j++) {
         delete[] trig_phi_table[j];
     }
@@ -390,7 +386,6 @@ EmissionFunctionArray::~EmissionFunctionArray() {
     if (INCLUDE_DIFFUSION_DELTAF == 1) {
         delete [] sf_expint_En;
     }
-    delete [] lambert_W;
 
     if (flag_store_samples_in_memory == 1) {
         for (unsigned int i = 0; i < Hadron_list->size(); i++) {
@@ -3821,8 +3816,9 @@ void EmissionFunctionArray::initialize_special_function_arrays() {
     lambert_x_min = 0;
     lambert_x_max = 200.0;
     lambert_dx = 0.005;
-    lambert_tb_length = (int)((lambert_x_max - lambert_x_min)/lambert_dx) + 1;
-    lambert_W = new double [lambert_tb_length];
+    int lambert_tb_length = static_cast<int>(
+                        ((lambert_x_max - lambert_x_min)/lambert_dx) + 1);
+    lambert_W.resize(lambert_tb_length, 0.0);
     //ofstream check("lambertw_function.dat");
     for (int i = 0; i < lambert_tb_length; i++) {
         double lambert_x_local = lambert_x_min + i*lambert_dx;

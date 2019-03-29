@@ -77,7 +77,7 @@ class EmissionFunctionArray {
     int number_of_chosen_particles;
     // used in spectra and flow calculations; 
     // it has length Nparticle, 0 means miss, 1 means include
-    int *chosen_particles_01_table; 
+    std::vector<int> chosen_particles_01_table; 
 
     // 0/1: Particles with similar mass and chemical potentials 
     // will be sampled using the same dN/(dxt deta dy) matrix
@@ -92,10 +92,10 @@ class EmissionFunctionArray {
 
     // store particle index; 
     // the sampling process follows the order specified by this table
-    int *chosen_particles_sampling_table; 
+    std::vector<int> chosen_particles_sampling_table; 
 
     // store chosen particle monte carlo number that are not found in pdg.dat
-    int *unidentifiedPid_table;
+    std::vector<int> unidentifiedPid_table;
 
     // list for information for all particles
     int Nparticles;
@@ -136,8 +136,7 @@ class EmissionFunctionArray {
     double** sf_expint_En;
 
     double lambert_x_min, lambert_x_max, lambert_dx;
-    int lambert_tb_length;
-    double *lambert_W;
+    std::vector<double> lambert_W;
     
     int flag_output_samples_into_files;
     int flag_store_samples_in_memory;
