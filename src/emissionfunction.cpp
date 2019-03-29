@@ -3383,8 +3383,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         // maximum_guess to maximum_guess*maximum_ratio*adjust_maximum_to
         // for the rest of sampling. Note that you want to set
         // adjust_maximum_to to be slightly larger than 1 to avoid errors.
-        long number_of_tries      = 0;
-        int number_of_success     = 0;
+        //long number_of_tries      = 0;
+        //int number_of_success     = 0;
 
         long sample_writing_signal  = 0;
         long control_writing_signal = 0;
@@ -3444,7 +3444,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 } else {
                     sample_idx++;
                 }
-                number_of_success++; // to track success rate
+                //number_of_success++; // to track success rate
                 
                 double eta_s = surf->eta;
                 if (hydro_mode != 2) {
@@ -3518,13 +3518,13 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         }
         if (AMOUNT_OF_OUTPUT > 0) print_progressbar(1);
 
-        if (AMOUNT_OF_OUTPUT > 3) {
-            cout << endl << " -- -- Number of tries: " << number_of_tries 
-                 << ", number of success: " << number_of_success << endl
-                 << " -- -- Success rate: " 
-                 << static_cast<double>(number_of_success)/static_cast<double>(number_of_tries)
-                 << endl;
-        }
+        //if (AMOUNT_OF_OUTPUT > 3) {
+        //    cout << endl << " -- -- Number of tries: " << number_of_tries 
+        //         << ", number of success: " << number_of_success << endl
+        //         << " -- -- Success rate: " 
+        //         << static_cast<double>(number_of_success)/static_cast<double>(number_of_tries)
+        //         << endl;
+        //}
 
         sw.toc();
         cout << endl << "Sampling finished in " 
