@@ -17,6 +17,7 @@
 #include <cmath>
 #include <iomanip>
 #include <vector>
+#include <array>
 
 #include "zlib.h"
 #include "data_struct.h"
@@ -46,8 +47,8 @@ EmissionFunctionArray::EmissionFunctionArray(
     std::shared_ptr<RandomUtil::Random> ran_gen,
     Table* chosen_particles_in, Table* pt_tab_in, Table* phi_tab_in,
     Table* y_minus_eta_tab_in, std::vector<particle_info> particles_in,
-    std::vector<FO_surf> FOsurf_ptr_in, int flag_PCE_in,
-    ParameterReader* paraRdr_in, string path_in) {
+    const std::vector<FO_surf> &FOsurf_ptr_in, int flag_PCE_in,
+    ParameterReader* paraRdr_in, string path_in) : FOsurf_ptr(FOsurf_ptr_in) {
 
     ran_gen_ptr = ran_gen;
 
@@ -71,7 +72,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     particles = particles_in;
     Nparticles = particles.size();
 
-    FOsurf_ptr = FOsurf_ptr_in;
+    //FOsurf_ptr = FOsurf_ptr_in;
     FO_length = FOsurf_ptr.size();
 
     paraRdr = paraRdr_in;
@@ -255,7 +256,7 @@ EmissionFunctionArray::EmissionFunctionArray(
         //for (long l=0; l<FO_length; l++) {
         //    dN_dxtdy_4all[l] = new double[number_of_chosen_particles];
         //}
-        dN_dxtdy_for_one_particle_species = new double[FO_length];
+        dN_dxtdy_for_one_particle_species.resize(FO_length, 0.);
     }
     //sorted_FZ = new long[FO_length];
 
@@ -353,13 +354,11 @@ EmissionFunctionArray::~EmissionFunctionArray() {
     }
     delete[] hypertrig_y_minus_eta_table;
 
-    if (MC_sampling == 2) {
-        //for (long l=0; l<FO_length; l++)
-        //    delete[] dN_dxtdy_4all[l];
-        //delete[] dN_dxtdy_4all;
-        delete[] dN_dxtdy_for_one_particle_species;
-    }
-
+    //if (MC_sampling == 2) {
+    //    for (long l=0; l<FO_length; l++)
+    //        delete[] dN_dxtdy_4all[l];
+    //    delete[] dN_dxtdy_4all;
+    //}
     //delete[] sorted_FZ;
 
     for (int j=0; j<phi_tab4Sampling_length; j++) {
@@ -430,7 +429,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
 
   double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
   
-  double *bulkvisCoefficients = new double[3];
+  std::array<double, 3> bulkvisCoefficients = {0.0};
 
 
   // initialize to 0
@@ -625,8 +624,6 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
       print_progressbar(1);
   //cout << endl << "------------------------------------- " << endl;
 
-    delete [] bulkvisCoefficients;
-
   sw.toc();
   messager << " -- Calculate_dN_dxtdetady finished in " 
            << sw.takeTime() << " seconds.";
@@ -659,7 +656,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
 
   
-    double *bulkvisCoefficients = new double[3];
+    std::array<double, 3> bulkvisCoefficients = {0.0};
 
     // for intermedia results
     //cout << "initializing intermedia variables... ";
@@ -848,8 +845,6 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
             dN_pTdpTdphidy_max->set(i+1,j+1,dN_pTdpTdphidy_max_tab[i][j]);
         }
     }
-
-    delete [] bulkvisCoefficients;
 
     sw.toc();
     messager << " -- Calculate_dN_pTdpTdphidy finished in " 
@@ -1290,7 +1285,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
 
     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
 
-    double *bulkvisCoefficients = new double[3];
+    std::array<double, 3> bulkvisCoefficients = {0.0};
 
     // create local cache
     double delta_y_minus_eta_tab[y_minus_eta_tab_length];
@@ -1646,8 +1641,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
     }
     of_sample_format.close();
 
-    delete [] bulkvisCoefficients;
-
     sw.toc();
     messager << "Sampling finished in " << sw.takeTime() << " seconds.";
     messager.flush("info");
@@ -1701,7 +1694,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
 
     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
 
-    double *bulkvisCoefficients = new double[3];
+    std::array<double, 3> bulkvisCoefficients = {0.0};
 
     //------------------------------------------------------------------------
     // Prepare the inverse CDF
@@ -1841,14 +1834,13 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                             dN_pTdpTdphidy_max_4Sampling[pT_idx][phi_idx]);
 
             long tries = 1;
-            FO_surf *surf = nullptr;
             while (tries<maximum_impatience) {
                 bool found_sample = false;
 
                 // get a surface index
                 FO_idx = floor(ran_gen_ptr.lock()->rand_uniform()*(FO_length-1e-30));
 
-                surf = &FOsurf_ptr[FO_idx];
+                const FO_surf *surf = &FOsurf_ptr[FO_idx];
 
                 double Tdec = surf->Tdec;
                 double inv_Tdec = 1.0/Tdec;
@@ -2069,7 +2061,8 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                 if (flip_a_coin > 0.5)
                     y_minus_eta_s = -y_minus_eta_s;
             }
-
+            
+            const FO_surf *surf = &FOsurf_ptr[FO_idx];
             double y = y_LB + ran_gen_ptr.lock()->rand_uniform()*(y_RB-y_LB);
             double eta_s = y - y_minus_eta_s;
             double p_z = mT*sinh(y);
@@ -2175,8 +2168,6 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     for (int i=0; i<pT_tab4Sampling_length; i++)
         delete[] dN_pTdpTdphidy_max_4Sampling[i];
     delete[] dN_pTdpTdphidy_max_4Sampling;
-
-    delete [] bulkvisCoefficients;
 
     sw.toc();
     messager << "Sampling finished in " << sw.takeTime() << " seconds.";
@@ -2804,7 +2795,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
     Stopwatch sw;
     sw.tic();
 
-    double *bulkvisCoefficients = new double[3];
+    std::array<double, 3> bulkvisCoefficients = {0.0};
 
     // read parameters
     double tolerance = paraRdr->getVal("grouping_tolerance");
@@ -2907,7 +2898,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
                 last_particle_mu = mu;
                 //last_particle_baryon = baryon;
 
-                double* results_ptr = new double[5];
+                std::array<double, 5> results_ptr = {0.0};
                 calculate_dN_analytic(particle, mu, temp, results_ptr);
 
                 double N_eq = (
@@ -2932,8 +2923,6 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
                 total_N = N_eq + deltaN_bulk + deltaN_qmu;
 
                 integral_laststep[n] = total_N;
-
-                delete [] results_ptr;
             }
             dN_dxtdy_4all[l][n] = integral_laststep[n];
         }
@@ -2955,8 +2944,6 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
         to_write.printTable(of);
         of.close();
     }
-
-    delete [] bulkvisCoefficients;
 
     sw.toc();
     cout << endl << " -- Calculate_dN_dxtdy_4all_particles finished in "
@@ -2983,7 +2970,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
     Stopwatch sw;
     sw.tic();
 
-    double *bulkvisCoefficients = new double[3];
+    std::array<double, 3> bulkvisCoefficients = {0.0};
 
     // now loop over all freeze-out cells and particles
     double unit_factor = 1.0/pow(hbarC, 3);  // unit: convert to unitless
@@ -3055,7 +3042,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
         double prefactor = degen/(2.*M_PI*M_PI);
         
         // calculate dN / (dxt dy)
-        double* results_ptr = new double[5];
+        std::array<double, 5> results_ptr = {0.0};
         calculate_dN_analytic(particle, mu, temp, results_ptr);
 
         double N_eq = unit_factor*prefactor*dsigma_dot_u*results_ptr[0];
@@ -3078,11 +3065,8 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
 
         total_N = N_eq + deltaN_bulk + deltaN_qmu;
 
-        delete [] results_ptr;
         dN_dxtdy_for_one_particle_species[l] = total_N;
     }
-
-    delete [] bulkvisCoefficients;
 
     sw.toc();
     cout << endl
@@ -3094,7 +3078,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
 //***************************************************************************
 void EmissionFunctionArray::calculate_dN_analytic(
         const particle_info* particle, double mu, double Temperature,
-        double* results) {
+        std::array<double, 5> &results) {
 /* calculate particle yield using analytic formula as a series sum of Bessel 
    functions. The particle yield emitted from a given fluid cell is 
    \dsigma_mu u^\mu times the return value from this function
@@ -3132,7 +3116,8 @@ void EmissionFunctionArray::calculate_dN_analytic(
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
             deltaN_qmu_term1 += theta/n*fugacity*K_2;
 
-            double *sf_expint_En_ptr = new double[sf_expint_truncate_order-1];
+            std::vector<double> sf_expint_En_ptr(
+                                            sf_expint_truncate_order-1, 0.);
             get_special_function_En(arg, sf_expint_En_ptr);
 
             double mbeta = mass*beta;
@@ -3156,8 +3141,6 @@ void EmissionFunctionArray::calculate_dN_analytic(
             }
             I_1_n = -(mbeta*mbeta*mbeta)*I_1_n;
             deltaN_qmu_term2 += n*theta*fugacity*I_1_n;
-
-            delete [] sf_expint_En_ptr;
         }
     }
 
@@ -3260,7 +3243,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     sw_total.tic();
     messager.info(" Function sample_using_dN_dxtdy_4all_particles started...");
 
-    double *bulkvisCoefficients = new double[3];
+    std::array<double, 3> bulkvisCoefficients = {0.0};
 
     // load pre-calculated table
     // (x,y) that y*exp(-y) = x; y<=1
@@ -3303,7 +3286,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     // use "conventional" sampling
     // reusable variables
     // dN_dxtdy for 1 particle
-    vector<double> dN_dxtdy_single_particle(FO_length, 0);
+    //vector<double> dN_dxtdy_single_particle(FO_length, 0);
     messager << "Sampling using dN/dy with "
              << "sample_using_dN_dxtdy_4all_particles function.";
     messager.flush("info");
@@ -3362,12 +3345,14 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         std::stringstream control_str_buffer;
 
         // prepare the inverse CDF
-        for (long l = 0; l < FO_length; l++) {
-            //dN_dxtdy_single_particle[l] = dN_dxtdy_4all[l][n];
-            dN_dxtdy_single_particle[l] = (
-                                    dN_dxtdy_for_one_particle_species[l]);
-        }
-        RandomVariable1DArray rand1D(&dN_dxtdy_single_particle,
+        //for (long l = 0; l < FO_length; l++) {
+        //    dN_dxtdy_single_particle[l] = dN_dxtdy_4all[l][n];
+        //    dN_dxtdy_single_particle[l] = (
+        //                            dN_dxtdy_for_one_particle_species[l]);
+        //}
+        //RandomVariable1DArray rand1D(&dN_dxtdy_single_particle,
+        //                             ran_gen_ptr.lock(), 0);
+        RandomVariable1DArray rand1D(&dN_dxtdy_for_one_particle_species,
                                      ran_gen_ptr.lock(), 0);
 
         // first get total number of particles
@@ -3593,8 +3578,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         of_sample_format.close();
     }
     
-    delete [] bulkvisCoefficients;
-
     sw_total.toc();
     cout << endl 
          << "sample_using_dN_dxtdy_4all_particles finished in " 
@@ -3602,7 +3585,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
 }
 
 void EmissionFunctionArray::getbulkvisCoefficients(
-                double Tdec, double* bulkvisCoefficients) {
+                double Tdec, std::array<double, 3> &bulkvisCoefficients) {
    double Tdec_fm = Tdec/hbarC;  // [1/fm]
    double Tdec_fm_power[11];    // cache the polynomial power of Tdec_fm
    Tdec_fm_power[1] = Tdec_fm;
@@ -3888,8 +3871,8 @@ double EmissionFunctionArray::get_special_function_K1(double arg) {
     return(results);
 }
 
-void EmissionFunctionArray::get_special_function_En(double arg, 
-                                                    double* results) {
+void EmissionFunctionArray::get_special_function_En(
+                                double arg, std::vector<double> &results) {
     if (arg < sf_x_min || arg > sf_x_max-sf_dx) {
         if (AMOUNT_OF_OUTPUT > 5) {
             cout << "EmissionFunctionArray::get_special_function_En: "
@@ -4133,7 +4116,7 @@ double EmissionFunctionArray::estimate_diffusion_maximum(
 
 double EmissionFunctionArray::get_deltaf_bulk(
         double mass, double pdotu, double bulkPi, double Tdec, int sign,
-        double f0, double *bulkvisCoefficients) {
+        double f0, const std::array<double, 3> bulkvisCoefficients) {
     if (INCLUDE_BULK_DELTAF== 0) return(0.0);
     double delta_f_bulk = 0.0;
     if (bulk_deltaf_kind == 0) {
@@ -4168,7 +4151,8 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
         const int baryon, const int strange, const int charge,
         const double pT_to, const double y_minus_eta_s_range,
         const double maximum_guess, const FO_surf *surf,
-        double *bulkvisCoefficients, const double deltaf_qmu_coeff,
+        const std::array<double, 3> bulkvisCoefficients,
+        const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s
         ) {
     const double Tdec = surf->Tdec;
@@ -4288,7 +4272,8 @@ double EmissionFunctionArray::estimate_maximum(
         const double sign, const double degen,
         const int baryon, const int strange, const int charge,
         TableFunction &z_exp_m_z,
-        const double *bulkvisCoefficients, const double deltaf_qmu_coeff) {
+        const std::array<double, 3> bulkvisCoefficients,
+        const double deltaf_qmu_coeff) {
     const double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
 
     const double Tdec     = surf->Tdec;

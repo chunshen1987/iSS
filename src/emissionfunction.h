@@ -11,6 +11,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 #include <memory>
 
 #include "Table.h"
@@ -71,7 +72,7 @@ class EmissionFunctionArray {
     double **dN_dxtdy_4all;  // dN / (dxt dy) for all particles
     
     // dN/(dxt dy) for one particle species
-    double *dN_dxtdy_for_one_particle_species; 
+    std::vector<double> dN_dxtdy_for_one_particle_species; 
 
     int number_of_chosen_particles;
     // used in spectra and flow calculations; 
@@ -102,7 +103,7 @@ class EmissionFunctionArray {
 
     // list for information for all fluid cells
     long FO_length;
-    std::vector<FO_surf> FOsurf_ptr;
+    const std::vector<FO_surf> FOsurf_ptr;
 
     // store the last particle index being used by calculate_dNArrays function
     int last_particle_idx;
@@ -150,7 +151,7 @@ class EmissionFunctionArray {
                           Table* chosen_particle, Table* pt_tab_in,
                           Table* phi_tab_in, Table* eta_tab_in,
                           std::vector<particle_info> particles_in,
-                          std::vector<FO_surf> FOsurf_ptr_in,
+                          const std::vector<FO_surf> &FOsurf_ptr_in,
                           int flag_PCE_in, ParameterReader* paraRdr_in,
                           std::string path_in);
     ~EmissionFunctionArray();
@@ -160,7 +161,7 @@ class EmissionFunctionArray {
     void initialize_special_function_arrays();
     double get_special_function_K1(double arg);
     double get_special_function_K2(double arg);
-    void get_special_function_En(double arg, double* results);
+    void get_special_function_En(double arg, std::vector<double> &results);
     double get_special_function_lambertW(double arg);
 
     void calculate_dNArrays(int);
@@ -211,7 +212,8 @@ class EmissionFunctionArray {
 
     // Second sampling method
     void calculate_dN_analytic(const particle_info* particle, double mu,
-                               double Temperature, double* results);
+                               double Temperature,
+                               std::array<double, 5> &results);
 
     // the following variables need to be set first in order to 
     // call this function
@@ -229,7 +231,8 @@ class EmissionFunctionArray {
     int pT_tab4Sampling_length, phi_tab4Sampling_length;
     double** trig_phi_tab4Sampling;
 
-    void getbulkvisCoefficients(double Tdec, double* bulkvisCoefficients);
+    void getbulkvisCoefficients(double Tdec,
+                                std::array<double, 3> &bulkvisCoefficients);
     void load_deltaf_qmu_coeff_table(std::string filename);
     double get_deltaf_qmu_coeff(double T, double muB);
 
@@ -256,20 +259,22 @@ class EmissionFunctionArray {
         double prefactor_qmu, double guess_ideal, double q_size);
     double get_deltaf_bulk(
         double mass, double pdotu, double bulkPi, double Tdec, int sign,
-        double f0, double *bulkvisCoefficients);
+        double f0, const std::array<double, 3> bulkvisCoefficients);
     int sample_momemtum_from_a_fluid_cell(
         const double mass, const double degen, const int sign,
         const int baryon, const int strange, const int charge,
         const double pT_to, const double y_minus_eta_s_range,
         const double maximum_guess, const FO_surf *surf,
-        double *bulkvisCoefficients, const double deltaf_qmu_coeff,
+        const std::array<double, 3> bulkvisCoefficients,
+        const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s);
     double estimate_maximum(
         const FO_surf *surf, const int real_particle_idx, const double mass,
         const double sign, const double degen,
         const int baryon, const int strange, const int charge,
         TableFunction &z_exp_m_z,
-        const double *bulkvisCoefficients, const double deltaf_qmu_coeff);
+        const std::array<double, 3> bulkvisCoefficients,
+        const double deltaf_qmu_coeff);
     std::string add_one_sampled_particle(
         const int repeated_sampling_idx, 
         const unsigned long FO_idx, const FO_surf *surf,
