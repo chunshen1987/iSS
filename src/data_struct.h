@@ -38,15 +38,15 @@ typedef struct {
 } particle_info;
 
 typedef struct {
-    double tau, xpt, ypt, eta;
-    double da0, da1, da2, da3;
-    double u0, u1, u2, u3;
-    double Edec, Tdec, Pdec;
-    double Bn, muB, muS, muC;
-    double pi00, pi01, pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33;
-    double bulkPi;
-    double qmu0, qmu1, qmu2, qmu3;
-    double *particle_mu_PCE;
+    float tau, xpt, ypt, eta;
+    float da0, da1, da2, da3;
+    float u0, u1, u2, u3;
+    float Edec, Tdec, Pdec;
+    float Bn, muB, muS, muC;
+    float pi00, pi01, pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33;
+    float bulkPi;
+    float qmu0, qmu1, qmu2, qmu3;
+    std::vector<float> particle_mu_PCE;
 } FO_surf;
 
 typedef struct {

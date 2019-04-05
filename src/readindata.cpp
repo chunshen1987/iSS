@@ -970,7 +970,7 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle,
     }
 
     particletable >> Nstable_particle;
-    double *stable_particle_monval = new double[Nstable_particle];
+    std::vector<int> stable_particle_monval(Nstable_particle, 0);
     for (int i = 0; i < Nstable_particle; i++) {
         particletable >> Idummy >> stable_particle_monval[i];
         particletable.getline(cdummy, 256);
@@ -978,10 +978,7 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle,
     particletable.close();
 
     for (int k = 0; k < FO_length; k++) {
-        FOsurf_ptr[k].particle_mu_PCE = new double[Nparticle];
-        for (int ii = 0; ii < Nparticle; ii++) {
-            FOsurf_ptr[k].particle_mu_PCE[ii] = 0.0;
-        }
+        FOsurf_ptr[k].particle_mu_PCE.resize(Nparticle, 0.0);
     }
 
     // assign chemical potentials for stable particles
