@@ -42,4 +42,5 @@ int main(int argc, char** argv) {
     if (status == 0) {
         cout << "Program executed normally." << endl;
     }
+    return(0);
 }
