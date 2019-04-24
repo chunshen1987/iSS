@@ -26,7 +26,7 @@ class iSS {
 
     std::vector<particle_info> particle;
     
-    EmissionFunctionArray *efa;
+    std::unique_ptr<EmissionFunctionArray> efa;
 
     pretty_ostream messager;
 
