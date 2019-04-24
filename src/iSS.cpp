@@ -18,6 +18,10 @@ iSS::iSS(string path_in) {
 }
 
 iSS::~iSS() {
+    clear();
+}
+
+void iSS::clear() {
     FOsurf_ptr.clear();
     particle.clear();
     if (efa != nullptr) {

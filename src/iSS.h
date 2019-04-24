@@ -54,6 +54,8 @@ class iSS {
     iSS_Hadron get_hadron(int iev, int ipart) {
         return(efa->get_hadron(iev, ipart));
     };
+    
+    void clear();
 };
 
 
