@@ -13,16 +13,17 @@ iSS::iSS(string path_in) {
     path = path_in;
     flag_PCE = 0;
 
-    efa = nullptr;
     paraRdr_ptr = new ParameterReader;
 }
 
 iSS::~iSS() {
+    clear();
+    delete paraRdr_ptr;
+}
+
+void iSS::clear() {
     FOsurf_ptr.clear();
     particle.clear();
-    if (efa != nullptr) {
-        delete efa;
-    }
 }
 
 int iSS::shell() {
@@ -78,9 +79,9 @@ int iSS::generate_samples() {
     // Table eta_tab("tables/eta_gauss_table_30_full.dat");
 
     messager.info("Start computation and generating samples ...");
-    efa = new EmissionFunctionArray(ran_gen_ptr,
-            &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
-            particle, FOsurf_ptr, flag_PCE, paraRdr_ptr, path);
+    efa = std::unique_ptr<EmissionFunctionArray> (new EmissionFunctionArray(
+                ran_gen_ptr, &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
+                particle, FOsurf_ptr, flag_PCE, paraRdr_ptr, path));
     efa->shell();
 
     return(0);

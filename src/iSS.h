@@ -26,7 +26,7 @@ class iSS {
 
     std::vector<particle_info> particle;
     
-    EmissionFunctionArray *efa;
+    std::unique_ptr<EmissionFunctionArray> efa;
 
     pretty_ostream messager;
 
@@ -54,6 +54,8 @@ class iSS {
     iSS_Hadron get_hadron(int iev, int ipart) {
         return(efa->get_hadron(iev, ipart));
     };
+    
+    void clear();
 };
 
 
