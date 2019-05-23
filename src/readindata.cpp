@@ -409,10 +409,10 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             surf_elem.bulkPi = array[28]*hbarC;   // GeV/fm^3
 
             surf_elem.Bn   = array[29];             // 1/fm^3
-            surf_elem.qmu0 = array[30]*hbarC;
-            surf_elem.qmu1 = array[31]*hbarC;
-            surf_elem.qmu2 = array[32]*hbarC;
-            surf_elem.qmu3 = array[33]*hbarC;
+            surf_elem.qmu0 = array[30];
+            surf_elem.qmu1 = array[31];
+            surf_elem.qmu2 = array[32];
+            surf_elem.qmu3 = array[33];
         } else {
             getline(surfdat, input, '\n');
             stringstream ss(input);
@@ -470,10 +470,10 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
                 surf_elem.Bn = 0.0;
             }
             if (turn_on_diff == 1) {
-                ss >> dummy; surf_elem.qmu0 = dummy*hbarC;
-                ss >> dummy; surf_elem.qmu1 = dummy*hbarC;
-                ss >> dummy; surf_elem.qmu2 = dummy*hbarC;
-                ss >> dummy; surf_elem.qmu3 = dummy*hbarC;
+                ss >> surf_elem.qmu0;
+                ss >> surf_elem.qmu1;
+                ss >> surf_elem.qmu2;
+                ss >> surf_elem.qmu3;
             } else {
                 surf_elem.qmu0 = 0.0e0;
                 surf_elem.qmu1 = 0.0e0;
@@ -622,10 +622,10 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
             surf_elem.bulkPi = array[28]*hbarC;   // GeV/fm^3
 
             surf_elem.Bn   = array[29];             // 1/fm^3
-            surf_elem.qmu0 = array[30]*hbarC;
-            surf_elem.qmu1 = array[31]*hbarC;
-            surf_elem.qmu2 = array[32]*hbarC;
-            surf_elem.qmu3 = array[33]*hbarC;
+            surf_elem.qmu0 = array[30];
+            surf_elem.qmu1 = array[31];
+            surf_elem.qmu2 = array[32];
+            surf_elem.qmu3 = array[33];
         } else {
             // freeze out position
             surfdat >> surf_elem.tau;
@@ -676,10 +676,10 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
                 surf_elem.Bn = 0.0;
             }
             if (turn_on_diff == 1) {
-                surfdat >> dummy; surf_elem.qmu0 = dummy*hbarC;
-                surfdat >> dummy; surf_elem.qmu1 = dummy*hbarC;
-                surfdat >> dummy; surf_elem.qmu2 = dummy*hbarC;
-                surfdat >> dummy; surf_elem.qmu3 = dummy*hbarC;
+                surfdat >> surf_elem.qmu0;
+                surfdat >> surf_elem.qmu1;
+                surfdat >> surf_elem.qmu2;
+                surfdat >> surf_elem.qmu3;
             } else {
                 surf_elem.qmu0 = 0.0e0;
                 surf_elem.qmu1 = 0.0e0;
@@ -703,9 +703,9 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
         surf_i.u0 = sqrt(1. + surf_i.u1*surf_i.u1
                                  + surf_i.u2*surf_i.u2
                                  + surf_i.u3*surf_i.u3);
-        surf_i.qmu0 = ((  surf_i.u1*surf_i.qmu1
-                             + surf_i.u2*surf_i.qmu2
-                             + surf_i.u3*surf_i.qmu3)/surf_i.u0);
+        surf_i.qmu0 = ((surf_i.u1*surf_i.qmu1
+                        + surf_i.u2*surf_i.qmu2
+                        + surf_i.u3*surf_i.qmu3)/surf_i.u0);
         u_flow[0] = surf_i.u0;
         u_flow[1] = surf_i.u1;
         u_flow[2] = surf_i.u2;

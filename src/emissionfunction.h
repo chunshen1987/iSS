@@ -126,7 +126,7 @@ class EmissionFunctionArray {
     int deltaf_qmu_coeff_table_length_mu;
     double delta_qmu_coeff_table_T0, delta_qmu_coeff_table_mu0;
     double delta_qmu_coeff_table_dT, delta_qmu_coeff_table_dmu;
-    double **deltaf_qmu_coeff_tb;
+    double **deltaf_qmu_coeff_tb;       // kappa_B [1/fm^3]
 
     // arrays to speed up computing particle yield
     double sf_dx, sf_x_min, sf_x_max;
