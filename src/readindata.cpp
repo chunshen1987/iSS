@@ -24,7 +24,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
     turn_on_bulk = paraRdr->getVal("turn_on_bulk");
     turn_on_rhob = paraRdr->getVal("turn_on_rhob");
     turn_on_diff = paraRdr->getVal("turn_on_diff");
-    surface_in_binary = false;
+    surface_in_binary = true;
 
     if (mode == 1 || mode == 2) {
         // determine read in format in surface.dat from MUSIC simulation
@@ -56,8 +56,11 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
             if (temp_name == "freeze_surface_in_binary") {
                 int flag_b;
                 ss >> flag_b;
-                if (flag_b == 1)
+                if (flag_b == 1) {
                     surface_in_binary = true;
+                } else {
+                    surface_in_binary = false;
+                }
             }
         }
         configuration.close();
