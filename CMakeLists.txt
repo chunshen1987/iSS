@@ -1,6 +1,9 @@
 cmake_minimum_required (VERSION 3.4)
 project (iSS LANGUAGES CXX)
 
+set(lib_name "iSS")
+set(exe_name "iSS.e")
+
 # require C++11
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -13,18 +13,18 @@ set (SOURCES
   pretty_ostream.cpp
   )
 
-add_library(iSS_lib SHARED ${SOURCES})
+add_library(${lib_name} SHARED ${SOURCES})
 if (APPLE)
-    set_target_properties (iSS_lib PROPERTIES COMPILE_FLAGS "-DAPPLE")
+    set_target_properties (${lib_name} PROPERTIES COMPILE_FLAGS "-DAPPLE")
 endif (APPLE)
-target_link_libraries (iSS_lib ${LIBS} ${ZLIB_LIBRARIES})
+target_link_libraries (${lib_name} ${LIBS} ${ZLIB_LIBRARIES})
 
-add_executable(iSS.e main.cpp)
+add_executable(${exe_name} main.cpp)
 if (APPLE)
-    set_target_properties (iSS.e PROPERTIES COMPILE_FLAGS "-DAPPLE")
+    set_target_properties (${exe_name} PROPERTIES COMPILE_FLAGS "-DAPPLE")
 endif (APPLE)
-target_link_libraries (iSS.e iSS_lib ${LIBS} ${ZLIB_LIBRARIES})
-install(TARGETS iSS.e iSS_lib
+target_link_libraries (${exe_name} ${lib_name} ${LIBS} ${ZLIB_LIBRARIES})
+install(TARGETS ${exe_name} ${lib_name}
         RUNTIME DESTINATION ${CMAKE_HOME_DIRECTORY}
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib/static)
