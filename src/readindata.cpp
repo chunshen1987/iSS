@@ -33,8 +33,9 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
         config_file << path << "/music_input";
         ifstream configuration(config_file.str().c_str());
         if (!configuration.is_open()) {
-            messager << "read_FOdata::read_FOdata: can not find configuration file"
-                     << " " << config_file.str();
+            messager << "read_FOdata::read_FOdata: "
+                     << "can not find configuration file "
+                     << config_file.str();
             messager.flush("error");
             exit(1);
         }
