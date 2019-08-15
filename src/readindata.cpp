@@ -605,13 +605,13 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
             surf_elem.u2  = array[10];
             surf_elem.u3  = array[11];
 
-            surf_elem.Edec = array[12]*hbarC;   
+            surf_elem.Edec = array[12]*hbarC;
             surf_elem.Tdec = array[13]*hbarC;
             surf_elem.muB  = array[14]*hbarC;
             surf_elem.muS  = array[15]*hbarC;
             surf_elem.muC  = array[16]*hbarC;
             surf_elem.Pdec = array[17]*surf_elem.Tdec - surf_elem.Edec;
-            
+
             surf_elem.pi00 = array[18]*hbarC;  // GeV/fm^3
             surf_elem.pi01 = array[19]*hbarC;  // GeV/fm^3
             surf_elem.pi02 = array[20]*hbarC;  // GeV/fm^3

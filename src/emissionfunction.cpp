@@ -2701,25 +2701,29 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
     } else {
         for (unsigned int iev = 0; iev < Hadron_list->size(); iev++) {
             int total_number_of_particles = (*Hadron_list)[iev]->size();
-            // sub-header for each event
-            oscar << setw(10) << iev << "  " 
-                  << setw(10) << total_number_of_particles << "  " 
-                  << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
-            for (int ipart = 0; ipart < total_number_of_particles; ipart++) {
-                oscar << setw(10) << ipart + 1 << "  "
-                      << setw(10) << (*(*Hadron_list)[iev])[ipart].pid << "  ";
-                sprintf(line_buffer, 
-                        "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e",
-                        (*(*Hadron_list)[iev])[ipart].px,
-                        (*(*Hadron_list)[iev])[ipart].py,
-                        (*(*Hadron_list)[iev])[ipart].pz,
-                        (*(*Hadron_list)[iev])[ipart].E,
-                        (*(*Hadron_list)[iev])[ipart].mass,
-                        (*(*Hadron_list)[iev])[ipart].x,
-                        (*(*Hadron_list)[iev])[ipart].y,
-                        (*(*Hadron_list)[iev])[ipart].z,
-                        (*(*Hadron_list)[iev])[ipart].t);
-                oscar << line_buffer << endl;
+            if (total_number_of_particles > 0) {
+                // sub-header for each event
+                oscar << setw(10) << iev << "  " 
+                      << setw(10) << total_number_of_particles << "  " 
+                      << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
+                for (int ipart = 0; ipart < total_number_of_particles;
+                     ipart++) {
+                    oscar << setw(10) << ipart + 1 << "  "
+                          << setw(10) << (*(*Hadron_list)[iev])[ipart].pid
+                          << "  ";
+                    sprintf(line_buffer, 
+                            "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e",
+                            (*(*Hadron_list)[iev])[ipart].px,
+                            (*(*Hadron_list)[iev])[ipart].py,
+                            (*(*Hadron_list)[iev])[ipart].pz,
+                            (*(*Hadron_list)[iev])[ipart].E,
+                            (*(*Hadron_list)[iev])[ipart].mass,
+                            (*(*Hadron_list)[iev])[ipart].x,
+                            (*(*Hadron_list)[iev])[ipart].y,
+                            (*(*Hadron_list)[iev])[ipart].z,
+                            (*(*Hadron_list)[iev])[ipart].t);
+                    oscar << line_buffer << endl;
+                }
             }
         }
     }
@@ -3223,7 +3227,7 @@ int EmissionFunctionArray::compute_number_of_sampling_needed(
     if (hydro_mode == 2) {
         nev_needed *= 10;
     }
-    if (nev_needed < 1) nev_needed = 1;
+    nev_needed = std::max(1, std::min(10000, nev_needed));
     return(nev_needed);
 }
 
