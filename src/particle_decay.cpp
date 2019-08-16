@@ -36,7 +36,7 @@ int particle_decay::read_resonances_list() {
     resofile >> particle_monval;
     while (!resofile.eof()) {
         // add one resonance
-        particle_decay_info *temp_resonance = new particle_decay_info;
+        particle_info *temp_resonance = new particle_info;
         temp_resonance->monval = particle_monval;
         resofile >> temp_resonance->name;
         resofile >> temp_resonance->mass;
@@ -73,7 +73,7 @@ int particle_decay::read_resonances_list() {
 
         if (temp_resonance->baryon == 1) {
             // add anti-particle entry for baryon
-            particle_decay_info *temp_anti_resonance = new particle_decay_info;
+            particle_info *temp_anti_resonance = new particle_info;
             temp_anti_resonance->monval = -temp_resonance->monval;
             ostringstream antiname;
             antiname << "Anti-" << temp_resonance->name;
@@ -248,7 +248,7 @@ int particle_decay::get_particle_strange_number(int monval) {
 //! This is a shell function to perform resonance decays
 void particle_decay::perform_decays(
             iSS_Hadron *mother, vector<iSS_Hadron>* daughter_list) {
-    particle_decay_info* mother_decay_info = NULL;
+    particle_info* mother_decay_info = NULL;
     for (unsigned int i = 0; i < resonance_table.size(); i++) {
         if (mother->pid == resonance_table[i]->monval) {
             mother_decay_info = resonance_table[i];

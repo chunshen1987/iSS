@@ -11,7 +11,7 @@
 
 class particle_decay {
  private:
-    std::vector<particle_decay_info*> resonance_table;
+    std::vector<particle_info*> resonance_table;
     std::weak_ptr<RandomUtil::Random> ran_gen_ptr;
 
  public:

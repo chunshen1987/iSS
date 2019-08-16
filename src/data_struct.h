@@ -56,24 +56,6 @@ typedef struct {
 } FO_surf;
 
 
-typedef struct {
-    int monval;     // Monte Carlo number according PDG
-    std::string name;
-    double mass;
-    double width;
-    int gspin;      // spin degeneracy
-    int baryon;
-    int strange;
-    int charm;
-    int bottom;
-    int gisospin;   // isospin degeneracy
-    int charge;
-    int decays;     // amount of decays listed for this resonance
-    int stable;     // defines whether this particle is considered as stable
-    std::vector<decay_channel_info*> decay_channels;
-    int sign;                   // Bose-Einstein or Dirac-Fermi statistics
-} particle_decay_info;
-
 struct iSS_Hadron {
      int pid;
      double mass;

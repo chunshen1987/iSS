@@ -928,11 +928,11 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
         local_i++;   // Add one to the counting variable "i" for the meson/baryon
     }
     for (auto &particle_i: particle) {
-       if (particle_i.baryon == 0) {
-          particle_i.sign = -1;
-       } else {
-          particle_i.sign=1;
-       }
+        if (particle_i.baryon == 0) {
+            particle_i.sign = -1;
+        } else {
+            particle_i.sign=1;
+        }
     }
     cout << "done." << endl;
     return(particle.size());
