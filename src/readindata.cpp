@@ -837,18 +837,20 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
         resofile >> particle_i.charge;
         resofile >> particle_i.decays;
         for (int j = 0; j < particle_i.decays; j++) {
+            decay_channel_info *temp_decay_channel = new decay_channel_info;
             resofile >> dummy_int;
-            resofile >> particle_i.decays_Npart[j];
-            resofile >> particle_i.decays_branchratio[j];
-            resofile >> particle_i.decays_part[j][0];
-            resofile >> particle_i.decays_part[j][1];
-            resofile >> particle_i.decays_part[j][2];
-            resofile >> particle_i.decays_part[j][3];
-            resofile >> particle_i.decays_part[j][4];
+            resofile >> temp_decay_channel->decay_Npart;
+            resofile >> temp_decay_channel->branching_ratio;
+            resofile >> temp_decay_channel->decay_part[0];
+            resofile >> temp_decay_channel->decay_part[1];
+            resofile >> temp_decay_channel->decay_part[2];
+            resofile >> temp_decay_channel->decay_part[3];
+            resofile >> temp_decay_channel->decay_part[4];
+            particle_i.decay_channels.push_back(temp_decay_channel);
         }
 
         //decide whether particle is stable under strong interactions
-        if (particle_i.decays_Npart[0] == 1) {
+        if (particle_i.decay_channels[0]->decay_Npart == 1) {
             particle_i.stable = 1;
         } else {
             particle_i.stable = 0;
@@ -880,39 +882,43 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
             particle_j.decays = particle_i.decays;
             particle_j.stable = particle_i.stable;
             for (int j = 0; j < particle_j.decays; j++) {
-                particle_j.decays_Npart[j] = particle_i.decays_Npart[j];
-                particle_j.decays_branchratio[j] = 
-                                       particle_i.decays_branchratio[j];
-                for (int k = 0; k < Maxdecaypart; k++) {
-                    if (particle_i.decays_part[j][k] == 0) {
-                        particle_j.decays_part[j][k] = (
-                                       particle_i.decays_part[j][k]);
+                decay_channel_info *temp_anti_decay_channel = (
+                                                    new decay_channel_info);
+                temp_anti_decay_channel->decay_Npart = (
+                        particle_i.decay_channels[j]->decay_Npart);
+                temp_anti_decay_channel->branching_ratio =
+                        particle_i.decay_channels[j]->branching_ratio;
+                for (int k = 0; k < 5; k++) {
+                    if (particle_i.decay_channels[j]->decay_part[k] == 0) {
+                        particle_j.decay_channels[j]->decay_part[k] = (
+                                particle_i.decay_channels[j]->decay_part[k]);
                     } else {
                         int idx; 
                         // find the index for decay particle
                         for (idx = 0; idx < local_i; idx++) {
-                           if (particle[idx].monval 
-                                  == particle_i.decays_part[j][k]) {
-                              break;
-                           }
+                            if (particle[idx].monval
+                                == particle_i.decay_channels[j]->decay_part[k]) {
+                                break;
+                            }
                         }
-                        if (idx == local_i && particle_i.stable == 0 
-                             && particle_i.decays_branchratio[j] > eps) {
+                        if (idx == local_i && particle_i.stable == 0
+                            && particle_i.decay_channels[j]->branching_ratio > eps) {
                             messager << "Can not find decay particle index for "
                                      << "anti-baryon!";
                             messager.flush("error");
-                            messager << "particle monval : " 
-                                     << particle_i.decays_part[j][k];
+                            messager << "particle monval : "
+                                     << particle_i.decay_channels[j]->decay_part[k];
                             messager.flush("error");
                             exit(1);
                         }
-                        if (particle[idx].baryon == 0 && particle[idx].charge == 0 
+                        if (particle[idx].baryon == 0
+                            && particle[idx].charge == 0
                             && particle[idx].strange == 0) {
-                            particle_j.decays_part[j][k] = (
-                                           particle_i.decays_part[j][k]);
+                            particle_j.decay_channels[j]->decay_part[k] = (
+                                particle_i.decay_channels[j]->decay_part[k]);
                         } else {
-                            particle_j.decays_part[j][k] = (
-                                           - particle_i.decays_part[j][k]);
+                            particle_j.decay_channels[j]->decay_part[k] = (
+                                - particle_i.decay_channels[j]->decay_part[k]);
                         }
                     }
                 }
@@ -1002,14 +1008,16 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle,
     for (int i = 0; i < Nparticle; i++) {
         if (particle[i].stable == 0) {
             for (int j = 0; j < particle[i].decays; j++) {
-                for (int k = 0; k < std::abs(particle[i].decays_Npart[j]); k++) {
+                for (int k = 0;
+                     k < std::abs(particle[i].decay_channels[j]->decay_Npart);
+                     k++) {
                     for (int l = 0; l < Nparticle; l++) {
-                        if (particle[i].decays_part[j][k]
+                        if (particle[i].decay_channels[j]->decay_part[k]
                             == particle[l].monval) {
                             for (int m = 0; m < FO_length; m++)
                                 FOsurf_ptr[m].particle_mu_PCE[i] += (
-                                            particle[i].decays_branchratio[j]
-                                            *FOsurf_ptr[m].particle_mu_PCE[l]);
+                                    particle[i].decay_channels[j]->branching_ratio
+                                    *FOsurf_ptr[m].particle_mu_PCE[l]);
                             break;
                         }
                         if (l == Nparticle-1) {

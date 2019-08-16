@@ -8,14 +8,21 @@
 const double hbarC=0.197327053;  //GeV*fm
 
 const int Maxparticle=500;            //size of array for storage of the particles
-const int Maxdecaychannel=20;
-const int Maxdecaypart=5;
 const std::string table_path="iSS_tables";
+
 
 namespace iSS_data {
     typedef std::array<double, 4> Vec4;
     typedef std::array<double, 10> ViscousVec;
 }
+
+
+typedef struct {
+    int decay_Npart;
+    double branching_ratio;
+    int decay_part[5];
+} decay_channel_info;
+
 
 typedef struct {
     int monval;     // Monte Carlo number according PDG
@@ -31,11 +38,10 @@ typedef struct {
     int charge;
     int decays;     // amount of decays listed for this resonance
     int stable;     // defines whether this particle is considered as stable
-    int decays_Npart[Maxdecaychannel];
-    double decays_branchratio[Maxdecaychannel];
-    int decays_part[Maxdecaychannel][Maxdecaypart];
+    std::vector<decay_channel_info*> decay_channels;
     int sign;                   // Bose-Einstein or Dirac-Fermi statistics
 } particle_info;
+
 
 typedef struct {
     float tau, xpt, ypt, eta;
@@ -49,11 +55,6 @@ typedef struct {
     std::vector<float> particle_mu_PCE;
 } FO_surf;
 
-typedef struct {
-    int decay_Npart;
-    double branching_ratio;
-    int decay_part[5];
-} decay_channel_info;
 
 typedef struct {
     int monval;     // Monte Carlo number according PDG
