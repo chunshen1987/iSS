@@ -6,8 +6,6 @@
 #include <vector>
 
 const double hbarC=0.197327053;  //GeV*fm
-
-const int Maxparticle=500;            //size of array for storage of the particles
 const std::string table_path="iSS_tables";
 
 

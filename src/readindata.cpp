@@ -889,39 +889,44 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
                 temp_anti_decay_channel->branching_ratio =
                         particle_i.decay_channels[j]->branching_ratio;
                 for (int k = 0; k < 5; k++) {
-                    if (particle_i.decay_channels[j]->decay_part[k] == 0) {
-                        particle_j.decay_channels[j]->decay_part[k] = (
-                                particle_i.decay_channels[j]->decay_part[k]);
+                    int decay_part_monval = (
+                            particle_i.decay_channels[j]->decay_part[k]);
+                    if (decay_part_monval == 0) {
+                        // a null entry
+                        temp_anti_decay_channel->decay_part[k] = 0;
                     } else {
-                        int idx; 
-                        // find the index for decay particle
+                        // find the index for decay particle in the
+                        // current resonance table
+                        int idx;
                         for (idx = 0; idx < local_i; idx++) {
-                            if (particle[idx].monval
-                                == particle_i.decay_channels[j]->decay_part[k]) {
+                            if (particle[idx].monval == decay_part_monval) {
                                 break;
                             }
                         }
+                        double temp_br = (
+                            particle_i.decay_channels[j]->branching_ratio);
                         if (idx == local_i && particle_i.stable == 0
-                            && particle_i.decay_channels[j]->branching_ratio > eps) {
+                            && temp_br > eps) {
                             messager << "Can not find decay particle index for "
                                      << "anti-baryon!";
                             messager.flush("error");
                             messager << "particle monval : "
-                                     << particle_i.decay_channels[j]->decay_part[k];
+                                     << decay_part_monval;
                             messager.flush("error");
                             exit(1);
                         }
                         if (particle[idx].baryon == 0
                             && particle[idx].charge == 0
                             && particle[idx].strange == 0) {
-                            particle_j.decay_channels[j]->decay_part[k] = (
+                            temp_anti_decay_channel->decay_part[k] = (
                                 particle_i.decay_channels[j]->decay_part[k]);
                         } else {
-                            particle_j.decay_channels[j]->decay_part[k] = (
+                            temp_anti_decay_channel->decay_part[k] = (
                                 - particle_i.decay_channels[j]->decay_part[k]);
                         }
                     }
                 }
+                particle_j.decay_channels.push_back(temp_anti_decay_channel);
             }
             particle.push_back(particle_j);
         }

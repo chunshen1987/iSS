@@ -91,11 +91,11 @@ int particle_decay::read_resonances_list() {
             temp_anti_resonance->stable = temp_resonance->stable;
             for (int j = 0; j < temp_resonance->decays; j++) {
                 // add anti-particle decay channels
-                decay_channel_info *temp_anti_decay_channel =
-                                                    new decay_channel_info;
-                temp_anti_decay_channel->decay_Npart = 
+                decay_channel_info *temp_anti_decay_channel = (
+                                                    new decay_channel_info);
+                temp_anti_decay_channel->decay_Npart =
                         temp_resonance->decay_channels[j]->decay_Npart;
-                temp_anti_decay_channel->branching_ratio = 
+                temp_anti_decay_channel->branching_ratio =
                         temp_resonance->decay_channels[j]->branching_ratio;
                 for (int k = 0; k < 5; k++) {
                     int decay_part_monval =

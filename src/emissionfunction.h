@@ -29,12 +29,12 @@ class EmissionFunctionArray {
     int flag_PCE;
     int flag_restrict_deltaf;
     double deltaf_max_ratio;
-    
+
     pretty_ostream messager;
 
     std::string path;
 
-    std::weak_ptr<RandomUtil::Random> ran_gen_ptr;
+    std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
 
     int MC_sampling;
     int number_of_repeated_sampling;
