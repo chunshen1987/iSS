@@ -8,7 +8,6 @@
 const double hbarC=0.197327053;  //GeV*fm
 const std::string table_path="iSS_tables";
 
-
 namespace iSS_data {
     typedef std::array<double, 4> Vec4;
     typedef std::array<double, 10> ViscousVec;
