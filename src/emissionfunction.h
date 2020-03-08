@@ -245,8 +245,8 @@ class EmissionFunctionArray {
         return((*(*Hadron_list)[iev])[ipart]);
     };
 
-    std::vector<iSS_Hadron> get_hadron_list_iev(const int iev) {
-        return((*(*Hadron_list)[iev]));
+    std::vector<iSS_Hadron>* get_hadron_list_iev(const int iev) {
+        return(Hadron_list->at(iev));
     }
 
     void perform_resonance_feed_down(
