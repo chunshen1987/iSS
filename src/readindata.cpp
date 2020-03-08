@@ -15,7 +15,12 @@
 #include "ParameterReader.h"
 #include "Table.h"
 
-using namespace std;
+using std::cout;
+using std::endl;
+using std::string;
+using std::ostringstream;
+using iSS_data::table_path;
+using iSS_data::hbarC;
 
 read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
     paraRdr = paraRdr_in;
@@ -31,7 +36,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
         messager.info("read in hyper-surface from MUSIC simulations ...");
         ostringstream config_file;
         config_file << path_ << "/music_input";
-        ifstream configuration(config_file.str().c_str());
+        std::ifstream configuration(config_file.str().c_str());
         if (!configuration.is_open()) {
             messager << "read_FOdata::read_FOdata: "
                      << "can not find configuration file "
@@ -43,7 +48,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
         string temp_name;
         while (!configuration.eof()) {
             getline(configuration, temp1);
-            stringstream ss(temp1);
+            std::stringstream ss(temp1);
             ss >> temp_name;
             if (temp_name == "Include_Bulk_Visc_Yes_1_No_0") {
                 ss >> turn_on_bulk;
@@ -136,7 +141,7 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
     int count = 0;
     float temp = 0.;
     while(surface_file) {
-        surface_file.read((char*) &temp, sizeof(float));
+        surface_file.read(reinterpret_cast<char*>(&temp), sizeof(float));
         count++;
     }
     int counted_line = count/34;
@@ -162,19 +167,19 @@ void read_FOdata::read_in_chemical_potentials(
     int N_stableparticle;
     Table mu_table;
     if (mode == 0) {      // VISH2+1 output
-        ifstream particletable(table_path + "/EOS_particletable.dat");
+        std::ifstream particletable(table_path + "/EOS_particletable.dat");
         particletable >> N_stableparticle;
         particletable.close();
     } else if (mode == 1 || mode == 2) {   // music output
         // determine the type of the EOS
         ostringstream config_file;
         config_file << path_ << "/music_input";
-        ifstream configuration(config_file.str().c_str());
+        std::ifstream configuration(config_file.str().c_str());
         string temp1;
         string temp_name;
         while (!configuration.eof()) {
             getline(configuration, temp1);
-            stringstream ss(temp1);
+            std::stringstream ss(temp1);
             ss >> temp_name;
             if (temp_name == "EOS_to_use") {
                 ss >> IEOS_music;
@@ -182,7 +187,7 @@ void read_FOdata::read_in_chemical_potentials(
             }
         }
         configuration.close();
-        ifstream particletable;
+        std::ifstream particletable;
         if (IEOS_music == 2) {       // s95p-v1
             N_stableparticle = 0;
         } else if (IEOS_music == 3) {  // s95p-v1-PCE150
@@ -226,7 +231,7 @@ void read_FOdata::read_in_chemical_potentials(
         }
     }
     if (mode == 10) {     // hydro_analysis output
-        ifstream particletable(table_path + "/EOS_particletable.dat");
+        std::ifstream particletable(table_path + "/EOS_particletable.dat");
         particletable >> N_stableparticle;
         particletable.close();
     }
@@ -266,11 +271,11 @@ void read_FOdata::read_decdat(std::vector<FO_surf> &surf_ptr) {
     cout <<" -- Read in information on freeze out surface...";
     ostringstream decdat_stream;
     decdat_stream << path_ << "/decdat2.dat";
-    ifstream decdat(decdat_stream.str().c_str());
+    std::ifstream decdat(decdat_stream.str().c_str());
     string input;
     getline(decdat, input, '\n');
     while (!decdat.eof()) {
-        stringstream ss(input);
+        std::stringstream ss(input);
 
         FO_surf surf_elem;
 
@@ -332,7 +337,7 @@ void read_FOdata::read_surfdat(std::vector<FO_surf> &surf_ptr) {
     double dummy;
     char rest_dummy[512];
     surfdat_stream << path_ << "/surface.dat";
-    ifstream surfdat(surfdat_stream.str().c_str());
+    std::ifstream surfdat(surfdat_stream.str().c_str());
     for (auto &surf_i: surf_ptr) {
         surfdat >> dummy >> dummy;
         surfdat >> surf_i.xpt;
@@ -363,7 +368,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     double temp_tau, temp_xpt, temp_ypt, temp_eta;
     int idx = 0;
     surfdat_stream << path_ << "/surface.dat";
-    ifstream surfdat;
+    std::ifstream surfdat;
     if (surface_in_binary) {
         surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);
     } else {
@@ -375,7 +380,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             float array[34];
             for (int ii = 0; ii < 34; ii++) {
                 float temp = 0.;
-                surfdat.read((char*)&temp, sizeof(float));
+                surfdat.read(reinterpret_cast<char*>(&temp), sizeof(float));
                 array[ii] = temp;
             }
             surf_elem.tau = array[0];
@@ -418,7 +423,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             surf_elem.qmu3 = array[33];
         } else {
             getline(surfdat, input, '\n');
-            stringstream ss(input);
+            std::stringstream ss(input);
 
             ss >> temp_tau >> temp_xpt >> temp_ypt >> temp_eta;
             // freeze out position
@@ -504,10 +509,10 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
   double temp_vx, temp_vy;
   int idx = 0;
   surfdat_stream << path_ << "/hyper_surface_2+1d.dat";
-  ifstream surfdat(surfdat_stream.str().c_str());
+  std::ifstream surfdat(surfdat_stream.str().c_str());
   getline(surfdat, input, '\n' );
   while (!surfdat.eof()) {
-     stringstream ss(input);
+     std::stringstream ss(input);
      ss >> temp_tau >> temp_xpt >> temp_ypt;
 
      FO_surf surf_elem;
@@ -576,7 +581,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
     ostringstream surfdat_stream;
     double dummy;
     surfdat_stream << path_ << "/surface.dat";
-    ifstream surfdat;
+    std::ifstream surfdat;
     if (surface_in_binary) {
         surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);
     } else {
@@ -588,7 +593,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
             float array[34];
             for (int i = 0; i < 34; i++) {
                 float temp = 0.;
-                surfdat.read((char*)&temp, sizeof(float));
+                surfdat.read(reinterpret_cast<char*>(&temp), sizeof(float));
                 array[i] = temp;
             }
             surf_elem.tau = array[0];
@@ -751,7 +756,7 @@ void read_FOdata::read_decdat_mu(int FO_length, int N_stable,
   ostringstream decdat_mu_stream;
   double dummy;
   decdat_mu_stream << path_ << "/decdat_mu.dat";
-  ifstream decdat_mu(decdat_mu_stream.str().c_str());
+  std::ifstream decdat_mu(decdat_mu_stream.str().c_str());
 
   //For backward compatibility: decdat_mu.dat can be one line or FO_length lines
   for(int j=0; j<FO_length; j++)
@@ -817,7 +822,7 @@ void read_FOdata::read_chemical_potentials_music(
 int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
     double eps = 1e-15;
     cout << " -- Read in particle resonance decay table...";
-    ifstream resofile(table_path + "/pdg.dat");
+    std::ifstream resofile(table_path + "/pdg.dat");
     int local_i = 0;
     int dummy_int;
     while (!resofile.eof()) {
@@ -952,7 +957,7 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle,
     char cdummy[256];
     cout << " -- Read particle table and calculating chemical potential "
          << "for particles..." << endl;
-    ifstream particletable;
+    std::ifstream particletable;
     if (mode == 0) {
         particletable.open(table_path + "/EOS_particletable.dat");
     } else if (mode == 1 || mode == 2) {

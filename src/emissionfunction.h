@@ -191,23 +191,17 @@ class EmissionFunctionArray {
     // where samples, its control informations, and its "format file" 
     // are stored; 
     // the first two can contain a "%d" string to generate multiple files
-    std::string samples_filename;
-    std::string samples_control_filename, samples_format_filename; 
+    std::string samples_format_filename;
 
     // First sampling method
     void sample_using_dN_dxtdetady_smooth_pT_phi();
     void calculate_dN_dtau_using_dN_dxtdetady(
                     double tau0 = 0, double dtau = 0.5, double tau_max = 17);
-    std::string dN_dtau_filename;
     void calculate_dN_dphi_using_dN_pTdpTdphidy();
-    std::string dN_dphi_filename;
     void calculate_dN_deta_using_dN_dxtdetady();
-    std::string dN_deta_filename;
     void calculate_dN_dxt_using_dN_dxtdetady();
-    std::string dN_dxt_filename;
     void calculate_dN_dx_using_dN_dxtdetady(
                     double x_min, double x_max, double dx);
-    std::string dN_dx_filename;
 
     // Second sampling method
     void calculate_dN_analytic(const particle_info* particle, double mu,

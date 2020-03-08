@@ -30,7 +30,7 @@ particle_decay::~particle_decay() {
 int particle_decay::read_resonances_list() {
     double eps = 1e-15;
     cout << " -- Read in particle resonance decay table..." << endl;
-    ifstream resofile(table_path + "/pdg.dat");
+    ifstream resofile(iSS_data::table_path + "/pdg.dat");
     int dummy_int;
     int particle_monval;
     resofile >> particle_monval;

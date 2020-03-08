@@ -22,9 +22,9 @@ class ParameterReader
   public:
     ParameterReader();
     ~ParameterReader();
-    void phraseOneLine(string str, string commentSymbol=(string)("#")); // read and phrase one setting string like "x=1"
-    void readFromFile(string filename, string commentSymbol=(string)("#")); // read in parameters from a file
-    void readFromArguments(long argc, char * argv[], string commentSymbol=(string)("#"), long start_from=1); // read in parameter from argument list. The process starts with index="start_from".
+    void phraseOneLine(string str, string commentSymbol=static_cast<string>("#")); // read and phrase one setting string like "x=1"
+    void readFromFile(string filename, string commentSymbol=static_cast<string>("#")); // read in parameters from a file
+    void readFromArguments(long argc, char * argv[], string commentSymbol=static_cast<string>("#"), long start_from=1); // read in parameter from argument list. The process starts with index="start_from".
     bool exist(string name); // check if parameter with "name" exists
     void setVal(string name, double value); // set the parameter with "name" to value "value"
     double getVal(string name); // return the value for parameter with "name"

@@ -40,6 +40,8 @@ using std::vector;
 using std::ofstream;
 using std::ifstream;
 using std::setw;
+using iSS_data::hbarC;
+using iSS_data::table_path;
 
 // Class EmissionFunctionArray ------------------------------------------
 //***************************************************************************
@@ -203,8 +205,6 @@ EmissionFunctionArray::EmissionFunctionArray(
     // for flow calculation
     flow_differential_filename_old = path + "/v2data.dat";
     flow_integrated_filename_old = path + "/v2data-inte.dat";
-    flow_differential_filename = path + "/thermal_%d_vndata.dat";
-    flow_integrated_filename = path + "/thermal_%d_integrated_vndata.dat";
     last_particle_idx = -1;
 
     // pre-calculate variables
@@ -237,17 +237,7 @@ EmissionFunctionArray::EmissionFunctionArray(
         }
     }
     //cout << "done" << endl;
-
-    samples_filename = path + "/samples_%d.dat";
-    samples_control_filename = path + "/samples_control_%d.dat";
     samples_format_filename = path + "/samples_format.dat";
-
-    dN_dtau_filename = path + "/dN_dtau_%d.dat";
-    dN_dphi_filename = path + "/dN_dphi_%d.dat";
-    dN_deta_filename = path + "/dN_deta_%d.dat";
-    dN_dxt_filename = path + "/dN_dxt_%d.dat";
-    dN_dx_filename = path + "/dN_dx_%d.dat";
-
     OSCAR_header_filename = table_path + "/OSCAR_header.txt";
     OSCAR_output_filename = "OSCAR.DAT";
 
@@ -315,7 +305,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     // create arrays for special functions who are needed to compute 
     // particle yields
     initialize_special_function_arrays();
-  
+
 }
 //***************************************************************************
 
@@ -613,7 +603,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
 
       }
       if (AMOUNT_OF_OUTPUT>0)
-          print_progressbar((double)(l)/progress_total);
+          print_progressbar(static_cast<double>(l)/progress_total);
   }
   if (AMOUNT_OF_OUTPUT>0)
       print_progressbar(1);
@@ -881,7 +871,7 @@ void EmissionFunctionArray::write_dN_dxtdetady_toFile()
 
 //***************************************************************************
 void EmissionFunctionArray::calculate_flows(
-    int to_order, string flow_differential_filename_in, 
+    int to_order, string flow_differential_filename_in,
     string flow_integrated_filename_in)
 // Calculate flow from order from_order to to_order and store them to files.
 {
@@ -1194,18 +1184,19 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(
         if (calculate_dN_dphi)
             calculate_dN_dphi_using_dN_pTdpTdphidy();
 
-        char buffer_diff[500], buffer_inte[500];
-        sprintf(buffer_diff, flow_differential_filename.c_str(), monval);
-        remove(buffer_diff);
-        sprintf(buffer_inte, flow_integrated_filename.c_str(), monval);
-        remove(buffer_inte);
-        calculate_flows(to_order, buffer_diff, buffer_inte);
+        std::stringstream filename_diff, filename_inte;
+        filename_diff << path << "/thermal_" << monval << "_vndata.dat";
+        remove(filename_diff.str().c_str());
+        filename_inte << path << "/thermal_" << monval
+                      << "_integrated__vndata.dat";
+        remove(filename_inte.str().c_str());
+        calculate_flows(to_order, filename_diff.str(), filename_inte.str());
     }
 
     // write out dN / (ptdpt dphi dy) matrices
     remove(dN_pTdpTdphidy_filename.c_str());
     ofstream of(dN_pTdpTdphidy_filename.c_str(), std::ios_base::app);
-    Table zero(dN_pTdpTdphidy->getNumberOfCols(), 
+    Table zero(dN_pTdpTdphidy->getNumberOfCols(),
                dN_pTdpTdphidy->getNumberOfRows(), 0);
     for (int n=0; n<Nparticles; n++)
     {
@@ -1315,18 +1306,17 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
 
     // prepare for outputs
     // the control file records how many particles are there in each sampling
-    char samples_control_filename_buffer[300];
-    sprintf(samples_control_filename_buffer, samples_control_filename.c_str(), 
-            particle->monval);
-    remove(samples_control_filename_buffer);
-    ofstream of_control(samples_control_filename_buffer);
+    std::stringstream samples_control_filename;
+    samples_control_filename << path << "/samples_control_"
+                             << particle->monval << ".dat";
+    remove(samples_control_filename.str().c_str());
+    ofstream of_control(samples_control_filename.str().c_str());
 
     // the sample file contains the actual samples
-    char samples_filename_buffer[300];
-    sprintf(samples_filename_buffer, samples_filename.c_str(), 
-            particle->monval);
-    remove(samples_filename_buffer);
-    ofstream of_sample(samples_filename_buffer);
+    std::stringstream samples_filename;
+    samples_filename << path << "/samples_" << particle->monval << ".dat";
+    remove(samples_filename.str().c_str());
+    ofstream of_sample(samples_filename.str().c_str());
 
     // buffers are used to speed up the output process
     char line_buffer[500]; // only used in text mode
@@ -1572,7 +1562,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
             }
         }
         if (AMOUNT_OF_OUTPUT>0)
-            print_progressbar((double)(sampling_idx)
+            print_progressbar(static_cast<double>(sampling_idx)
                                       /number_of_repeated_sampling);
     }
     // flushing buffers
@@ -1756,18 +1746,17 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
 
     // prepare for outputs
     // the control file records how many particles are there in each sampling
-    char samples_control_filename_buffer[300];
-    sprintf(samples_control_filename_buffer, samples_control_filename.c_str(), 
-            particle->monval);
-    remove(samples_control_filename_buffer);
-    ofstream of_control(samples_control_filename_buffer);
+    std::stringstream samples_control_filename;
+    samples_control_filename << path << "/samples_control_"
+                             << particle->monval << ".dat";
+    remove(samples_control_filename.str().c_str());
+    ofstream of_control(samples_control_filename.str().c_str());
 
     // the sample file contains the actual samples
-    char samples_filename_buffer[300];
-    sprintf(samples_filename_buffer, samples_filename.c_str(), 
-            particle->monval);
-    remove(samples_filename_buffer);
-    ofstream of_sample(samples_filename_buffer);
+    std::stringstream samples_filename;
+    samples_filename << path << "/samples_" << particle->monval << ".dat";
+    remove(samples_filename.str().c_str());
+    ofstream of_sample(samples_filename.str().c_str());
 
     // buffers are used to speed up the output process
     char line_buffer[500]; // only used in text mode
@@ -2086,7 +2075,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
 
         }
         if (AMOUNT_OF_OUTPUT > 0) {
-            print_progressbar((double)(sampling_idx)
+            print_progressbar(static_cast<double>(sampling_idx)
                                       /number_of_repeated_sampling);
         }
     }
@@ -2354,13 +2343,12 @@ void EmissionFunctionArray::calculate_dN_dtau_using_dN_dxtdetady(
 
     // average them and output
     const particle_info* particle = &particles[last_particle_idx];
-    char dN_dtau_filename_buffer[300];
-    sprintf(dN_dtau_filename_buffer, dN_dtau_filename.c_str(), 
-            particle->monval);
-    ofstream of(dN_dtau_filename_buffer);
+    std::stringstream dN_dtau_filename;
+    dN_dtau_filename << path << "/dN_dtau_" << particle->monval << ".dat";
+    ofstream of(dN_dtau_filename.str().c_str());
     for (long idx=0; idx<number_of_bins; idx++)
         formatedPrint(of, 4, tau0+(idx+0.5)*dtau, 
-                      sum_tau[idx]/(count[idx]+1e-30), sum_dN[idx]/dtau, 
+                      sum_tau[idx]/(count[idx]+1e-30), sum_dN[idx]/dtau,
                       count[idx]);
     of.close();
 
@@ -2425,9 +2413,9 @@ void EmissionFunctionArray::calculate_dN_dx_using_dN_dxtdetady(
 
     // average them and output
     const particle_info* particle = &particles[last_particle_idx];
-    char dN_dx_filename_buffer[300];
-    sprintf(dN_dx_filename_buffer, dN_dx_filename.c_str(), particle->monval);
-    ofstream of(dN_dx_filename_buffer);
+    std::stringstream dN_dx_filename;
+    dN_dx_filename << path << "/dN_dx_" << particle->monval << ".dat";
+    ofstream of(dN_dx_filename.str().c_str());
     for (long idx=0; idx<number_of_bins; idx++) 
         formatedPrint(of, 7, x_min+(idx+0.5)*dx, 
                       sum_x1[idx]/(count1[idx]+1e-30), sum_dN1[idx]/dx, 
@@ -2459,12 +2447,11 @@ void EmissionFunctionArray::calculate_dN_dphi_using_dN_pTdpTdphidy()
 
     // output
     const particle_info* particle = &particles[last_particle_idx];
-    char dN_dphi_filename_buffer[300];
-    sprintf(dN_dphi_filename_buffer, dN_dphi_filename.c_str(),
-            particle->monval);
-    ofstream of(dN_dphi_filename_buffer);
+    std::stringstream dN_dphi_filename;
+    dN_dphi_filename << path << "/dN_dphi_" << particle->monval << ".dat";
+    ofstream of(dN_dphi_filename.str().c_str());
     for (int j=0; j<phi_tab_length; j++)
-        formatedPrint(of, 3, phi_tab->get(1,j+1), dN_dphi[j], 
+        formatedPrint(of, 3, phi_tab->get(1,j+1), dN_dphi[j],
                       phi_tab->get(2,j+1));
     of.close();
 
@@ -2489,10 +2476,9 @@ void EmissionFunctionArray::calculate_dN_deta_using_dN_dxtdetady()
 
     // output
     const particle_info* particle = &particles[last_particle_idx];
-    char dN_deta_filename_buffer[300];
-    sprintf(dN_deta_filename_buffer, dN_deta_filename.c_str(),
-            particle->monval);
-    ofstream of(dN_deta_filename_buffer);
+    std::stringstream dN_deta_filename;
+    dN_deta_filename << path << "/dN_deta_" << particle->monval << ".dat";
+    ofstream of(dN_deta_filename.str().c_str());
     for (int k=0; k<y_minus_eta_tab_length; k++) 
         formatedPrint(of, 3, y_minus_eta_tab->get(1,k+1), dN_deta[k], 
                       dN_deta[k]*y_minus_eta_tab->get(2,k+1));
@@ -2514,11 +2500,11 @@ void EmissionFunctionArray::calculate_dN_dxt_using_dN_dxtdetady()
 
     // output
     const particle_info* particle = &particles[last_particle_idx];
-    char dN_dxt_filename_buffer[300];
-    sprintf(dN_dxt_filename_buffer, dN_dxt_filename.c_str(), particle->monval);
-    ofstream of(dN_dxt_filename_buffer);
+    std::stringstream dN_dxt_filename;
+    dN_dxt_filename << path << "/dN_dxt_" << particle->monval << ".dat";
+    ofstream of(dN_dxt_filename.str().c_str());
     for (long l=0; l<FO_length; l++)
-        formatedPrint(of, 2, (double)(l), dN_dxt[l]);
+        formatedPrint(of, 2, static_cast<double>(l), dN_dxt[l]);
     of.close();
 }
 
@@ -2638,25 +2624,28 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
         vector<ifstream*> controls(number_of_chosen_particles);
         vector<ifstream*> samples(number_of_chosen_particles);
         for (int m = 0; m < number_of_chosen_particles; m++) {
-            char filename_buffer[300];
             int monval = particles[chosen_particles_sampling_table[m]].monval;
             // control files first
-            sprintf(filename_buffer, samples_control_filename.c_str(), monval);
+            std::stringstream samples_control_filename;
+            samples_control_filename << path << "/samples_control_"
+                                     << monval << ".dat";
             controls[m] = new ifstream ;
-            controls[m]->open(filename_buffer);
+            controls[m]->open(samples_control_filename.str().c_str());
             if (!controls[m]->is_open()) {
-                cout << endl 
-                     << "combine_samples_to_OSCAR error: control file " 
-                     << filename_buffer << " not found." << endl;
+                cout << endl
+                     << "combine_samples_to_OSCAR error: control file "
+                     << samples_control_filename.str() << " not found."
+                     << endl;
                 exit(-1);
             }
-            sprintf(filename_buffer, samples_filename.c_str(), monval);
+            std::stringstream samples_filename;
+            samples_filename << path << "/samples_" << monval << ".dat";
             samples[m] = new ifstream ;
-            samples[m]->open(filename_buffer);
+            samples[m]->open(samples_filename.str().c_str());
             if (!samples[m]->is_open()) {
-                cout << endl 
-                     << "combine_samples_to_OSCAR error: sample file " 
-                     << filename_buffer << " not found." << endl;
+                cout << endl
+                     << "combine_samples_to_OSCAR error: sample file "
+                     << samples_filename.str() << " not found." << endl;
                 exit(-1);
             }
         }
@@ -2933,10 +2922,10 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
 
     if (static_cast<int>(paraRdr->getVal("output_dN_dxtdy_4all")) == 1) {
         Table to_write(dN_dxtdy_4all, FO_length, number_of_chosen_particles);
-        char dN_dxt_filename_buffer[300];
         // 0 means "all"
-        sprintf(dN_dxt_filename_buffer, dN_dxt_filename.c_str(), 0);
-        ofstream of(dN_dxt_filename_buffer);
+        std::stringstream dN_dxt_filename;
+        dN_dxt_filename << path << "/dN_dxt_0.dat";
+        ofstream of(dN_dxt_filename.str().c_str());
         to_write.printTable(of);
         of.close();
     }
@@ -3314,24 +3303,23 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         // prepare for outputs
         // the control file records how many particles are there
         // in each sampling
-        char samples_control_filename_buffer[300];
-        sprintf(samples_control_filename_buffer,
-                samples_control_filename.c_str(), particle->monval);
-        remove(samples_control_filename_buffer);
+        std::stringstream samples_control_filename;
+        samples_control_filename << path << "/samples_control_"
+                                 << particle->monval << ".dat";
+        remove(samples_control_filename.str().c_str());
         ofstream of_control;
         if (flag_output_samples_into_files == 1) {
-            of_control.open(samples_control_filename_buffer,
+            of_control.open(samples_control_filename.str().c_str(),
                             std::ofstream::out | std::ofstream::app);
         }
 
         // the sample file contains the actual samples
-        char samples_filename_buffer[300];
-        sprintf(samples_filename_buffer, samples_filename.c_str(),
-                particle->monval);
-        remove(samples_filename_buffer);
+        std::stringstream samples_filename;
+        samples_filename << path << "/samples_" << particle->monval << ".dat";
+        remove(samples_filename.str().c_str());
         ofstream of_sample;
         if (flag_output_samples_into_files == 1) {
-            of_sample.open(samples_filename_buffer,
+            of_sample.open(samples_filename.str().c_str(),
                            std::ofstream::out | std::ofstream::app);
         }
 
@@ -3786,7 +3774,7 @@ void EmissionFunctionArray::initialize_special_function_arrays() {
     sf_x_min = 0.5;
     sf_x_max = 400;
     sf_dx = 0.05;
-    sf_tb_length = (int)((sf_x_max - sf_x_min)/sf_dx) + 1;
+    sf_tb_length = static_cast<int>((sf_x_max - sf_x_min)/sf_dx) + 1;
     sf_bessel_Kn = new double* [sf_tb_length];
     if (INCLUDE_DIFFUSION_DELTAF == 1) {
         sf_expint_En = new double* [sf_tb_length];
@@ -3841,7 +3829,7 @@ double EmissionFunctionArray::get_special_function_K2(double arg) {
         }
         results = gsl_sf_bessel_Kn(2, arg);
     } else {
-        int idx = (int)((arg - sf_x_min)/sf_dx);
+        int idx = static_cast<int>((arg - sf_x_min)/sf_dx);
         double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
         results = ((1. - fraction)*sf_bessel_Kn[idx][1] 
                     + fraction*sf_bessel_Kn[idx+1][1]);
@@ -3860,7 +3848,7 @@ double EmissionFunctionArray::get_special_function_K1(double arg) {
         }
         results = gsl_sf_bessel_K1(arg);
     } else {
-        int idx = (int)((arg - sf_x_min)/sf_dx);
+        int idx = static_cast<int>((arg - sf_x_min)/sf_dx);
         double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
         results = ((1. - fraction)*sf_bessel_Kn[idx][0] 
                     + fraction*sf_bessel_Kn[idx+1][0]);
@@ -3882,7 +3870,7 @@ void EmissionFunctionArray::get_special_function_En(
             results[i] = gsl_sf_expint_En(2*i+2, arg);
         }
     } else {
-        int idx = (int)((arg - sf_x_min)/sf_dx);
+        int idx = static_cast<int>((arg - sf_x_min)/sf_dx);
         double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
         for (int i = 0; i < sf_expint_truncate_order-1; i++) {
             results[i] = ((1. - fraction)*sf_expint_En[idx][i] 
@@ -3903,7 +3891,7 @@ double EmissionFunctionArray::get_special_function_lambertW(double arg) {
         }
         results = gsl_sf_lambert_W0(arg);
     } else {
-        int idx = (int)((arg - lambert_x_min)/lambert_dx);
+        int idx = static_cast<int>((arg - lambert_x_min)/lambert_dx);
         double fraction = (arg - lambert_x_min - idx*lambert_dx)/lambert_dx;
         results = (1. - fraction)*lambert_W[idx] + fraction*lambert_W[idx+1];
     }

@@ -11,7 +11,7 @@ class Stopwatch
     Stopwatch() {start=clock(); end=0;}
     void tic() {start=clock();}
     void toc() {end=clock();}
-    double takeTime() {return (double)(end - start) / CLOCKS_PER_SEC;}
+    double takeTime() {return static_cast<double>(end - start) / CLOCKS_PER_SEC;}
 };
 
 #endif

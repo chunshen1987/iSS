@@ -8,7 +8,7 @@
 #ifndef Table_h
 #define Table_h
 
-
+double zq_global_invert_hook(double);
 class Table
 {
   private:

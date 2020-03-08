@@ -665,14 +665,14 @@ long binarySearch(vector<double>* A, double value, bool skip_out_of_range)
       cout << "binarySearch: desired value is too small, exceeding the beginning of table." << endl;
       exit(-1);
    }
-   idx = (int) floor((idx_f+idx_i)/2.);
+   idx = static_cast<int>(floor((idx_f+idx_i)/2.));
    while((idx_f-idx_i) > 1)
    {
      if((*A)[idx] < value)
         idx_i = idx;
      else
         idx_f = idx;
-     idx = (int) floor((idx_f+idx_i)/2.);
+     idx = static_cast<int>(floor((idx_f+idx_i)/2.));
    }
    return(idx_i);
 }
@@ -719,7 +719,7 @@ long double gamma_function(long double x)
     0.14e-14};
 
   if (x > 171.0) return 1e308;    // This value is an overflow flag.
-  if (x == (int)x) {
+  if (x == static_cast<int>(x)) {
     if (x > 0.0) {
       ga = 1.0;               // use factorial
       for (i=2;i<x;i++) {
@@ -732,7 +732,7 @@ long double gamma_function(long double x)
    else {
     if (std::abs(x) > 1.0) {
       z = std::abs(x);
-      m = (int)z;
+      m = static_cast<int>(z);
       r = 1.0;
       for (k=1;k<=m;k++) {
         r *= (z-k);
@@ -769,10 +769,10 @@ long double log_gamma_function(long double x)
 {
   if (x <= 0 || x > XBIG)
     return HUGE_VAL;
- 
+
   if (x <= MACHINE_EPSILON)
     return -log(x);
- 
+
   if (x <= 4)
   {
     double
