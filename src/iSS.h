@@ -55,7 +55,7 @@ class iSS {
         return(efa->get_hadron(iev, ipart));
     };
 
-    std::vector<iSS_Hadron> get_hadron_list_iev(const int iev) {
+    std::vector<iSS_Hadron>* get_hadron_list_iev(const int iev) {
         return(efa->get_hadron_list_iev(iev));
     }
 
