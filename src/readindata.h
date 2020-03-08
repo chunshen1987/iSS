@@ -13,7 +13,7 @@
 class read_FOdata {
  private:
     ParameterReader* paraRdr;
-    std::string path;
+    std::string path_;
     int mode;
     bool surface_in_binary;
 
@@ -35,8 +35,7 @@ class read_FOdata {
     int get_number_of_lines_of_binary_surface_file(string filename);
     int get_flag_PCE() {return(flag_PCE);}
     void read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr);
-    void read_in_chemical_potentials(std::string path,
-                                     std::vector<FO_surf> &surf_ptr,
+    void read_in_chemical_potentials(std::vector<FO_surf> &surf_ptr,
                                      std::vector<particle_info> &particle_ptr);
     void read_decdat(std::vector<FO_surf> &surf_ptr);
     void read_surfdat(std::vector<FO_surf> &surf_ptr);

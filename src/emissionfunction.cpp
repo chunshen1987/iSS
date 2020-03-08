@@ -1979,7 +1979,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                     double pdsigma = pt*da0 + px*da1 + py*da2 + pz*da3/tau;
 
                     //viscous corrections
-                    double delta_f_shear = 0.0;
+                    delta_f_shear = 0.0;
                     if (INCLUDE_DELTAF) {
                         double Wfactor = (
                             pt*pt*pi00 - 2.0*pt*px*pi01 - 2.0*pt*py*pi02
@@ -1991,12 +1991,12 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                             (1. - F0_IS_NOT_SMALL*sign*f0)
                             *Wfactor*deltaf_prefactor);
                     }
-                    double delta_f_bulk = get_deltaf_bulk(
+                    delta_f_bulk = get_deltaf_bulk(
                         mass, pdotu, bulkPi, Tdec, sign, f0,
                         bulkvisCoefficients);
 
                     // delta f for diffusion
-                    double delta_f_qmu = 0.0;
+                    delta_f_qmu = 0.0;
                     if (INCLUDE_DIFFUSION_DELTAF == 1) {
                         double qmufactor = (
                                         pt*qmu0 - px*qmu1 - py*qmu2 - pz*qmu3);

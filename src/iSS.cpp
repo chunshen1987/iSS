@@ -48,7 +48,7 @@ int iSS::read_in_FO_surface() {
     freeze_out_data.read_in_freeze_out_data(FOsurf_ptr);
     messager << "total number of cells: " <<  FOsurf_ptr.size();
     messager.flush("info");
-    freeze_out_data.read_in_chemical_potentials(path, FOsurf_ptr, particle);
+    freeze_out_data.read_in_chemical_potentials(FOsurf_ptr, particle);
     flag_PCE = freeze_out_data.get_flag_PCE();
     messager.info(" -- Read in data finished!");
     return(0);

@@ -19,7 +19,7 @@ using namespace std;
 
 read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
     paraRdr = paraRdr_in;
-    path = path_in;
+    path_ = path_in;
     mode = paraRdr->getVal("hydro_mode");
     turn_on_bulk = paraRdr->getVal("turn_on_bulk");
     turn_on_rhob = paraRdr->getVal("turn_on_rhob");
@@ -30,7 +30,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
         // determine read in format in surface.dat from MUSIC simulation
         messager.info("read in hyper-surface from MUSIC simulations ...");
         ostringstream config_file;
-        config_file << path << "/music_input";
+        config_file << path_ << "/music_input";
         ifstream configuration(config_file.str().c_str());
         if (!configuration.is_open()) {
             messager << "read_FOdata::read_FOdata: "
@@ -83,12 +83,12 @@ int read_FOdata::get_number_of_freezeout_cells() {
     int number_of_cells = 0;
     if (mode == 0) {  // outputs from VISH2+1
         ostringstream decdatfile;
-        decdatfile << path << "/decdat2.dat";
+        decdatfile << path_ << "/decdat2.dat";
         Table block_file(decdatfile.str().c_str());
         number_of_cells = block_file.getNumberOfRows();
     } else if (mode == 1) {  // outputs from MUSIC boost-invariant
         ostringstream surface_file;
-        surface_file << path << "/surface.dat";
+        surface_file << path_ << "/surface.dat";
         if (surface_in_binary) {
             number_of_cells = get_number_of_lines_of_binary_surface_file(
                                                         surface_file.str());
@@ -109,7 +109,7 @@ int read_FOdata::get_number_of_freezeout_cells() {
     } else if (mode == 2) {  // outputs from MUSIC full (3+1)-d
         int number_of_lines = 0;
         ostringstream surface_filename;
-        surface_filename << path << "/surface.dat";
+        surface_filename << path_ << "/surface.dat";
         if (surface_in_binary) {
             number_of_cells = get_number_of_lines_of_binary_surface_file(
                                                     surface_filename.str());
@@ -124,7 +124,7 @@ int read_FOdata::get_number_of_freezeout_cells() {
         }
     } else if (mode == 10) {  // outputs from hydro analysis
         ostringstream surface_file;
-        surface_file << path << "/hyper_surface_2+1d.dat";
+        surface_file << path_ << "/hyper_surface_2+1d.dat";
         Table block_file(surface_file.str().c_str());
         number_of_cells = block_file.getNumberOfRows();
     }
@@ -156,9 +156,8 @@ void read_FOdata::read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr) {
     regulate_surface_cells(surf_ptr);
 }
 
-void read_FOdata::read_in_chemical_potentials(string path,
-                                              std::vector<FO_surf> &surf_ptr,
-                                              std::vector<particle_info> &particle_ptr) {
+void read_FOdata::read_in_chemical_potentials(
+    std::vector<FO_surf> &surf_ptr, std::vector<particle_info> &particle_ptr) {
     int Nparticle = 0;
     int N_stableparticle;
     Table mu_table;
@@ -169,7 +168,7 @@ void read_FOdata::read_in_chemical_potentials(string path,
     } else if (mode == 1 || mode == 2) {   // music output
         // determine the type of the EOS
         ostringstream config_file;
-        config_file << path << "/music_input";
+        config_file << path_ << "/music_input";
         ifstream configuration(config_file.str().c_str());
         string temp1;
         string temp_name;
@@ -266,7 +265,7 @@ void read_FOdata::read_decdat(std::vector<FO_surf> &surf_ptr) {
     double temp, temp_vx, temp_vy;
     cout <<" -- Read in information on freeze out surface...";
     ostringstream decdat_stream;
-    decdat_stream << path << "/decdat2.dat";
+    decdat_stream << path_ << "/decdat2.dat";
     ifstream decdat(decdat_stream.str().c_str());
     string input;
     getline(decdat, input, '\n');
@@ -332,7 +331,7 @@ void read_FOdata::read_surfdat(std::vector<FO_surf> &surf_ptr) {
     ostringstream surfdat_stream;
     double dummy;
     char rest_dummy[512];
-    surfdat_stream << path << "/surface.dat";
+    surfdat_stream << path_ << "/surface.dat";
     ifstream surfdat(surfdat_stream.str().c_str());
     for (auto &surf_i: surf_ptr) {
         surfdat >> dummy >> dummy;
@@ -363,7 +362,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     string input;
     double temp_tau, temp_xpt, temp_ypt, temp_eta;
     int idx = 0;
-    surfdat_stream << path << "/surface.dat";
+    surfdat_stream << path_ << "/surface.dat";
     ifstream surfdat;
     if (surface_in_binary) {
         surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);
@@ -504,7 +503,7 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
   double temp_tau, temp_xpt, temp_ypt;
   double temp_vx, temp_vy;
   int idx = 0;
-  surfdat_stream << path << "/hyper_surface_2+1d.dat";
+  surfdat_stream << path_ << "/hyper_surface_2+1d.dat";
   ifstream surfdat(surfdat_stream.str().c_str());
   getline(surfdat, input, '\n' );
   while (!surfdat.eof()) {
@@ -576,7 +575,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
     cout << " -- Read spatial positions of freeze out surface from MUSIC...";
     ostringstream surfdat_stream;
     double dummy;
-    surfdat_stream << path << "/surface.dat";
+    surfdat_stream << path_ << "/surface.dat";
     ifstream surfdat;
     if (surface_in_binary) {
         surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);
@@ -751,7 +750,7 @@ void read_FOdata::read_decdat_mu(int FO_length, int N_stable,
   cout<<" -- Read chemical potential for stable particles...";
   ostringstream decdat_mu_stream;
   double dummy;
-  decdat_mu_stream << path << "/decdat_mu.dat";
+  decdat_mu_stream << path_ << "/decdat_mu.dat";
   ifstream decdat_mu(decdat_mu_stream.str().c_str());
 
   //For backward compatibility: decdat_mu.dat can be one line or FO_length lines

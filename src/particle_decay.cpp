@@ -436,7 +436,7 @@ void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
         } while (E1_lrf + E2_lrf > M_sampled);
         p1_lrf = sqrt(E1_lrf*E1_lrf - m1*m1);
         p2_lrf = sqrt(E2_lrf*E2_lrf - m2*m2);
-        double E3_lrf = M_sampled - E1_lrf - E2_lrf;
+        E3_lrf = M_sampled - E1_lrf - E2_lrf;
         cos12_lrf = (E3_lrf*E3_lrf - p1_lrf*p1_lrf - p2_lrf*p2_lrf - m3*m3)
                      /(2.*p1_lrf*p2_lrf);
     } while (cos12_lrf < - 1.0 || cos12_lrf > 1.0);
