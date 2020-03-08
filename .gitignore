@@ -5,3 +5,5 @@ results/
 test/
 iSS.e
 *.DAT
+build/*
+lib/*
