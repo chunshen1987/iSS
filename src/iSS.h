@@ -14,8 +14,8 @@
 
 class iSS {
  private:
-    std::string path;
-    
+    std::string path_;
+
     std::vector<FO_surf> FOsurf_ptr;
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
 
@@ -25,7 +25,7 @@ class iSS {
     long randomSeed;
 
     std::vector<particle_info> particle;
-    
+
     std::unique_ptr<EmissionFunctionArray> efa;
 
     pretty_ostream messager;
@@ -54,7 +54,11 @@ class iSS {
     iSS_Hadron get_hadron(int iev, int ipart) {
         return(efa->get_hadron(iev, ipart));
     };
-    
+
+    std::vector<iSS_Hadron> get_hadron_list_iev(const int iev) {
+        return(efa->get_hadron_list_iev(iev));
+    }
+
     void clear();
 };
 

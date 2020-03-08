@@ -70,7 +70,7 @@ class EmissionFunctionArray {
     // for each eta and FO-cell.
     double **dN_dxtdetady_pT_max; 
     double **dN_dxtdy_4all;  // dN / (dxt dy) for all particles
-    
+
     // dN/(dxt dy) for one particle species
     std::vector<double> dN_dxtdy_for_one_particle_species; 
 
@@ -117,7 +117,7 @@ class EmissionFunctionArray {
 
     bool particles_are_the_same(int, int);
     //long *sorted_FZ;
-        
+
     //array for bulk delta f coefficients
     Table *bulkdf_coeff;
 
@@ -137,10 +137,10 @@ class EmissionFunctionArray {
 
     double lambert_x_min, lambert_x_max, lambert_dx;
     std::vector<double> lambert_W;
-    
+
     int flag_output_samples_into_files;
     int flag_store_samples_in_memory;
-    
+
     //! particle decay
     int flag_perform_decays;
     particle_decay *decayer_ptr;
@@ -240,9 +240,15 @@ class EmissionFunctionArray {
     int get_number_of_particles(int iev) {
         return((*Hadron_list)[iev]->size());
     };
+
     iSS_Hadron get_hadron(int iev, int ipart) {
         return((*(*Hadron_list)[iev])[ipart]);
     };
+
+    std::vector<iSS_Hadron> get_hadron_list_iev(const int iev) {
+        return((*(*Hadron_list)[iev]));
+    }
+
     void perform_resonance_feed_down(
                 std::vector< std::vector<iSS_Hadron>* >* input_particle_list);
     int compute_number_of_sampling_needed(int number_of_particles_needed);

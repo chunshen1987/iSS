@@ -10,7 +10,7 @@
 using namespace std;
 
 iSS::iSS(string path_in) {
-    path = path_in;
+    path_ = path_in;
     flag_PCE = 0;
 
     paraRdr_ptr = new ParameterReader;
@@ -44,7 +44,7 @@ int iSS::shell() {
 }
 
 int iSS::read_in_FO_surface() {
-    read_FOdata freeze_out_data(paraRdr_ptr, path);
+    read_FOdata freeze_out_data(paraRdr_ptr, path_);
     freeze_out_data.read_in_freeze_out_data(FOsurf_ptr);
     messager << "total number of cells: " <<  FOsurf_ptr.size();
     messager.flush("info");
@@ -81,7 +81,7 @@ int iSS::generate_samples() {
     messager.info("Start computation and generating samples ...");
     efa = std::unique_ptr<EmissionFunctionArray> (new EmissionFunctionArray(
                 ran_gen_ptr, &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
-                particle, FOsurf_ptr, flag_PCE, paraRdr_ptr, path));
+                particle, FOsurf_ptr, flag_PCE, paraRdr_ptr, path_));
     efa->shell();
 
     return(0);
