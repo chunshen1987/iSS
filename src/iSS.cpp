@@ -48,6 +48,7 @@ int iSS::read_in_FO_surface() {
     freeze_out_data.read_in_freeze_out_data(FOsurf_ptr);
     messager << "total number of cells: " <<  FOsurf_ptr.size();
     messager.flush("info");
+    IEOS_music_ = freeze_out_data.get_IEOS_music();
     freeze_out_data.read_in_chemical_potentials(FOsurf_ptr, particle);
     flag_PCE = freeze_out_data.get_flag_PCE();
     messager.info(" -- Read in data finished!");
@@ -70,7 +71,19 @@ void iSS::set_random_seed(int randomSeed_in) {
 
 int iSS::generate_samples() {
     // skip others except for these particle
-    Table chosen_particles(iSS_data::table_path + "/chosen_particles.dat");
+    Table chosen_particles;
+    if (IEOS_music_ == 9) {
+        chosen_particles.loadTableFromFile(
+            iSS_data::table_path + "/backup_tables"
+            + "/chosen_particles_SMASH.dat");
+    } else if (IEOS_music_ == 91) {
+        chosen_particles.loadTableFromFile(
+            iSS_data::table_path + "/backup_tables"
+            + "/chosen_particles_urqmd_v3.3+.dat");
+    } else {
+        chosen_particles.loadTableFromFile(iSS_data::table_path
+                                           + "/chosen_particles.dat");
+    }
 
     Table pT_tab(iSS_data::table_path + "/bin_tables/pT_gauss_table.dat");
     Table phi_tab(iSS_data::table_path + "/bin_tables/phi_gauss_table.dat");

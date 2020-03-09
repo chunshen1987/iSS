@@ -21,6 +21,7 @@ class iSS {
 
     int Nparticle;
     int flag_PCE;
+    int IEOS_music_;
 
     long randomSeed;
 

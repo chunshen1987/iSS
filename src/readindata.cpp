@@ -80,6 +80,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
             messager.info("the hyper-surface includes baryon diffusion.");
     }
     n_eta_skip = 0;
+    IEOS_music = 0;
 }
 
 read_FOdata::~read_FOdata() {}
@@ -218,7 +219,9 @@ void read_FOdata::read_in_chemical_potentials(
             N_stableparticle = 0;
         } else if (IEOS_music == 8) {        // WB
             N_stableparticle = 0;
-        } else if (IEOS_music == 9) {        // hotQCD
+        } else if (IEOS_music == 9) {        // hotQCD + HRG(UrQMD)
+            N_stableparticle = 0;
+        } else if (IEOS_music == 91) {       // hotQCD + HRG(SMASH)
             N_stableparticle = 0;
         } else if (IEOS_music >= 10 && IEOS_music <=14) {       // AK
             N_stableparticle = 0;
@@ -822,7 +825,14 @@ void read_FOdata::read_chemical_potentials_music(
 int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
     double eps = 1e-15;
     cout << " -- Read in particle resonance decay table...";
-    std::ifstream resofile(table_path + "/pdg.dat");
+    std::ifstream resofile;
+    if (IEOS_music == 91) {
+        resofile.open(table_path + "backup_tables/pdg-SMASH.dat");
+    } else if (IEOS_music == 9) {
+        resofile.open(table_path + "backup_tables/pdg-urqmd_v3.3+.dat");
+    } else {
+        resofile.open(table_path + "/pdg.dat");
+    }
     int local_i = 0;
     int dummy_int;
     while (!resofile.eof()) {
