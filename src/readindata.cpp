@@ -377,6 +377,11 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     } else {
         surfdat.open(surfdat_stream.str().c_str());
     }
+    if (!surfdat.good()) {
+        cout << "[Error] Surface file is not found! " << surfdat_stream.str()
+             << endl;
+        exit(1);
+    }
     while (!surfdat.eof()) {
         FO_surf surf_elem;
         if (surface_in_binary) {
@@ -589,6 +594,11 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
         surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);
     } else {
         surfdat.open(surfdat_stream.str().c_str());
+    }
+    if (!surfdat.good()) {
+        cout << "[Error] Surface file is not found! " << surfdat_stream.str()
+             << endl;
+        exit(1);
     }
     while (!surfdat.eof()) {
         FO_surf surf_elem;
