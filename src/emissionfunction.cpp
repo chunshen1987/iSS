@@ -2786,7 +2786,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
     double tolerance = paraRdr->getVal("grouping_tolerance");
 
     // now loop over all freeze-out cells and particles
-    double unit_factor = 1.0/pow(hbarC, 3);  // unit: convert to unitless
+    const double unit_factor = 1.0/pow(hbarC, 3);  // unit: convert to unitless
 
     double integral_laststep[number_of_chosen_particles];
 
@@ -2938,7 +2938,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
 
 //***************************************************************************
 void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
-                                                    int real_particle_idx) {
+                                                const int real_particle_idx) {
 /*
    The p_integral_table is a table stores results for the integral
      int( p^2 / ( exp(sqrt(p^2+m^2)-mu) + 1), p=0..inf)
@@ -2958,7 +2958,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
     std::array<double, 3> bulkvisCoefficients = {0.0};
 
     // now loop over all freeze-out cells and particles
-    double unit_factor = 1.0/pow(hbarC, 3);  // unit: convert to unitless
+    const double unit_factor = 1.0/pow(hbarC, 3);  // unit: convert to unitless
 
     // loop over all the fluid cells
     for (long l = 0; l < FO_length; l++) {
@@ -3074,14 +3074,19 @@ void EmissionFunctionArray::calculate_dN_analytic(
     double deltaN_qmu_term1 = 0.0;      // contribution from baryon diffusion
     double deltaN_qmu_term2 = 0.0;      // contribution from baryon diffusion
 
-    int truncate_order = 10;            // truncation order in taylor expansion
 
-    int sign = particle->sign;
-    double mass = particle->mass;
-    double beta = 1./Temperature;
+    const int sign    = particle->sign;
+    const double mass = particle->mass;
+    const double beta = 1./Temperature;
 
     double lambda = exp(beta*mu);  // fugacity factor
 
+    int truncate_order;
+    if (mass < 0.7) {
+        truncate_order = 10.;
+    } else {
+        truncate_order = 1.;
+    }
     // compute the sum in the series
     for (int n = 1; n <= truncate_order; n++) {
         double arg = n*mass*beta;  // argument inside bessel functions
@@ -3091,6 +3096,15 @@ void EmissionFunctionArray::calculate_dN_analytic(
         double K_2 = get_special_function_K2(arg);
 
         N_eq += theta/n*fugacity*K_2;
+        if (std::isnan(N_eq)) {
+            cout << "N_eq is nan"
+                 << ", theta = " << theta << ", n = " << n
+                 << ", exp(mu/T) = " << lambda
+                 << ", exp(n*mu/T) = " << fugacity
+                 << ", n*m/T = " << arg
+                 << ", K_2 = " << K_2 << endl;
+            exit(1);
+        }
 
         if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1) {
             double K_1 = get_special_function_K1(arg);

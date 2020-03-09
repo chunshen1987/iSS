@@ -212,7 +212,7 @@ class EmissionFunctionArray {
     // call this function
     void calculate_dN_dxtdy_4all_particles(); 
 
-    void calculate_dN_dxtdy_for_one_particle_species(int particle_idx);
+    void calculate_dN_dxtdy_for_one_particle_species(const int particle_idx);
 
     double calculate_total_FZ_energy_flux();
     // to be used after calculate_dN_dxtdy_4all_particles
