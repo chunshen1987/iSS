@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-sign = lambda a: (a>0) - (a<0)
-
 filename = "pdg-SMASH.dat"
 pdg_list = []
 with open(filename) as fp:
@@ -13,8 +11,10 @@ pdg_list = list(set(pdg_list))
 
 pdg_list_final = []
 for ipart in pdg_list:
-    temp = int(ipart)
-    pdg_code_dissected = [int(d) for d in str(abs(temp))]
+    ipart = int(ipart)
+    pdg_code_dissected = [int(d) for d in str(abs(ipart))]
+
+    # here are filters
     if len(pdg_code_dissected) < 3:
         # photon
         continue
@@ -24,10 +24,17 @@ for ipart in pdg_list:
     if len(pdg_code_dissected) > 3 and pdg_code_dissected[-4] > 3:
         # heavy quark baryons
         continue
+
+    # passed all the filters, add it to the final pdg list
+    pdg_list_final.append(ipart)
+
     if len(pdg_code_dissected) > 3 and pdg_code_dissected[-4] != 0:
-        # baryons
-        pdg_list_final.append(-temp)
-    pdg_list_final.append(temp)
+        # it is baryons: we need to add anti-baryons in the final pdg list
+        if ipart < 0:
+            print("something wrong!")
+            exit(1)
+        pdg_list_final.append(-ipart)
+
 
 for ipart in pdg_list_final:
     print(ipart)
