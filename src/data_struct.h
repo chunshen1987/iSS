@@ -13,6 +13,14 @@ namespace iSS_data {
 }
 
 
+enum class AfterburnerType {
+    UrQMD,
+    SMASH,
+    JAM,
+    PDG_Decay,
+};
+
+
 typedef struct {
     int decay_Npart;
     double branching_ratio;

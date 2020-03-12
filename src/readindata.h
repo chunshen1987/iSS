@@ -24,7 +24,9 @@ class read_FOdata {
     int turn_on_diff;       // switch to read in diffusion current
 
     int n_eta_skip;
-    int IEOS_music;
+    int iEOS_MUSIC_;
+
+    AfterburnerType afterburner_type_;
 
     pretty_ostream messager;
 
@@ -32,7 +34,7 @@ class read_FOdata {
     read_FOdata(ParameterReader* paraRdr_in, std::string path);
     ~read_FOdata();
     int get_number_of_freezeout_cells();
-    int get_IEOS_music() const {return(IEOS_music);}
+    int get_IEOS_music() const {return(iEOS_MUSIC_);}
     int get_number_of_lines_of_binary_surface_file(string filename);
     int get_flag_PCE() {return(flag_PCE);}
     void read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr);
