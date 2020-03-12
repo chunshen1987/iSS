@@ -848,14 +848,20 @@ void read_FOdata::read_chemical_potentials_music(
 int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
     double eps = 1e-15;
     cout << " -- Read in particle resonance decay table...";
-    std::ifstream resofile;
+    std::string reso_filename;
     if (afterburner_type_ == AfterburnerType::SMASH) {
-        resofile.open(table_path_ + "/pdg-SMASH.dat");
+        reso_filename = table_path_ + "/pdg-SMASH.dat";
     } else if (afterburner_type_ == AfterburnerType::UrQMD) {
-        resofile.open(table_path_ + "/pdg-urqmd_v3.3+.dat");
+        reso_filename = table_path_ + "/pdg-urqmd_v3.3+.dat";
     } else {
-        resofile.open(table_path_ + "/pdg-s95pv1.dat");
+        reso_filename = table_path_ + "/pdg-s95pv1.dat";
     }
+    std::ifstream resofile(reso_filename.c_str());
+    if (!resofile.good()) {
+        cout << "[Error] Can not found pdg file: " << reso_filename << endl;
+        exit(1);
+    }
+
     int local_i = 0;
     int dummy_int;
     while (!resofile.eof()) {
