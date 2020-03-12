@@ -7,9 +7,12 @@
 
 namespace iSS_data {
     const double hbarC=0.197327053;  //GeV*fm
-    const std::string table_path="iSS_tables";
+
     typedef std::array<double, 4> Vec4;
     typedef std::array<double, 10> ViscousVec;
+
+    const int NUMBER_OF_LINES_TO_WRITE = 100000;
+    const int AMOUNT_OF_OUTPUT = 0;
 }
 
 

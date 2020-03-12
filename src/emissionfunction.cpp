@@ -29,9 +29,7 @@
 #include "arsenal.h"
 #include "Stopwatch.h"
 
-#define AMOUNT_OF_OUTPUT 0                  // smaller value means less outputs
-#define NUMBER_OF_LINES_TO_WRITE   100000   // string buffer for sample files
-
+using iSS_data::AMOUNT_OF_OUTPUT;
 using std::cout;
 using std::endl;
 using std::string;
@@ -41,7 +39,7 @@ using std::ofstream;
 using std::ifstream;
 using std::setw;
 using iSS_data::hbarC;
-using iSS_data::table_path;
+
 
 // Class EmissionFunctionArray ------------------------------------------
 //***************************************************************************
@@ -49,14 +47,16 @@ EmissionFunctionArray::EmissionFunctionArray(
     std::shared_ptr<RandomUtil::Random> ran_gen,
     Table* chosen_particles_in, Table* pt_tab_in, Table* phi_tab_in,
     Table* y_minus_eta_tab_in, std::vector<particle_info> particles_in,
-    const std::vector<FO_surf> &FOsurf_ptr_in, int flag_PCE_in,
-    ParameterReader* paraRdr_in, string path_in) : FOsurf_ptr(FOsurf_ptr_in) {
+    const std::vector<FO_surf> &FOsurf_ptr_in, int flag_PCE,
+    ParameterReader* paraRdr_in, string path, string table_path,
+    AfterburnerType afterburner_type) :
+        path_(path), table_path_(table_path),
+        afterburner_type_(afterburner_type), FOsurf_ptr(FOsurf_ptr_in) {
 
     ran_gen_ptr = ran_gen;
 
-    path = path_in;
     // get info
-    flag_PCE = flag_PCE_in;
+    flag_PCE_ = flag_PCE;
     pT_tab = pt_tab_in;
     pT_tab_length = pT_tab->getNumberOfRows();
     phi_tab = phi_tab_in; 
@@ -113,14 +113,15 @@ EmissionFunctionArray::EmissionFunctionArray(
 
     flag_perform_decays = paraRdr->getVal("perform_decays");
     if (flag_perform_decays == 1) {
-        decayer_ptr = new particle_decay(ran_gen_ptr);
+        decayer_ptr = new particle_decay(ran_gen_ptr, afterburner_type_,
+                                         table_path_);
     }
 
     // allocate internal buffer
     dN_pTdpTdphidy = new Table(pT_tab_length, phi_tab_length);
     dN_pTdpTdphidy_max = new Table(pT_tab_length, phi_tab_length);
     std::ostringstream filename_stream;
-    dN_pTdpTdphidy_filename = path + "/dN_pTdpTdphidy.dat";
+    dN_pTdpTdphidy_filename = path_ + "/dN_pTdpTdphidy.dat";
 
     if (MC_sampling == 1) {
         dN_dxtdetady = new double*[y_minus_eta_tab_length];
@@ -132,7 +133,7 @@ EmissionFunctionArray::EmissionFunctionArray(
             dN_dxtdetady_pT_max[k] = new double[FO_length];
     }
 
-    dN_dxtdetady_filename = path + "/dN_dxdetady.dat";
+    dN_dxtdetady_filename = path_ + "/dN_dxdetady.dat";
 
     // deal with chosen_particle_xxx tables
     number_of_chosen_particles = chosen_particles_in->getNumberOfRows();
@@ -203,8 +204,8 @@ EmissionFunctionArray::EmissionFunctionArray(
     }
 
     // for flow calculation
-    flow_differential_filename_old = path + "/v2data.dat";
-    flow_integrated_filename_old = path + "/v2data-inte.dat";
+    flow_differential_filename_old = path_ + "/v2data.dat";
+    flow_integrated_filename_old = path_ + "/v2data-inte.dat";
     last_particle_idx = -1;
 
     // pre-calculate variables
@@ -237,8 +238,8 @@ EmissionFunctionArray::EmissionFunctionArray(
         }
     }
     //cout << "done" << endl;
-    samples_format_filename = path + "/samples_format.dat";
-    OSCAR_header_filename = table_path + "/OSCAR_header.txt";
+    samples_format_filename = path_ + "/samples_format.dat";
+    OSCAR_header_filename = table_path_ + "/OSCAR_header.txt";
     OSCAR_output_filename = "OSCAR.DAT";
 
     if (MC_sampling == 2) {
@@ -253,10 +254,10 @@ EmissionFunctionArray::EmissionFunctionArray(
     // for interpolation for the third way of sampling
     // generate new set of pT and phi table to be interpolated onto
     pT_tab4Sampling.loadTableFromFile(
-                    table_path + "/bin_tables/pT_table_for_sampling.dat");
+                    table_path_ + "/bin_tables/pT_table_for_sampling.dat");
     pT_tab4Sampling_length = pT_tab4Sampling.getNumberOfRows();
     phi_tab4Sampling.loadTableFromFile(
-                    table_path + "/bin_tables/phi_table_for_sampling.dat");
+                    table_path_ + "/bin_tables/phi_table_for_sampling.dat");
     phi_tab4Sampling_length = phi_tab4Sampling.getNumberOfRows();
     // extend pT_tab and phi_tab in order to extract index info for given
     // pT or phi
@@ -291,14 +292,14 @@ EmissionFunctionArray::EmissionFunctionArray(
     // arrays for bulk delta f coefficients
     if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0) {
         bulkdf_coeff = new Table (
-            table_path
+            table_path_
             + "/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat");
     }
 
     // load table for diffusion delta f coeffient
     if (INCLUDE_DIFFUSION_DELTAF == 1) {
         load_deltaf_qmu_coeff_table(
-            table_path + "/deltaf_tables/Coefficients_RTA_diffusion.dat");
+            table_path_ + "/deltaf_tables/Coefficients_RTA_diffusion.dat");
     }
 
 
@@ -462,7 +463,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
         double tau_ueta = surf->u3;
 
         double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
-        if (flag_PCE == 1) {
+        if (flag_PCE_ == 1) {
             double mu_PCE =  surf->particle_mu_PCE[particle_idx];
             mu += mu_PCE;
         }
@@ -696,7 +697,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
                 double tau_ueta = surf->u3;
 
                 double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
-                if (flag_PCE == 1) {
+                if (flag_PCE_ == 1) {
                     double mu_PCE = surf->particle_mu_PCE[particle_idx];
                     mu += mu_PCE;
                 }
@@ -1185,9 +1186,9 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(
             calculate_dN_dphi_using_dN_pTdpTdphidy();
 
         std::stringstream filename_diff, filename_inte;
-        filename_diff << path << "/thermal_" << monval << "_vndata.dat";
+        filename_diff << path_ << "/thermal_" << monval << "_vndata.dat";
         remove(filename_diff.str().c_str());
-        filename_inte << path << "/thermal_" << monval
+        filename_inte << path_ << "/thermal_" << monval
                       << "_integrated__vndata.dat";
         remove(filename_inte.str().c_str());
         calculate_flows(to_order, filename_diff.str(), filename_inte.str());
@@ -1307,14 +1308,14 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
     // prepare for outputs
     // the control file records how many particles are there in each sampling
     std::stringstream samples_control_filename;
-    samples_control_filename << path << "/samples_control_"
+    samples_control_filename << path_ << "/samples_control_"
                              << particle->monval << ".dat";
     remove(samples_control_filename.str().c_str());
     ofstream of_control(samples_control_filename.str().c_str());
 
     // the sample file contains the actual samples
     std::stringstream samples_filename;
-    samples_filename << path << "/samples_" << particle->monval << ".dat";
+    samples_filename << path_ << "/samples_" << particle->monval << ".dat";
     remove(samples_filename.str().c_str());
     ofstream of_sample(samples_filename.str().c_str());
 
@@ -1345,7 +1346,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
         sprintf(line_buffer, "%lu\n", number_to_sample);
         control_str_buffer << line_buffer;
         control_writing_signal++;
-        if (control_writing_signal==NUMBER_OF_LINES_TO_WRITE) {
+        if (control_writing_signal == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
             of_control << control_str_buffer.str();
             control_str_buffer.str("");
             control_writing_signal=0;
@@ -1374,7 +1375,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
             double tau_ueta = surf->u3;
 
             double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
-            if (flag_PCE == 1) {
+            if (flag_PCE_ == 1) {
                 double mu_PCE = surf->particle_mu_PCE[last_particle_idx];
                 mu += mu_PCE;
             }
@@ -1554,8 +1555,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
             }
             sample_str_buffer << line_buffer;
             sample_writing_signal++;
-            if (sample_writing_signal==NUMBER_OF_LINES_TO_WRITE)
-            {
+            if (sample_writing_signal == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
               of_sample << sample_str_buffer.str();
               sample_str_buffer.str("");
               sample_writing_signal=0;
@@ -1747,14 +1747,14 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     // prepare for outputs
     // the control file records how many particles are there in each sampling
     std::stringstream samples_control_filename;
-    samples_control_filename << path << "/samples_control_"
+    samples_control_filename << path_ << "/samples_control_"
                              << particle->monval << ".dat";
     remove(samples_control_filename.str().c_str());
     ofstream of_control(samples_control_filename.str().c_str());
 
     // the sample file contains the actual samples
     std::stringstream samples_filename;
-    samples_filename << path << "/samples_" << particle->monval << ".dat";
+    samples_filename << path_ << "/samples_" << particle->monval << ".dat";
     remove(samples_filename.str().c_str());
     ofstream of_sample(samples_filename.str().c_str());
 
@@ -1791,7 +1791,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
         sprintf(line_buffer, "%lu\n", number_to_sample);
         control_str_buffer << line_buffer;
         control_writing_signal++;
-        if (control_writing_signal==NUMBER_OF_LINES_TO_WRITE) {
+        if (control_writing_signal == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
             of_control << control_str_buffer.str();
             control_str_buffer.str("");
             control_writing_signal=0;
@@ -1837,7 +1837,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                 double uz = surf->u3;
 
                 double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
-                if (flag_PCE == 1) {
+                if (flag_PCE_ == 1) {
                     double mu_PCE = surf->particle_mu_PCE[last_particle_idx];
                     mu += mu_PCE;
                 }
@@ -2067,7 +2067,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
             }
             sample_str_buffer << line_buffer;
             sample_writing_signal++;
-            if (sample_writing_signal==NUMBER_OF_LINES_TO_WRITE) {
+            if (sample_writing_signal == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
                 of_sample << sample_str_buffer.str();
                 sample_str_buffer.str("");
                 sample_writing_signal=0;
@@ -2344,7 +2344,7 @@ void EmissionFunctionArray::calculate_dN_dtau_using_dN_dxtdetady(
     // average them and output
     const particle_info* particle = &particles[last_particle_idx];
     std::stringstream dN_dtau_filename;
-    dN_dtau_filename << path << "/dN_dtau_" << particle->monval << ".dat";
+    dN_dtau_filename << path_ << "/dN_dtau_" << particle->monval << ".dat";
     ofstream of(dN_dtau_filename.str().c_str());
     for (long idx=0; idx<number_of_bins; idx++)
         formatedPrint(of, 4, tau0+(idx+0.5)*dtau, 
@@ -2414,7 +2414,7 @@ void EmissionFunctionArray::calculate_dN_dx_using_dN_dxtdetady(
     // average them and output
     const particle_info* particle = &particles[last_particle_idx];
     std::stringstream dN_dx_filename;
-    dN_dx_filename << path << "/dN_dx_" << particle->monval << ".dat";
+    dN_dx_filename << path_ << "/dN_dx_" << particle->monval << ".dat";
     ofstream of(dN_dx_filename.str().c_str());
     for (long idx=0; idx<number_of_bins; idx++) 
         formatedPrint(of, 7, x_min+(idx+0.5)*dx, 
@@ -2448,7 +2448,7 @@ void EmissionFunctionArray::calculate_dN_dphi_using_dN_pTdpTdphidy()
     // output
     const particle_info* particle = &particles[last_particle_idx];
     std::stringstream dN_dphi_filename;
-    dN_dphi_filename << path << "/dN_dphi_" << particle->monval << ".dat";
+    dN_dphi_filename << path_ << "/dN_dphi_" << particle->monval << ".dat";
     ofstream of(dN_dphi_filename.str().c_str());
     for (int j=0; j<phi_tab_length; j++)
         formatedPrint(of, 3, phi_tab->get(1,j+1), dN_dphi[j],
@@ -2477,7 +2477,7 @@ void EmissionFunctionArray::calculate_dN_deta_using_dN_dxtdetady()
     // output
     const particle_info* particle = &particles[last_particle_idx];
     std::stringstream dN_deta_filename;
-    dN_deta_filename << path << "/dN_deta_" << particle->monval << ".dat";
+    dN_deta_filename << path_ << "/dN_deta_" << particle->monval << ".dat";
     ofstream of(dN_deta_filename.str().c_str());
     for (int k=0; k<y_minus_eta_tab_length; k++) 
         formatedPrint(of, 3, y_minus_eta_tab->get(1,k+1), dN_deta[k], 
@@ -2501,7 +2501,7 @@ void EmissionFunctionArray::calculate_dN_dxt_using_dN_dxtdetady()
     // output
     const particle_info* particle = &particles[last_particle_idx];
     std::stringstream dN_dxt_filename;
-    dN_dxt_filename << path << "/dN_dxt_" << particle->monval << ".dat";
+    dN_dxt_filename << path_ << "/dN_dxt_" << particle->monval << ".dat";
     ofstream of(dN_dxt_filename.str().c_str());
     for (long l=0; l<FO_length; l++)
         formatedPrint(of, 2, static_cast<double>(l), dN_dxt[l]);
@@ -2527,7 +2527,7 @@ bool EmissionFunctionArray::particles_are_the_same(int idx1, int idx2)
     if (std::abs((particles[idx1].mass-particles[idx2].mass)
             /(particles[idx2].mass+1e-30)) > tolerance)
         return false;
-    if (flag_PCE == 1) {
+    if (flag_PCE_ == 1) {
         for (long l = 0; l < FO_length; l++) {
             double chem1 = FOsurf_ptr[l].particle_mu_PCE[idx1];
             double chem2 = FOsurf_ptr[l].particle_mu_PCE[idx2];
@@ -2627,7 +2627,7 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
             int monval = particles[chosen_particles_sampling_table[m]].monval;
             // control files first
             std::stringstream samples_control_filename;
-            samples_control_filename << path << "/samples_control_"
+            samples_control_filename << path_ << "/samples_control_"
                                      << monval << ".dat";
             controls[m] = new ifstream ;
             controls[m]->open(samples_control_filename.str().c_str());
@@ -2639,7 +2639,7 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
                 exit(-1);
             }
             std::stringstream samples_filename;
-            samples_filename << path << "/samples_" << monval << ".dat";
+            samples_filename << path_ << "/samples_" << monval << ".dat";
             samples[m] = new ifstream ;
             samples[m]->open(samples_filename.str().c_str());
             if (!samples[m]->is_open()) {
@@ -2860,7 +2860,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
             const int strange = particle->strange;
             const int charge  = particle->charge;
             double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
-            if (flag_PCE == 1) {
+            if (flag_PCE_ == 1) {
                 double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
                 mu += mu_PCE;
             }
@@ -2924,7 +2924,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
         Table to_write(dN_dxtdy_4all, FO_length, number_of_chosen_particles);
         // 0 means "all"
         std::stringstream dN_dxt_filename;
-        dN_dxt_filename << path << "/dN_dxt_0.dat";
+        dN_dxt_filename << path_ << "/dN_dxt_0.dat";
         ofstream of(dN_dxt_filename.str().c_str());
         to_write.printTable(of);
         of.close();
@@ -3019,7 +3019,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
         const int strange = particle->strange;
         const int charge  = particle->charge;
         double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
-        if (flag_PCE == 1) {
+        if (flag_PCE_ == 1) {
             double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
             mu += mu_PCE;
         }
@@ -3246,7 +3246,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
 
     // load pre-calculated table
     // (x,y) that y*exp(-y) = x; y<=1
-    TableFunction z_exp_m_z(table_path + "/z_exp_m_z.dat");
+    TableFunction z_exp_m_z(table_path_ + "/z_exp_m_z.dat");
     z_exp_m_z.interpolation_model = 5;
 
     // control variables
@@ -3318,7 +3318,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         // the control file records how many particles are there
         // in each sampling
         std::stringstream samples_control_filename;
-        samples_control_filename << path << "/samples_control_"
+        samples_control_filename << path_ << "/samples_control_"
                                  << particle->monval << ".dat";
         remove(samples_control_filename.str().c_str());
         ofstream of_control;
@@ -3329,7 +3329,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
 
         // the sample file contains the actual samples
         std::stringstream samples_filename;
-        samples_filename << path << "/samples_" << particle->monval << ".dat";
+        samples_filename << path_ << "/samples_" << particle->monval << ".dat";
         remove(samples_filename.str().c_str());
         ofstream of_sample;
         if (flag_output_samples_into_files == 1) {
@@ -3407,7 +3407,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 // write to control file
                 sprintf(line_buffer, "%lu\n", number_to_sample);
                 control_str_buffer << line_buffer;
-                if (control_writing_signal == NUMBER_OF_LINES_TO_WRITE) {
+                if (control_writing_signal
+                        == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
                     of_control << control_str_buffer.str();
                     control_str_buffer.str("");
                     control_writing_signal = 0;
@@ -3463,7 +3464,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 if (flag_output_samples_into_files == 1) {
                     sample_str_buffer << particle_string;
                     sample_writing_signal++;
-                    if (sample_writing_signal == NUMBER_OF_LINES_TO_WRITE) {
+                    if (sample_writing_signal
+                            == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
                         of_sample << sample_str_buffer.str();
                         sample_str_buffer.str("");
                         sample_writing_signal=0;
@@ -3489,7 +3491,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                     if (flag_output_samples_into_files == 1) {
                         sample_str_buffer << particle_string2;
                         sample_writing_signal++;
-                        if (sample_writing_signal == NUMBER_OF_LINES_TO_WRITE) {
+                        if (sample_writing_signal
+                                == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
                             of_sample << sample_str_buffer.str();
                             sample_str_buffer.str("");
                             sample_writing_signal=0;
@@ -4281,7 +4284,7 @@ double EmissionFunctionArray::estimate_maximum(
     const double Edec     = surf->Edec;
 
     double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
-    if (flag_PCE == 1) {
+    if (flag_PCE_ == 1) {
         double mu_PCE = (
                     surf->particle_mu_PCE[real_particle_idx]);
         mu += mu_PCE;

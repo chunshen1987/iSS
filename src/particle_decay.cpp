@@ -10,7 +10,10 @@
 
 using namespace std;
 
-particle_decay::particle_decay(shared_ptr<RandomUtil::Random> ran_gen) {
+particle_decay::particle_decay(shared_ptr<RandomUtil::Random> ran_gen,
+                               AfterburnerType afterburner_type,
+                               string table_path) :
+        table_path_(table_path), afterburner_type_(afterburner_type) {
     ran_gen_ptr = ran_gen;
     resonance_table.clear();
     read_resonances_list();
@@ -30,7 +33,14 @@ particle_decay::~particle_decay() {
 int particle_decay::read_resonances_list() {
     double eps = 1e-15;
     cout << " -- Read in particle resonance decay table..." << endl;
-    ifstream resofile(iSS_data::table_path + "/pdg.dat");
+    std::ifstream resofile;
+    if (afterburner_type_ == AfterburnerType::SMASH) {
+        resofile.open(table_path_ + "/pdg-SMASH.dat");
+    } else if (afterburner_type_ == AfterburnerType::UrQMD) {
+        resofile.open(table_path_ + "/pdg-urqmd_v3.3+.dat");
+    } else {
+        resofile.open(table_path_ + "/pdg-s95pv1.dat");
+    }
     int dummy_int;
     int particle_monval;
     resofile >> particle_monval;

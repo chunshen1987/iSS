@@ -32,9 +32,10 @@ int main(int argc, char** argv) {
          << endl << endl;
 
     string path = "results";
-    iSS iSsampler(path);
+    string table_path = "iSS_tables";
+    string input_file = "iSS_parameters.dat";
+    iSS iSsampler(path, table_path, input_file);
     // read in parameters
-    iSsampler.paraRdr_ptr->readFromFile("iSS_parameters.dat");
     iSsampler.paraRdr_ptr->readFromArguments(argc, argv);
     iSsampler.paraRdr_ptr->echo();
 

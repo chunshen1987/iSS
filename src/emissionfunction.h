@@ -26,13 +26,15 @@
 class EmissionFunctionArray {
  private:
     int hydro_mode;   // switch for (2+1)-d or (3+1)-d hypersurface
-    int flag_PCE;
+    int flag_PCE_;
     int flag_restrict_deltaf;
     double deltaf_max_ratio;
 
     pretty_ostream messager;
 
-    std::string path;
+    const std::string path_;
+    const std::string table_path_;
+    const AfterburnerType afterburner_type_;
 
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
 
@@ -45,9 +47,9 @@ class EmissionFunctionArray {
 
     // the y_minus_eta_min_index holds the index 
     // to the smallest positive y-eta_s value
-    int y_minus_eta_tab_length, y_minus_eta_min_index; 
+    int y_minus_eta_tab_length, y_minus_eta_min_index;
     // true if y_minus_eta_tab has only positive part
-    bool positive_y_minus_eta_table_only; 
+    bool positive_y_minus_eta_table_only;
 
     ParameterReader *paraRdr; // used to pass-in parameters
     int F0_IS_NOT_SMALL;
@@ -59,40 +61,40 @@ class EmissionFunctionArray {
     int turn_on_rhob;
 
     Table *dN_pTdpTdphidy;  // dN / (pt dpt dphi dy)
-    // store the largest element when summing over xt and eta 
+    // store the largest element when summing over xt and eta
     // to get dN / (pt dpt dphi dy); used during sampling.
-    Table *dN_pTdpTdphidy_max; 
+    Table *dN_pTdpTdphidy_max;
 
     double **dN_dxtdetady;  // dN / (d^2x_t deta dy) (correction: and dtau)
-    // dN / (d^2x_t deta dy) is the (weighted) sum of all elements of 
-    // the [pT_tab_length][phi_tab_length]-sized dN/dall matrix; 
-    // this array records the maximum value of this dN/dall matrix, 
+    // dN / (d^2x_t deta dy) is the (weighted) sum of all elements of
+    // the [pT_tab_length][phi_tab_length]-sized dN/dall matrix;
+    // this array records the maximum value of this dN/dall matrix,
     // for each eta and FO-cell.
-    double **dN_dxtdetady_pT_max; 
+    double **dN_dxtdetady_pT_max;
     double **dN_dxtdy_4all;  // dN / (dxt dy) for all particles
 
     // dN/(dxt dy) for one particle species
-    std::vector<double> dN_dxtdy_for_one_particle_species; 
+    std::vector<double> dN_dxtdy_for_one_particle_species;
 
     int number_of_chosen_particles;
     // used in spectra and flow calculations; 
     // it has length Nparticle, 0 means miss, 1 means include
-    std::vector<int> chosen_particles_01_table; 
+    std::vector<int> chosen_particles_01_table;
 
     // 0/1: Particles with similar mass and chemical potentials 
     // will be sampled using the same dN/(dxt deta dy) matrix
-    int grouping_particles; 
+    int grouping_particles;
 
-    // Usable only when grouping_particles is 1. 
-    // If two particles have mass and chemical potentials 
-    // close within this relative tolerance, they are considered to be 
-    // identical and will be sampled successively without regenerating 
+    // Usable only when grouping_particles is 1.
+    // If two particles have mass and chemical potentials
+    // close within this relative tolerance, they are considered to be
+    // identical and will be sampled successively without regenerating
     // the dN / (dxt deta dy) matrix for efficiency.
-    double mc_grouping_tolerance; 
+    double mc_grouping_tolerance;
 
     // store particle index; 
     // the sampling process follows the order specified by this table
-    std::vector<int> chosen_particles_sampling_table; 
+    std::vector<int> chosen_particles_sampling_table;
 
     // store chosen particle monte carlo number that are not found in pdg.dat
     std::vector<int> unidentifiedPid_table;
@@ -152,7 +154,8 @@ class EmissionFunctionArray {
                           std::vector<particle_info> particles_in,
                           const std::vector<FO_surf> &FOsurf_ptr_in,
                           int flag_PCE_in, ParameterReader* paraRdr_in,
-                          std::string path_in);
+                          std::string path_in, std::string table_path,
+                          AfterburnerType afterburner_type);
     ~EmissionFunctionArray();
 
     std::vector< std::vector<iSS_Hadron>* >* Hadron_list;
@@ -208,15 +211,15 @@ class EmissionFunctionArray {
                                double Temperature,
                                std::array<double, 5> &results);
 
-    // the following variables need to be set first in order to 
+    // the following variables need to be set first in order to
     // call this function
-    void calculate_dN_dxtdy_4all_particles(); 
+    void calculate_dN_dxtdy_4all_particles();
 
     void calculate_dN_dxtdy_for_one_particle_species(const int particle_idx);
 
     double calculate_total_FZ_energy_flux();
     // to be used after calculate_dN_dxtdy_4all_particles
-    void sample_using_dN_dxtdy_4all_particles_conventional(); 
+    void sample_using_dN_dxtdy_4all_particles_conventional();
 
     // Third sampling method
     void sample_using_dN_pTdpTdphidy();

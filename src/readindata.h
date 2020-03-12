@@ -13,12 +13,15 @@
 class read_FOdata {
  private:
     ParameterReader* paraRdr;
-    std::string path_;
+
+    const std::string path_;
+    const std::string table_path_;
+
     int mode;
     bool surface_in_binary;
 
     // flag to determine whether the EoS is partial chemical equilibrium or not
-    int flag_PCE;
+    int flag_PCE_;
     int turn_on_bulk;       // switch to read in bulk viscous pressure
     int turn_on_rhob;       // switch to read in net baryon density
     int turn_on_diff;       // switch to read in diffusion current
@@ -31,12 +34,14 @@ class read_FOdata {
     pretty_ostream messager;
 
  public:
-    read_FOdata(ParameterReader* paraRdr_in, std::string path);
+    read_FOdata(ParameterReader* paraRdr_in, std::string path,
+                std::string table_path);
     ~read_FOdata();
     int get_number_of_freezeout_cells();
     int get_IEOS_music() const {return(iEOS_MUSIC_);}
+    AfterburnerType get_afterburner_type() const {return(afterburner_type_);}
     int get_number_of_lines_of_binary_surface_file(string filename);
-    int get_flag_PCE() {return(flag_PCE);}
+    int get_flag_PCE() {return(flag_PCE_);}
     void read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr);
     void read_in_chemical_potentials(std::vector<FO_surf> &surf_ptr,
                                      std::vector<particle_info> &particle_ptr);

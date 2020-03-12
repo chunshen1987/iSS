@@ -19,12 +19,13 @@ using std::cout;
 using std::endl;
 using std::string;
 using std::ostringstream;
-using iSS_data::table_path;
 using iSS_data::hbarC;
 
-read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
+read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
+                         string table_path) :
+        path_(path), table_path_(table_path) {
     paraRdr = paraRdr_in;
-    path_ = path_in;
+
     mode = paraRdr->getVal("hydro_mode");
     turn_on_bulk = paraRdr->getVal("turn_on_bulk");
     turn_on_rhob = paraRdr->getVal("turn_on_rhob");
@@ -81,7 +82,14 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path_in) {
     }
     n_eta_skip = 0;
     iEOS_MUSIC_ = 0;
-    afterburner_type_ = AfterburnerType::PDG_Decay;
+    int afterburner_id = paraRdr->getVal("afterburner_type");
+    if (afterburner_id == 1) {
+        afterburner_type_ = AfterburnerType::UrQMD;
+    } else if (afterburner_id == 2) {
+        afterburner_type_ = AfterburnerType::SMASH;
+    } else {
+        afterburner_type_ = AfterburnerType::PDG_Decay;
+    }
 }
 
 read_FOdata::~read_FOdata() {}
@@ -151,6 +159,7 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
     return(counted_line);
 }
 
+
 void read_FOdata::read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr) {
     if (mode == 0)     // VISH2+1 outputs
         read_FOsurfdat_VISH2p1(surf_ptr);
@@ -163,13 +172,14 @@ void read_FOdata::read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr) {
     regulate_surface_cells(surf_ptr);
 }
 
+
 void read_FOdata::read_in_chemical_potentials(
     std::vector<FO_surf> &surf_ptr, std::vector<particle_info> &particle_ptr) {
     int Nparticle = 0;
     int N_stableparticle;
     Table mu_table;
     if (mode == 0) {      // VISH2+1 output
-        std::ifstream particletable(table_path + "/EOS_particletable.dat");
+        std::ifstream particletable(table_path_ + "/EOS_particletable.dat");
         particletable >> N_stableparticle;
         particletable.close();
     } else if (mode == 1 || mode == 2) {   // music output
@@ -194,25 +204,25 @@ void read_FOdata::read_in_chemical_potentials(
             N_stableparticle = 0;
         } else if (iEOS_MUSIC_ == 3) {  // s95p-v1-PCE150
             particletable.open(
-                table_path
+                table_path_
                 + "/EOS_tables/s95p-v1-PCE150/EOS_particletable.dat");
             particletable >> N_stableparticle;
             particletable.close();
         } else if (iEOS_MUSIC_ == 4) {  // s95p-v1-PCE155
             particletable.open(
-                table_path
+                table_path_
                 + "/EOS_tables/s95p-v1-PCE155/EOS_particletable.dat");
             particletable >> N_stableparticle;
             particletable.close();
         } else if (iEOS_MUSIC_ == 5) {  // s95p-v1-PCE160
             particletable.open(
-                table_path
+                table_path_
                 + "/EOS_tables/s95p-v1-PCE160/EOS_particletable.dat");
             particletable >> N_stableparticle;
             particletable.close();
         } else if (iEOS_MUSIC_ == 6) {  // s95p-v0-PCE165
             particletable.open(
-                table_path
+                table_path_
                 + "/EOS_tables/s95p-v0-PCE165/EOS_particletable.dat");
             particletable >> N_stableparticle;
             particletable.close();
@@ -238,7 +248,7 @@ void read_FOdata::read_in_chemical_potentials(
         }
     }
     if (mode == 10) {     // hydro_analysis output
-        std::ifstream particletable(table_path + "/EOS_particletable.dat");
+        std::ifstream particletable(table_path_ + "/EOS_particletable.dat");
         particletable >> N_stableparticle;
         particletable.close();
     }
@@ -250,7 +260,7 @@ void read_FOdata::read_in_chemical_potentials(
 
     if (N_stableparticle > 0) {
         messager.info(" -- EOS is partially chemical equilibrium ");
-        flag_PCE = 1;
+        flag_PCE_ = 1;
         int FO_length = surf_ptr.size();
         double** particle_mu = new double* [N_stableparticle];
         for (int i = 0; i < N_stableparticle; i++)
@@ -269,7 +279,7 @@ void read_FOdata::read_in_chemical_potentials(
         delete [] particle_mu;
     } else {
         messager.info(" -- EOS is chemical equilibrium. ");
-        flag_PCE = 0;
+        flag_PCE_ = 0;
     }
 }
 
@@ -805,16 +815,16 @@ void read_FOdata::read_chemical_potentials_music(
     Table mu_table;
     if (iEOS_MUSIC_ == 3) {
         mu_table.loadTableFromFile(
-                    table_path + "/EOS_tables/s95p-v1-PCE150/EOS_Mu.dat");
+                    table_path_ + "/EOS_tables/s95p-v1-PCE150/EOS_Mu.dat");
     } else if (iEOS_MUSIC_ == 4) {
         mu_table.loadTableFromFile(
-                    table_path + "/EOS_tables/s95p-v1-PCE155/EOS_Mu.dat");
+                    table_path_ + "/EOS_tables/s95p-v1-PCE155/EOS_Mu.dat");
     } else if (iEOS_MUSIC_ == 5) {
         mu_table.loadTableFromFile(
-                    table_path + "/EOS_tables/s95p-v1-PCE160/EOS_Mu.dat");
+                    table_path_ + "/EOS_tables/s95p-v1-PCE160/EOS_Mu.dat");
     } else if (iEOS_MUSIC_ == 6) {
         mu_table.loadTableFromFile(
-                    table_path + "/EOS_tables/s95p-v1-PCE165/EOS_Mu.dat");
+                    table_path_ + "/EOS_tables/s95p-v1-PCE165/EOS_Mu.dat");
     }
 
     double edec_pre = 0.0e0;
@@ -840,11 +850,11 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
     cout << " -- Read in particle resonance decay table...";
     std::ifstream resofile;
     if (afterburner_type_ == AfterburnerType::SMASH) {
-        resofile.open(table_path + "backup_tables/pdg-SMASH.dat");
+        resofile.open(table_path_ + "/pdg-SMASH.dat");
     } else if (afterburner_type_ == AfterburnerType::UrQMD) {
-        resofile.open(table_path + "backup_tables/pdg-urqmd_v3.3+.dat");
+        resofile.open(table_path_ + "/pdg-urqmd_v3.3+.dat");
     } else {
-        resofile.open(table_path + "/pdg.dat");
+        resofile.open(table_path_ + "/pdg-s95pv1.dat");
     }
     int local_i = 0;
     int dummy_int;
@@ -982,23 +992,23 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle,
          << "for particles..." << endl;
     std::ifstream particletable;
     if (mode == 0) {
-        particletable.open(table_path + "/EOS_particletable.dat");
+        particletable.open(table_path_ + "/EOS_particletable.dat");
     } else if (mode == 1 || mode == 2) {
         if (iEOS_MUSIC_ == 3) {
             particletable.open(
-                table_path
+                table_path_
                 + "/EOS_tables/s95p-v1-PCE150/EOS_particletable.dat");
         } else if (iEOS_MUSIC_ == 4) {
             particletable.open(
-                table_path
+                table_path_
                 + "/EOS_tables/s95p-v1-PCE155/EOS_particletable.dat");
         } else if (iEOS_MUSIC_ == 5) {
             particletable.open(
-                table_path
+                table_path_
                 + "/EOS_tables/s95p-v1-PCE160/EOS_particletable.dat");
         } else if (iEOS_MUSIC_ == 6) {
             particletable.open(
-                table_path
+                table_path_
                 + "/EOS_tables/s95p-v1-PCE165/EOS_particletable.dat");
         } else {
             messager << "invalid EOS option for MUSIC: " << iEOS_MUSIC_;

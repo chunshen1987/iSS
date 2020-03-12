@@ -11,11 +11,15 @@
 
 class particle_decay {
  private:
+    const std::string table_path_;
+    const AfterburnerType afterburner_type_;
     std::vector<particle_info*> resonance_table;
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
 
  public:
-    particle_decay(std::shared_ptr<RandomUtil::Random> ran_gen);
+    particle_decay(std::shared_ptr<RandomUtil::Random> ran_gen,
+                   AfterburnerType afterburner_type,
+                   std::string table_path="iSS_tables");
     ~particle_decay();
 
     //! This function reads in resonance decay table
@@ -39,7 +43,7 @@ class particle_decay {
 
     //! This function returns the strange number of particle
     int get_particle_strange_number(int monval);
-    
+
     //! This function returns the particle mass for a given particle id
     double get_particle_mass(int POI_monval);
 

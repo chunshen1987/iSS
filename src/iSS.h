@@ -14,14 +14,15 @@
 
 class iSS {
  private:
-    std::string path_;
+    const std::string path_;
+    const std::string table_path_;
 
     std::vector<FO_surf> FOsurf_ptr;
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
 
     int Nparticle;
-    int flag_PCE;
-    int IEOS_music_;
+    int flag_PCE_;
+    AfterburnerType afterburner_type_;
 
     long randomSeed;
 
@@ -32,7 +33,8 @@ class iSS {
     pretty_ostream messager;
 
  public:
-    iSS(std::string path_in);
+    iSS(std::string path, std::string table_path="iSS_tables",
+        std::string inputfile="iSS_parameters.dat");
     ~iSS();
 
     ParameterReader *paraRdr_ptr;
