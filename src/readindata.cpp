@@ -906,7 +906,7 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
         }
 
         //add anti-particle entry
-        if (particle_i.baryon == 1) {
+        if (particle_i.baryon > 0) {
             local_i++;
             particle_info particle_j;
             particle_j.monval = -particle_i.monval;
