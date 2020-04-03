@@ -81,7 +81,6 @@ EmissionFunctionArray::EmissionFunctionArray(
 
     hydro_mode = paraRdr->getVal("hydro_mode");
 
-    F0_IS_NOT_SMALL          = paraRdr->getVal("f0_is_not_small");
     USE_OSCAR_FORMAT         = paraRdr->getVal("use_OSCAR_format");
     USE_GZIP_FORMAT          = paraRdr->getVal("use_gzip_format");
     INCLUDE_DELTAF           = paraRdr->getVal("include_deltaf_shear");
@@ -557,9 +556,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
                           + px*px*pi11 + 2.0*px*py*pi12 + 2.0*px*pz*pi13
                           + py*py*pi22 + 2.0*py*pz*pi23
                           + pz*pz*pi33);
-                      delta_f_shear = (
-                          (1 - F0_IS_NOT_SMALL*sign*f0)*Wfactor
-                          *deltaf_prefactor);
+                      delta_f_shear = (1 - sign*f0)*Wfactor*deltaf_prefactor;
                   }
 
                 double delta_f_bulk = get_deltaf_bulk(
@@ -771,9 +768,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
                             + px*px*pi11 + 2.0*px*py*pi12 + 2.0*px*pz*pi13
                             + py*py*pi22 + 2.0*py*pz*pi23
                             + pz*pz*pi33);
-                        delta_f_shear = (
-                            (1 - F0_IS_NOT_SMALL*sign*f0)
-                            *Wfactor*deltaf_prefactor);
+                        delta_f_shear = (1 - sign*f0)*Wfactor*deltaf_prefactor;
                     }
 
                     double delta_f_bulk = get_deltaf_bulk(
@@ -1464,9 +1459,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
                         + px*px*pi11 + 2.0*px*py*pi12 + 2.0*px*pz*pi13
                         + py*py*pi22 + 2.0*py*pz*pi23
                         + pz*pz*pi33);
-                    delta_f_shear = (
-                        (1. - F0_IS_NOT_SMALL*sign*f0)
-                        *Wfactor*deltaf_prefactor);
+                    delta_f_shear = (1. - sign*f0)*Wfactor*deltaf_prefactor;
                 }
 
                 double delta_f_bulk = get_deltaf_bulk(
@@ -1782,7 +1775,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
 
     long total_tries = 0, total_violation = 0;
     //double largest_violation = -1.0;
-    
+
     for (long sampling_idx=1; sampling_idx<=number_of_repeated_sampling; 
          sampling_idx++) {
         long number_to_sample = determine_number_to_sample(
@@ -1912,9 +1905,8 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                         + px*px*pi11 + 2.0*px*py*pi12 + 2.0*px*pz_max*pi13
                         + py*py*pi22 + 2.0*py*pz_max*pi23
                         + pz_max*pz_max*pi33);
-                    delta_f_shear = (
-                        (1. - F0_IS_NOT_SMALL*sign*f0_max)
-                        *Wfactor_max*deltaf_prefactor);
+                    delta_f_shear = ((1. - sign*f0_max)
+                                     *Wfactor_max*deltaf_prefactor);
                 }
 
                 double delta_f_bulk = get_deltaf_bulk(
@@ -1976,9 +1968,8 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                             + px*px*pi11 + 2.0*px*py*pi12 + 2.0*px*pz*pi13
                             + py*py*pi22 + 2.0*py*pz*pi23
                             + pz*pz*pi33);
-                        delta_f_shear = (
-                            (1. - F0_IS_NOT_SMALL*sign*f0)
-                            *Wfactor*deltaf_prefactor);
+                        delta_f_shear = ((1. - sign*f0)*Wfactor
+                                         *deltaf_prefactor);
                     }
                     delta_f_bulk = get_deltaf_bulk(
                         mass, pdotu, bulkPi, Tdec, sign, f0,
@@ -4022,7 +4013,7 @@ double EmissionFunctionArray::estimate_shear_viscous_maximum(
     //                 *E^3*f0*trace_Pi2/(2*T^2*(e+p))
     double inv_Tdec = 1./Tdec;
     double tmp_factor = 1.;
-    if (F0_IS_NOT_SMALL && sign == -1) {
+    if (sign == -1) {
         // (1+f0) <= 2*f0
         tmp_factor = 2.0;
     } else {
@@ -4109,7 +4100,7 @@ double EmissionFunctionArray::estimate_diffusion_maximum(
     }
 
     double tmp_factor = 1.;
-    if (F0_IS_NOT_SMALL && sign == -1) {  // (1+f0) <= 2*f0
+    if (sign == -1) {  // (1+f0) <= 2*f0
         tmp_factor = 2.0;
     }
     guess_qmu *= tmp_factor*q_size;
@@ -4122,7 +4113,7 @@ double EmissionFunctionArray::get_deltaf_bulk(
     if (INCLUDE_BULK_DELTAF== 0) return(0.0);
     double delta_f_bulk = 0.0;
     if (bulk_deltaf_kind == 0) {
-        delta_f_bulk = (-(1. - F0_IS_NOT_SMALL*sign*f0)*bulkPi
+        delta_f_bulk = (-(1. - sign*f0)*bulkPi
                         *(  bulkvisCoefficients[0]*mass*mass 
                           + bulkvisCoefficients[1]*pdotu 
                           + bulkvisCoefficients[2]*pdotu*pdotu));
@@ -4203,7 +4194,7 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
                 + 2.0*px*p3*surf->pi13 + py*py*surf->pi22 + 2.0*py*p3*surf->pi23
                 + p3*p3*surf->pi33);
 
-            delta_f_shear = ((1. - F0_IS_NOT_SMALL*sign*f0)*Wfactor
+            delta_f_shear = ((1. - sign*f0)*Wfactor
                              *deltaf_prefactor);
         }
 

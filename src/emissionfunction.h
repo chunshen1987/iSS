@@ -52,7 +52,6 @@ class EmissionFunctionArray {
     bool positive_y_minus_eta_table_only;
 
     ParameterReader *paraRdr; // used to pass-in parameters
-    int F0_IS_NOT_SMALL;
     int USE_OSCAR_FORMAT;
     int USE_GZIP_FORMAT;
     int INCLUDE_DELTAF, INCLUDE_BULK_DELTAF, INCLUDE_DIFFUSION_DELTAF;

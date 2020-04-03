@@ -32,6 +32,12 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
     turn_on_diff = paraRdr->getVal("turn_on_diff");
     surface_in_binary = true;
 
+    if (paraRdr->getVal("quantum_statistics") == 1) {
+        quantum_statistics_ = true;
+    } else {
+        quantum_statistics_ = false;
+    }
+
     if (mode == 1 || mode == 2) {
         // determine read in format in surface.dat from MUSIC simulation
         messager.info("read in hyper-surface from MUSIC simulations ...");
@@ -976,10 +982,14 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
         local_i++;   // Add one to the counting variable "i" for the meson/baryon
     }
     for (auto &particle_i: particle) {
-        if (particle_i.baryon == 0) {
-            particle_i.sign = -1;
+        if (quantum_statistics_) {
+            if (particle_i.baryon == 0) {
+                particle_i.sign = -1;
+            } else {
+                particle_i.sign = 1;
+            }
         } else {
-            particle_i.sign=1;
+            particle_i.sign = 0;
         }
     }
     cout << "done." << endl;

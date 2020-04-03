@@ -22,7 +22,7 @@ bulk_deltaf_kind = 1     # 0 : 14-momentum approximation
 restrict_deltaf = 0      # flag to apply restriction on the size of delta f
 deltaf_max_ratio = 1.0   # the maximum allowed size of delta f w.r.t f0
 
-f0_is_not_small = 1      # include (1 \pm f_0) factor in delta f
+quantum_statistics = 1   # include quantum statistics or not (1: yes, 0: no)
 
 output_samples_into_files = 0  # output particle samples into individual files
                                # for individual particle species

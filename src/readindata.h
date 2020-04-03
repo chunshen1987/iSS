@@ -19,6 +19,7 @@ class read_FOdata {
 
     int mode;
     bool surface_in_binary;
+    bool quantum_statistics_;
 
     // flag to determine whether the EoS is partial chemical equilibrium or not
     int flag_PCE_;
