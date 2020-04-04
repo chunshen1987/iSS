@@ -895,6 +895,8 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
             resofile >> temp_decay_channel->decay_part[2];
             resofile >> temp_decay_channel->decay_part[3];
             resofile >> temp_decay_channel->decay_part[4];
+            std::string rest_of_line;
+            std::getline(resofile, rest_of_line);
             particle_i.decay_channels.push_back(temp_decay_channel);
         }
 
