@@ -9,8 +9,10 @@
 
 using namespace std;
 
-iSS::iSS(std::string path, std::string table_path, std::string inputfile) :
-        path_(path), table_path_(table_path) {
+iSS::iSS(std::string path, std::string table_path,
+         std::string particle_table_path, std::string inputfile) :
+        path_(path), table_path_(table_path),
+        particle_table_path_(particle_table_path) {
 
     flag_PCE_ = 0;
     paraRdr_ptr = new ParameterReader;
@@ -46,7 +48,8 @@ int iSS::shell() {
 }
 
 int iSS::read_in_FO_surface() {
-    read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_);
+    read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
+                                particle_table_path_);
     freeze_out_data.read_in_freeze_out_data(FOsurf_ptr);
     messager << "total number of cells: " <<  FOsurf_ptr.size();
     messager.flush("info");
@@ -76,12 +79,12 @@ int iSS::generate_samples() {
     Table chosen_particles;
     if (afterburner_type_ == AfterburnerType::SMASH) {
         chosen_particles.loadTableFromFile(
-            table_path_ + "/chosen_particles_SMASH.dat");
+            particle_table_path_ + "/chosen_particles_SMASH.dat");
     } else if (afterburner_type_ == AfterburnerType::UrQMD) {
         chosen_particles.loadTableFromFile(
-            table_path_ + "/chosen_particles_urqmd_v3.3+.dat");
+            particle_table_path_ + "/chosen_particles_urqmd_v3.3+.dat");
     } else {
-        chosen_particles.loadTableFromFile(table_path_
+        chosen_particles.loadTableFromFile(particle_table_path_
                                            + "/chosen_particles_s95p-v1.dat");
     }
 

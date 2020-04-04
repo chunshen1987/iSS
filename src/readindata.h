@@ -16,6 +16,7 @@ class read_FOdata {
 
     const std::string path_;
     const std::string table_path_;
+    const std::string particle_table_path_;
 
     int mode;
     bool surface_in_binary;
@@ -36,7 +37,7 @@ class read_FOdata {
 
  public:
     read_FOdata(ParameterReader* paraRdr_in, std::string path,
-                std::string table_path);
+                std::string table_path, std::string particle_table_path);
     ~read_FOdata();
     int get_number_of_freezeout_cells();
     int get_IEOS_music() const {return(iEOS_MUSIC_);}

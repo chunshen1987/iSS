@@ -22,8 +22,9 @@ using std::ostringstream;
 using iSS_data::hbarC;
 
 read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
-                         string table_path) :
-        path_(path), table_path_(table_path) {
+                         string table_path, string particle_table_path) :
+        path_(path), table_path_(table_path),
+        particle_table_path_(particle_table_path) {
     paraRdr = paraRdr_in;
 
     mode = paraRdr->getVal("hydro_mode");
@@ -856,11 +857,11 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
     cout << " -- Read in particle resonance decay table...";
     std::string reso_filename;
     if (afterburner_type_ == AfterburnerType::SMASH) {
-        reso_filename = table_path_ + "/pdg-SMASH.dat";
+        reso_filename = particle_table_path_ + "/pdg-SMASH.dat";
     } else if (afterburner_type_ == AfterburnerType::UrQMD) {
-        reso_filename = table_path_ + "/pdg-urqmd_v3.3+.dat";
+        reso_filename = particle_table_path_ + "/pdg-urqmd_v3.3+.dat";
     } else {
-        reso_filename = table_path_ + "/pdg-s95pv1.dat";
+        reso_filename = particle_table_path_ + "/pdg-s95pv1.dat";
     }
     std::ifstream resofile(reso_filename.c_str());
     if (!resofile.good()) {
