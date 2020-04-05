@@ -16,6 +16,7 @@ class iSS {
  private:
     const std::string path_;
     const std::string table_path_;
+    const std::string particle_table_path_;
 
     std::vector<FO_surf> FOsurf_ptr;
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
@@ -34,6 +35,7 @@ class iSS {
 
  public:
     iSS(std::string path, std::string table_path="iSS_tables",
+        std::string particle_table_path="iSS_tables",
         std::string inputfile="iSS_parameters.dat");
     ~iSS();
 
