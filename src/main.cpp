@@ -33,8 +33,9 @@ int main(int argc, char** argv) {
 
     string path = "results";
     string table_path = "iSS_tables";
+    string particle_table_path = "iSS_tables";
     string input_file = "iSS_parameters.dat";
-    iSS iSsampler(path, table_path, input_file);
+    iSS iSsampler(path, table_path, particle_table_path, input_file);
     // read in parameters
     iSsampler.paraRdr_ptr->readFromArguments(argc, argv);
     iSsampler.paraRdr_ptr->echo();
