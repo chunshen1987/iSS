@@ -52,6 +52,7 @@ typedef struct {
 
 typedef struct {
     float tau, xpt, ypt, eta;
+    float cosh_eta, sinh_eta;
     float da0, da1, da2, da3;
     float u0, u1, u2, u3;
     float Edec, Tdec, Pdec;

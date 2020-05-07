@@ -321,6 +321,8 @@ void read_FOdata::read_decdat(std::vector<FO_surf> &surf_ptr) {
 
         ss >> surf_elem.tau;
         surf_elem.eta = 0.0;
+        surf_elem.cosh_eta = 1.0;
+        surf_elem.sinh_eta = 0.0;
 
         ss >> surf_elem.da0;
         ss >> surf_elem.da1;
@@ -432,6 +434,8 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             surf_elem.xpt = array_loc[1];
             surf_elem.ypt = array_loc[2];
             surf_elem.eta = 0.0;
+            surf_elem.cosh_eta = 1.0;
+            surf_elem.sinh_eta = 0.0;
             surf_elem.da0 = array_loc[4];
             surf_elem.da1 = array_loc[5];
             surf_elem.da2 = array_loc[6];
@@ -572,6 +576,8 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
         surf_elem.xpt = temp_xpt;
         surf_elem.ypt = temp_ypt;
         surf_elem.eta = 0.0;
+        surf_elem.cosh_eta = 1.0;
+        surf_elem.sinh_eta = 0.0;
 
         // freeze out normal vectors
         ss >> surf_elem.da0;
@@ -655,6 +661,8 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
             surf_elem.xpt = array_loc[1];
             surf_elem.ypt = array_loc[2];
             surf_elem.eta = array_loc[3];
+            surf_elem.cosh_eta = cosh(surf_elem.eta);
+            surf_elem.sinh_eta = sinh(surf_elem.eta);
             surf_elem.da0 = array_loc[4];
             surf_elem.da1 = array_loc[5];
             surf_elem.da2 = array_loc[6];
@@ -700,6 +708,8 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
             surfdat >> surf_elem.xpt;
             surfdat >> surf_elem.ypt;
             surfdat >> surf_elem.eta;
+            surf_elem.cosh_eta = cosh(surf_elem.eta);
+            surf_elem.sinh_eta = sinh(surf_elem.eta);
 
             // freeze out normal vectors
             surfdat >> surf_elem.da0;

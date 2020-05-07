@@ -1237,3 +1237,15 @@ void delete_a_3D_Matrix(double*** Arr_3D, const int nx, const int ny) {
 }
 
 
+void set_val_in_3D_Matrix(double*** Arr_3D, const int nx, const int ny,
+                          const int nz, const double val) {
+    for (int i = 0; i < nx; i++) {
+        for (int j = 0; j < ny; j++) {
+            for (int k = 0; k < nz; k++) {
+                Arr_3D[i][j][k] = val;
+            }
+        }
+    }
+}
+
+
