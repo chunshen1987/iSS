@@ -2,6 +2,11 @@
 
 #include "spin_polarization.h"
 #include "arsenal.h"
+#include<iostream>
+
+
+using std::cout;
+using std::endl;
 
 SpinPolarization::SpinPolarization(const std::vector<FO_surf> &FOsurf_ptr,
                                    const std::vector<particle_info> &particles,
@@ -22,6 +27,19 @@ SpinPolarization::~SpinPolarization() {
 }
 
 void SpinPolarization::compute_spin_polarization() {
+    int POI_monval = 3122;  // Lambda
+
+    particle_info POI_info;
+    // find the information about the particle of interest
+    for (const auto &particle_i: particle_info_) {
+        if (particle_i.monval == POI_monval) {
+            POI_info = particle_i;
+            break;
+        }
+    }
+
+    cout << "Computing spin polarization for " << POI_info.name
+         << ", Monte-carlo index: " << POI_info.monval << endl;
 
 }
 

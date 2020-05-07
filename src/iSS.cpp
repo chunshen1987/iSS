@@ -113,5 +113,7 @@ int iSS::generate_samples() {
 void iSS::compute_spin_polarization() {
     polarizor = std::unique_ptr<SpinPolarization> (
             new SpinPolarization(FOsurf_ptr, particle, path_, table_path_));
+    polarizor->compute_spin_polarization();
+    exit(1);
 }
 
