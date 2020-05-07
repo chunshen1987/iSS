@@ -60,6 +60,7 @@ typedef struct {
     float bulkPi;
     float qmu0, qmu1, qmu2, qmu3;
     std::vector<float> particle_mu_PCE;
+    std::vector<float> vorticity_arr;
 } FO_surf;
 
 
