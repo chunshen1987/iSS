@@ -11,6 +11,7 @@
 #include "emissionfunction.h"
 #include "Random.h"
 #include "pretty_ostream.h"
+#include "spin_polarization.h"
 
 class iSS {
  private:
@@ -31,6 +32,8 @@ class iSS {
 
     std::unique_ptr<EmissionFunctionArray> efa;
 
+    std::unique_ptr<SpinPolarization> polarizor;
+
     pretty_ostream messager;
 
  public:
@@ -47,6 +50,7 @@ class iSS {
     int shell();
     int read_in_FO_surface();
     int generate_samples();
+    void compute_spin_polarization();
 
     int get_number_of_sampled_events() {
         return(efa->get_number_of_sampled_events());

@@ -11,7 +11,8 @@ set (SOURCES
   readindata.cpp
   particle_decay.cpp
   pretty_ostream.cpp
-  )
+  spin_polarization.cpp
+)
 
 add_library(${lib_name} SHARED ${SOURCES})
 if (APPLE)

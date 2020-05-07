@@ -37,6 +37,11 @@ int iSS::shell() {
         messager.flush("error");
         exit(-1);
     }
+
+    if (paraRdr_ptr->getVal("calculate_polarization") == 1) {
+        compute_spin_polarization();
+    }
+
     set_random_seed();
     status = generate_samples();
     if (status != 0) {
@@ -102,5 +107,11 @@ int iSS::generate_samples() {
     efa->shell();
 
     return(0);
+}
+
+
+void iSS::compute_spin_polarization() {
+    polarizor = std::unique_ptr<SpinPolarization> (
+            new SpinPolarization(FOsurf_ptr, particle, path_, table_path_));
 }
 
