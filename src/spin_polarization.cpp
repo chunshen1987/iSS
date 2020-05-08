@@ -38,17 +38,17 @@ SpinPolarization::SpinPolarization(const std::vector<FO_surf> &FOsurf_ptr,
         sin_phi_arr_[i] = sin(phi_arr_[i]);
     }
     double y_size = 10.0;
-    double dy = -y_size/2./(Ny_ - 1);
+    double dy = y_size/2./(Ny_ - 1);
     y_arr_.resize(Ny_);
     for (int i = 0; i < Ny_; i++)
         y_arr_[i] = - y_size/2. + i*dy;
 
-    Smu_pT_.resize(NpT_, {0.});
-    Smu_phi_.resize(Nphi_, {0.});
-    Smu_y_.resize(Ny_, {0.});
+    Smu_pT_.resize(NpT_, {0., 0., 0., 0.});
+    Smu_phi_.resize(Nphi_, {0., 0., 0., 0.});
+    Smu_y_.resize(Ny_, {0., 0., 0., 0.});
 
     for (int i = 0; i < NpT_; i++) {
-        std::vector<iSS_data::Vec4> Smu(Nphi_, {0.});
+        std::vector<iSS_data::Vec4> Smu(Nphi_, {0., 0., 0., 0.});
         Smu_pTdpTdphi_.push_back(Smu);
     }
 
@@ -94,6 +94,7 @@ void SpinPolarization::compute_spin_polarization() {
     const double prefactor = -1./(8.*mass);
 
     for (int iy = 0; iy < Ny_; iy++) {
+        cout << "progress: " << iy << "/" << Ny_ << endl;
         double y = y_arr_[iy];
         double cosh_y = cosh(y);
         double sinh_y = sinh(y);
@@ -305,8 +306,9 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
         const float tau = surf.tau;
         const float ptau = pmu[0]*surf.cosh_eta - pmu[3]*surf.sinh_eta;
         const float tau_peta = pmu[3]*surf.cosh_eta - pmu[0]*surf.sinh_eta;   // tau*p^eta
-        double mu = (  POI_info.baryon*surf.muB + POI_info.strange*surf.muS
-                     + POI_info.charge*surf.muC);
+        const double mu = (  POI_info.baryon*surf.muB
+                           + POI_info.strange*surf.muS
+                           + POI_info.charge*surf.muC);
         const double pdotu = (  ptau*surf.u0 - pmu[1]*surf.u1
                               - pmu[2]*surf.u2 - tau_peta*surf.u3);
         const double pdsigma = tau*(  ptau*surf.da0 + pmu[1]*surf.da1
@@ -332,6 +334,7 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
         Smu_tmp[3] += prefactor*(omega_ty*pmu[1] - omega_tx*pmu[2]
                                  - omega_xy*pmu[0]);
     }
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 4; i++) {
         Smu[i] = Smu_tmp[i];
+    }
 }
