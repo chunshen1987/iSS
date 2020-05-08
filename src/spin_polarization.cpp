@@ -298,6 +298,8 @@ void SpinPolarization::output_integrated_spin_polarizations(int POI_monval) {
 void SpinPolarization::compute_spin_polarization_for_a_given_p(
         const particle_info &POI_info, const iSS_data::Vec4 &pmu,
         iSS_data::Vec4 &Smu, double &dN) {
+    double Smu_tmp[4] = {0., 0., 0., 0.};
+    #pragma omp parallel for reduction(+: Smu_tmp[:4], dN)
     for (unsigned int i = 0; i < FOsurf_ptr_.size(); i++) {
         const FO_surf &surf = FOsurf_ptr_[i];
         const float tau = surf.tau;
@@ -321,13 +323,15 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
 
         const double prefactor = pdsigma*f0*(1. - f0)*2.;
         dN     += pdsigma*f0;
-        Smu[0] += prefactor*(- omega_yz*pmu[1] + omega_xz*pmu[2]
-                             - omega_xy*pmu[3]);
-        Smu[1] += prefactor*(- omega_ty*pmu[3] + omega_tz*pmu[2]
-                             - omega_yz*pmu[0]);
-        Smu[2] += prefactor*(- omega_tz*pmu[1] + omega_tx*pmu[3]
-                             - omega_xz*pmu[0]);
-        Smu[3] += prefactor*(omega_ty*pmu[1] - omega_tx*pmu[2]
-                             - omega_xy*pmu[0]);
+        Smu_tmp[0] += prefactor*(- omega_yz*pmu[1] + omega_xz*pmu[2]
+                                 - omega_xy*pmu[3]);
+        Smu_tmp[1] += prefactor*(- omega_ty*pmu[3] + omega_tz*pmu[2]
+                                 - omega_yz*pmu[0]);
+        Smu_tmp[2] += prefactor*(- omega_tz*pmu[1] + omega_tx*pmu[3]
+                                 - omega_xz*pmu[0]);
+        Smu_tmp[3] += prefactor*(omega_ty*pmu[1] - omega_tx*pmu[2]
+                                 - omega_xy*pmu[0]);
     }
+    for (int i = 0; i < 4; i++)
+        Smu[i] = Smu_tmp[i];
 }
