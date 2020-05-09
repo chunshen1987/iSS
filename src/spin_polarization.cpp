@@ -38,7 +38,7 @@ SpinPolarization::SpinPolarization(const std::vector<FO_surf> &FOsurf_ptr,
         sin_phi_arr_[i] = sin(phi_arr_[i]);
     }
     double y_size = 10.0;
-    double dy = y_size/2./(Ny_ - 1);
+    double dy = y_size/(Ny_ - 1);
     y_arr_.resize(Ny_);
     for (int i = 0; i < Ny_; i++)
         y_arr_[i] = - y_size/2. + i*dy;
