@@ -26,6 +26,7 @@ class SpinPolarization {
     std::vector<double> pT_arr_, phi_arr_, y_arr_;
     std::vector<double> cos_phi_arr_, sin_phi_arr_;
 
+    iSS_data::Vec4 Smu_;
     std::vector<iSS_data::Vec4> Smu_pT_;
     std::vector<iSS_data::Vec4> Smu_phi_;
     std::vector<iSS_data::Vec4> Smu_y_;

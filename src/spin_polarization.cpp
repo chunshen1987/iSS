@@ -145,9 +145,13 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
     cout << "computing the integrated spin polarization ... " << endl;
 
     // clean up previous results
-    Smu_pT_.resize(NpT_, {0., 0., 0., 0.});
-    Smu_phi_.resize(Nphi_, {0., 0., 0., 0.});
-    Smu_y_.resize(Ny_, {0., 0., 0., 0.});
+    Smu_ = {0.};
+    for (int ipT = 0; ipT < NpT_; ipT++)
+        Smu_pT_[ipT] = {0.};
+    for (int iphi = 0; iphi < Nphi_; iphi++)
+        Smu_phi_[iphi] = {0.};
+    for (int iy = 0; iy < Ny_; iy++)
+        Smu_y_[iy] = {0.};
     for (int ipT = 0; ipT < NpT_; ipT++) {
         for (int iphi = 0; iphi < Nphi_; iphi++) {
             for (int i = 0; i < 4; i++)
@@ -156,12 +160,30 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
     }
 
     // compute S^mu(pT)
+    double dN = 0.;
+    for (int iy = 0; iy < Ny_; iy++) {
+        if (std::abs(y_arr_[iy]) > 1.) continue;
+        for (int ipT = 0; ipT < NpT_; ipT++) {
+            for (int iphi = 0; iphi < Nphi_; iphi++) {
+                dN      += dN_pTdpTdphidy_[iy][ipT][iphi];
+                Smu_[0] += St_pTdpTdphidy_[iy][ipT][iphi];
+                Smu_[1] += Sx_pTdpTdphidy_[iy][ipT][iphi];
+                Smu_[2] += Sy_pTdpTdphidy_[iy][ipT][iphi];
+                Smu_[3] += Sz_pTdpTdphidy_[iy][ipT][iphi];
+            }
+        }
+    }
+    for (int i = 0; i < 4; i++) {
+        Smu_[i] /= dN;
+    }
+
+    // compute S^mu(pT)
     for (int ipT = 0; ipT < NpT_; ipT++) {
         double dN_pT = 0.;
         for (int iy = 0; iy < Ny_; iy++) {
             if (std::abs(y_arr_[iy]) > 1.) continue;
             for (int iphi = 0; iphi < Nphi_; iphi++) {
-                dN_pT += dN_pTdpTdphidy_[iy][ipT][iphi];
+                dN_pT           += dN_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_pT_[ipT][0] += St_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_pT_[ipT][1] += Sx_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_pT_[ipT][2] += Sy_pTdpTdphidy_[iy][ipT][iphi];
@@ -176,18 +198,19 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
     // compute S^mu(phi)
     for (int iphi = 0; iphi < Nphi_; iphi++) {
         double dN_phi = 0.;
-        for (int ipT = 0; ipT < NpT_; ipT++) {
-            for (int iy = 0; iy < Ny_; iy++) {
-                if (std::abs(y_arr_[iy]) > 1.) continue;
-                dN_phi += dN_pTdpTdphidy_[iy][ipT][iphi];
+        for (int iy = 0; iy < Ny_; iy++) {
+            if (std::abs(y_arr_[iy]) > 1.) continue;
+            for (int ipT = 0; ipT < NpT_; ipT++) {
+                dN_phi            += dN_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_phi_[iphi][0] += St_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_phi_[iphi][1] += Sx_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_phi_[iphi][2] += Sy_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_phi_[iphi][3] += Sz_pTdpTdphidy_[iy][ipT][iphi];
             }
         }
+        cout << "dN_phi = " << dN_phi << endl;
         for (int i = 0; i < 4; i++) {
-                Smu_phi_[iphi][i] /= dN_phi;
+            Smu_phi_[iphi][i] /= dN_phi;
         }
     }
 
@@ -196,7 +219,7 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
         double dN_y = 0.;
         for (int ipT = 0; ipT < NpT_; ipT++) {
             for (int iphi = 0; iphi < Nphi_; iphi++) {
-                dN_y += dN_pTdpTdphidy_[iy][ipT][iphi];
+                dN_y          += dN_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_y_[iy][0] += St_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_y_[iy][1] += Sx_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_y_[iy][2] += Sy_pTdpTdphidy_[iy][ipT][iphi];
@@ -204,7 +227,7 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
             }
         }
         for (int i = 0; i < 4; i++) {
-                Smu_y_[iy][i] /= dN_y;
+            Smu_y_[iy][i] /= dN_y;
         }
     }
 
@@ -214,7 +237,7 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
             double dN_pTdpTdphi = 0.;
             for (int iy = 0; iy < Ny_; iy++) {
                 if (std::abs(y_arr_[iy]) > 1.) continue;
-                dN_pTdpTdphi += dN_pTdpTdphidy_[iy][ipT][iphi];
+                dN_pTdpTdphi                 += dN_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_pTdpTdphi_[ipT][iphi][0] += St_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_pTdpTdphi_[ipT][iphi][1] += Sx_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_pTdpTdphi_[ipT][iphi][2] += Sy_pTdpTdphidy_[iy][ipT][iphi];
@@ -232,6 +255,17 @@ void SpinPolarization::output_integrated_spin_polarizations(
         const int POI_monval, const std::string vorticity_typename) {
     cout << "output spin polarization results to files ... " << endl;
     std::ofstream of;
+
+    std::stringstream Smu_filename;
+    Smu_filename << path_ << "/Smu_" << vorticity_typename << "_"
+                 << POI_monval << ".dat";
+    remove(Smu_filename.str().c_str());
+    of.open(Smu_filename.str().c_str(), std::ios::out);
+    of << "# S^t(pT)  S^x(pT)  S^y(pT)  S^z(pT)" << endl;
+    for (int i = 0; i < 4; i++)
+        of << scientific << setw(10) << setprecision(6) << Smu_[i] << "  ";
+    of << endl;
+    of.close();
 
     std::stringstream SmupT_filename;
     SmupT_filename << path_ << "/Smu_pT_" << vorticity_typename << "_"
@@ -348,12 +382,12 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
         const double expon = (pdotu - mu)/surf.Tdec;
         const double f0 = 1./(exp(expon) + POI_info.sign);
 
-        const float omega_tx = surf.vorticity_arr[4*itype + 0];
-        const float omega_ty = surf.vorticity_arr[4*itype + 1];
-        const float omega_tz = surf.vorticity_arr[4*itype + 2];
-        const float omega_xy = surf.vorticity_arr[4*itype + 3];
-        const float omega_xz = surf.vorticity_arr[4*itype + 4];
-        const float omega_yz = surf.vorticity_arr[4*itype + 5];
+        const float omega_tx = surf.vorticity_arr[6*itype + 0];
+        const float omega_ty = surf.vorticity_arr[6*itype + 1];
+        const float omega_tz = surf.vorticity_arr[6*itype + 2];
+        const float omega_xy = surf.vorticity_arr[6*itype + 3];
+        const float omega_xz = surf.vorticity_arr[6*itype + 4];
+        const float omega_yz = surf.vorticity_arr[6*itype + 5];
 
         const double prefactor = pdsigma*f0*(1. - f0)*2.;
         dN     += pdsigma*f0;
@@ -366,7 +400,16 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
         Smu_tmp[3] += prefactor*(omega_ty*pmu[1] - omega_tx*pmu[2]
                                  - omega_xy*pmu[0]);
     }
-    for (int i = 0; i < 4; i++) {
-        Smu[i] = Smu_tmp[i];
-    }
+
+    // transform to the particle LRF
+    iSS_data::Vec4 Smu_LRF;
+    const double mass = POI_info.mass;
+    double p_dot_S = 0.;
+    for (int i = 1; i < 4; i++)
+        p_dot_S += pmu[i]*Smu_tmp[i];
+    Smu_LRF[0] = pmu[0]/mass*Smu_tmp[0] - p_dot_S/mass;
+    for (int i = 1; i < 4; i++)
+        Smu_LRF[i] = Smu_tmp[i] - p_dot_S*pmu[i]/(pmu[0]*(pmu[0] + mass));
+
+    Smu = Smu_LRF;
 }
