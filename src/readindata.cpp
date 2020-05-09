@@ -471,8 +471,20 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             surf_elem.qmu2 = array_loc[32];
             surf_elem.qmu3 = array_loc[33];
             if (include_vorticity_) {
-                for (int ii = 0; ii < 24; ii++) {
-                    surf_elem.vorticity_arr.push_back(array_loc[34+ii]);
+                for (int ii = 0; ii < 6; ii++) {
+                    surf_elem.vorticity_arr.push_back(
+                                    array_loc[34+ii]/array_loc[13]);
+                }
+                for (int ii = 0; ii < 6; ii++) {
+                    surf_elem.vorticity_arr.push_back(
+                                    array_loc[40+ii]/array_loc[13]);
+                }
+                for (int ii = 0; ii < 6; ii++) {
+                    surf_elem.vorticity_arr.push_back(array_loc[46+ii]);
+                }
+                for (int ii = 0; ii < 6; ii++) {
+                    surf_elem.vorticity_arr.push_back(
+                        array_loc[52+ii]/(array_loc[13]*array_loc[13]));
                 }
             }
         } else {
@@ -698,8 +710,20 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
             surf_elem.qmu2 = array_loc[32];
             surf_elem.qmu3 = array_loc[33];
             if (include_vorticity_) {
-                for (int ii = 0; ii < 24; ii++) {
-                    surf_elem.vorticity_arr.push_back(array_loc[34+ii]);
+                for (int ii = 0; ii < 6; ii++) {
+                    surf_elem.vorticity_arr.push_back(
+                                    array_loc[34+ii]/array_loc[13]);
+                }
+                for (int ii = 0; ii < 6; ii++) {
+                    surf_elem.vorticity_arr.push_back(
+                                    array_loc[40+ii]/array_loc[13]);
+                }
+                for (int ii = 0; ii < 6; ii++) {
+                    surf_elem.vorticity_arr.push_back(array_loc[46+ii]);
+                }
+                for (int ii = 0; ii < 6; ii++) {
+                    surf_elem.vorticity_arr.push_back(
+                        array_loc[52+ii]/(array_loc[13]*array_loc[13]));
                 }
             }
         } else {

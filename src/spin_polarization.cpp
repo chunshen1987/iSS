@@ -57,6 +57,11 @@ SpinPolarization::SpinPolarization(const std::vector<FO_surf> &FOsurf_ptr,
     Sx_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
     Sy_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
     Sz_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
+
+    vorticity_typenames_.push_back("KineticSP");
+    vorticity_typenames_.push_back("Kinetic");
+    vorticity_typenames_.push_back("Thermal");
+    vorticity_typenames_.push_back("Temperature");
 }
 
 
@@ -69,17 +74,27 @@ SpinPolarization::~SpinPolarization() {
 }
 
 
-void SpinPolarization::compute_spin_polarization() {
-    int POI_monval = 3122;  // Lambda
+void SpinPolarization::compute_spin_polarization_shell() {
+    const int POI_monval = 3122;  // Lambda
+    for (unsigned int itype = 0; itype < vorticity_typenames_.size(); itype++) {
+        compute_spin_polarization(POI_monval, itype);
+        output_integrated_spin_polarizations(POI_monval,
+                                             vorticity_typenames_[itype]);
+    }
+}
 
+
+void SpinPolarization::compute_spin_polarization(const int POI_monval,
+                                                 const int itype) {
+    // first clean up previous results
     set_val_in_3D_Matrix(dN_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
     set_val_in_3D_Matrix(St_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
     set_val_in_3D_Matrix(Sx_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
     set_val_in_3D_Matrix(Sy_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
     set_val_in_3D_Matrix(Sz_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
 
-    particle_info POI_info;
     // find the information about the particle of interest
+    particle_info POI_info;
     for (const auto &particle_i: particle_info_) {
         if (particle_i.monval == POI_monval) {
             POI_info = particle_i;
@@ -89,6 +104,8 @@ void SpinPolarization::compute_spin_polarization() {
 
     cout << "Computing spin polarization for " << POI_info.name
          << ", Monte-carlo index: " << POI_info.monval << endl;
+    cout << "spin polarization tensor type : " << vorticity_typenames_[itype]
+         << endl;
 
     const double mass  = POI_info.mass;
     const double prefactor = -1./(8.*mass);
@@ -110,8 +127,8 @@ void SpinPolarization::compute_spin_polarization() {
                 iSS_data::Vec4 pmu = {pt, px, py, pz};
                 iSS_data::Vec4 Smu = {0., 0., 0., 0.};
                 double dN = 0.;
-                compute_spin_polarization_for_a_given_p(
-                                                POI_info, pmu, Smu, dN);
+                compute_spin_polarization_for_a_given_p(POI_info, pmu, itype,
+                                                        Smu, dN);
                 dN_pTdpTdphidy_[iy][ipT][iphi] = dN;
                 St_pTdpTdphidy_[iy][ipT][iphi] = prefactor*Smu[0];
                 Sx_pTdpTdphidy_[iy][ipT][iphi] = prefactor*Smu[1];
@@ -120,14 +137,24 @@ void SpinPolarization::compute_spin_polarization() {
             }
         }
     }
-
     compute_integrated_spin_polarizations();
-    output_integrated_spin_polarizations(POI_monval);
 }
 
 
 void SpinPolarization::compute_integrated_spin_polarizations() {
     cout << "computing the integrated spin polarization ... " << endl;
+
+    // clean up previous results
+    Smu_pT_.resize(NpT_, {0., 0., 0., 0.});
+    Smu_phi_.resize(Nphi_, {0., 0., 0., 0.});
+    Smu_y_.resize(Ny_, {0., 0., 0., 0.});
+    for (int ipT = 0; ipT < NpT_; ipT++) {
+        for (int iphi = 0; iphi < Nphi_; iphi++) {
+            for (int i = 0; i < 4; i++)
+                Smu_pTdpTdphi_[ipT][iphi][i] = 0.0;
+        }
+    }
+
     // compute S^mu(pT)
     for (int ipT = 0; ipT < NpT_; ipT++) {
         double dN_pT = 0.;
@@ -201,12 +228,14 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
 }
 
 
-void SpinPolarization::output_integrated_spin_polarizations(int POI_monval) {
+void SpinPolarization::output_integrated_spin_polarizations(
+        const int POI_monval, const std::string vorticity_typename) {
     cout << "output spin polarization results to files ... " << endl;
     std::ofstream of;
 
     std::stringstream SmupT_filename;
-    SmupT_filename << path_ << "/Smu_pT_" << POI_monval << ".dat";
+    SmupT_filename << path_ << "/Smu_pT_" << vorticity_typename << "_"
+                   << POI_monval << ".dat";
     remove(SmupT_filename.str().c_str());
     of.open(SmupT_filename.str().c_str(), std::ios::out);
     of << "# pT[GeV]  S^t(pT)  S^x(pT)  S^y(pT)  S^z(pT)" << endl;
@@ -222,7 +251,8 @@ void SpinPolarization::output_integrated_spin_polarizations(int POI_monval) {
     of.close();
 
     std::stringstream Smuphi_filename;
-    Smuphi_filename << path_ << "/Smu_phi_" << POI_monval << ".dat";
+    Smuphi_filename << path_ << "/Smu_phi_" << vorticity_typename << "_"
+                    << POI_monval << ".dat";
     remove(Smuphi_filename.str().c_str());
     of.open(Smuphi_filename.str().c_str(), std::ios::out);
     of << "# phi  S^t(phi)  S^x(phi)  S^y(phi)  S^z(phi)" << endl;
@@ -238,7 +268,8 @@ void SpinPolarization::output_integrated_spin_polarizations(int POI_monval) {
     of.close();
 
     std::stringstream Smuy_filename;
-    Smuy_filename << path_ << "/Smu_y_" << POI_monval << ".dat";
+    Smuy_filename << path_ << "/Smu_y_" << vorticity_typename << "_"
+                  << POI_monval << ".dat";
     remove(Smuy_filename.str().c_str());
     of.open(Smuy_filename.str().c_str(), std::ios::out);
     of << "# y  S^t(y)  S^x(y)  S^y(y)  S^z(y)" << endl;
@@ -254,7 +285,8 @@ void SpinPolarization::output_integrated_spin_polarizations(int POI_monval) {
     of.close();
 
     std::stringstream Smu_dpTdphi_filename;
-    Smu_dpTdphi_filename << path_ << "/Smu_dpTdphi_" << POI_monval << ".dat";
+    Smu_dpTdphi_filename << path_ << "/Smu_dpTdphi_" << vorticity_typename
+                         << "_" << POI_monval << ".dat";
     remove(Smu_dpTdphi_filename.str().c_str());
     of.open(Smu_dpTdphi_filename.str().c_str(), std::ios::out);
     of << "# pT[GeV]  phi  S^t(pT, phi)  S^x(pT, phi)  S^y(pT, phi)  "
@@ -273,8 +305,8 @@ void SpinPolarization::output_integrated_spin_polarizations(int POI_monval) {
     of.close();
 
     std::stringstream Smu_dpTdphidy_filename;
-    Smu_dpTdphidy_filename << path_ << "/Smu_dpTdphidy_" << POI_monval
-                           << ".dat";
+    Smu_dpTdphidy_filename << path_ << "/Smu_dpTdphidy_" << vorticity_typename
+                           << "_" << POI_monval << ".dat";
     remove(Smu_dpTdphidy_filename.str().c_str());
     of.open(Smu_dpTdphidy_filename.str().c_str(), std::ios::out);
     of << "# y  pT[GeV]  phi  S^t  S^x  S^y  S^z" << endl;
@@ -298,7 +330,7 @@ void SpinPolarization::output_integrated_spin_polarizations(int POI_monval) {
 
 void SpinPolarization::compute_spin_polarization_for_a_given_p(
         const particle_info &POI_info, const iSS_data::Vec4 &pmu,
-        iSS_data::Vec4 &Smu, double &dN) {
+        const int itype, iSS_data::Vec4 &Smu, double &dN) {
     double Smu_tmp[4] = {0., 0., 0., 0.};
     #pragma omp parallel for reduction(+: Smu_tmp[:4], dN)
     for (unsigned int i = 0; i < FOsurf_ptr_.size(); i++) {
@@ -316,12 +348,12 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
         const double expon = (pdotu - mu)/surf.Tdec;
         const double f0 = 1./(exp(expon) + POI_info.sign);
 
-        const float omega_tx = surf.vorticity_arr[0];
-        const float omega_ty = surf.vorticity_arr[1];
-        const float omega_tz = surf.vorticity_arr[2];
-        const float omega_xy = surf.vorticity_arr[3];
-        const float omega_xz = surf.vorticity_arr[4];
-        const float omega_yz = surf.vorticity_arr[5];
+        const float omega_tx = surf.vorticity_arr[4*itype + 0];
+        const float omega_ty = surf.vorticity_arr[4*itype + 1];
+        const float omega_tz = surf.vorticity_arr[4*itype + 2];
+        const float omega_xy = surf.vorticity_arr[4*itype + 3];
+        const float omega_xz = surf.vorticity_arr[4*itype + 4];
+        const float omega_yz = surf.vorticity_arr[4*itype + 5];
 
         const double prefactor = pdsigma*f0*(1. - f0)*2.;
         dN     += pdsigma*f0;

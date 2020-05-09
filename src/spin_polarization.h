@@ -4,6 +4,7 @@
 #define SRC_SPIN_POLARIZATION_H_
 
 #include<vector>
+#include<cstring>
 
 #include "data_struct.h"
 #include "Table.h"
@@ -15,6 +16,7 @@ class SpinPolarization {
     const std::string table_path_;
     const std::vector<FO_surf> &FOsurf_ptr_;
     const std::vector<particle_info> &particle_info_;
+    std::vector<std::string> vorticity_typenames_;
     const ParameterReader &paraRdr_;
 
     const int NpT_  = 15;
@@ -43,12 +45,14 @@ class SpinPolarization {
                      ParameterReader &paraRdr);
     ~SpinPolarization();
 
-    void compute_spin_polarization();
+    void compute_spin_polarization_shell();
+    void compute_spin_polarization(const int POI_monval, const int itype);
     void compute_spin_polarization_for_a_given_p(
         const particle_info &POI_info, const iSS_data::Vec4 &pmu,
-        iSS_data::Vec4 &Smu, double &dN);
+        const int itype, iSS_data::Vec4 &Smu, double &dN);
     void compute_integrated_spin_polarizations();
-    void output_integrated_spin_polarizations(int POI_monval);
+    void output_integrated_spin_polarizations(
+            const int POI_monval, const std::string vorticity_typename);
 };
 
 #endif  // SRC_SPIN_POLARIZATION_H_
