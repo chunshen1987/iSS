@@ -19,11 +19,17 @@ if (APPLE)
 endif (APPLE)
 target_link_libraries (${lib_name} ${LIBS} ${ZLIB_LIBRARIES})
 
-add_executable(${exe_name} main.cpp)
+if (link_with_lib)
+    add_executable(${exe_name} main.cpp)
+    target_link_libraries (${exe_name} ${lib_name} ${LIBS} ${ZLIB_LIBRARIES})
+else (link_with_lib)
+    add_executable(${exe_name} main.cpp ${SOURCES})
+    target_link_libraries (${exe_name} ${LIBS} ${ZLIB_LIBRARIES})
+endif (link_with_lib)
+
 if (APPLE)
     set_target_properties (${exe_name} PROPERTIES COMPILE_FLAGS "-DAPPLE")
 endif (APPLE)
-target_link_libraries (${exe_name} ${lib_name} ${LIBS} ${ZLIB_LIBRARIES})
 install(TARGETS ${exe_name} ${lib_name}
         RUNTIME DESTINATION ${CMAKE_HOME_DIRECTORY}
         LIBRARY DESTINATION lib
