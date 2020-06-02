@@ -730,7 +730,8 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
             }
         }
         if (!surfdat.eof()) {
-            surf_ptr.push_back(surf_elem);
+            if (surf_elem.Tdec > 0.01)
+                surf_ptr.push_back(surf_elem);
         }
     }
     surfdat.close();
