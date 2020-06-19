@@ -30,6 +30,7 @@
 #include "Stopwatch.h"
 
 using iSS_data::AMOUNT_OF_OUTPUT;
+using iSS_data::Vec4;
 using std::cout;
 using std::endl;
 using std::string;
@@ -4221,15 +4222,16 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
         if (ran_gen_ptr->rand_uniform() < accept_prob) {
             // accept the sample
             // now we need to boost the momentum to the lab frame
-            double p_dot_u = (  px*surf->u_tz[1] + py*surf->u_tz[2]
-                              + pz*surf->u_tz[3]);
-            double plab_0 = p0*surf->u_tz[0] + p_dot_u;
-            double plab_x = px + (p_dot_u/(surf->u_tz[0] + 1) + p0)*surf->u_tz[1];
-            double plab_y = py + (p_dot_u/(surf->u_tz[0] + 1) + p0)*surf->u_tz[2];
-            double plab_z = pz + (p_dot_u/(surf->u_tz[0] + 1) + p0)*surf->u_tz[3];
-            pT = sqrt(plab_x*plab_x + plab_y*plab_y);
-            phi = atan2(plab_y, plab_x);
-            double y = 0.5*log((plab_0 + plab_z)/(plab_0 - plab_z));
+            Vec4 pLRF = {p0, px, py, pz};
+            Vec4 umu = {surf->u_tz[0], surf->u_tz[1], surf->u_tz[2],
+                        surf->u_tz[3]};
+            Vec4 pLab = {0., 0., 0., 0.};
+            boost_vector_back_to_lab_frame(pLRF, pLab, umu);
+
+            // assigned to the return variables
+            pT = sqrt(pLab[1]*pLab[1] + pLab[2]*pLab[2]);
+            phi = atan2(pLab[2], pLab[1]);
+            double y = 0.5*log((pLab[0] + pLab[3])/(pLab[0] - pLab[3]));
             y_minus_eta_s = y - surf->eta;
             return(1);
         }
@@ -4405,4 +4407,18 @@ std::string EmissionFunctionArray::add_one_sampled_particle(
                                                     *temp_hadron);
     }
     return(text_string);
+}
+
+
+// this function boost a 4-vector from the fluid local rest frame to
+// the lab frame. The fluid velocity is u^\mu.
+void EmissionFunctionArray::boost_vector_back_to_lab_frame(
+                            Vec4 &p_LRF, Vec4 &p_lab, Vec4 &umu) const {
+    double p_dot_u = 0.;
+    for (int i = 1; i < 4; i++)
+        p_dot_u += p_LRF[i]*umu[i];
+
+    p_lab[0] = p_LRF[0]*umu[0] + p_dot_u;
+    for (int i = 1; i < 4; i++)
+        p_lab[i] = p_LRF[i] + (p_dot_u/(umu[0] + 1) + p_LRF[0])*umu[i];
 }

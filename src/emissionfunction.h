@@ -19,7 +19,6 @@
 #include "ParameterReader.h"
 #include "particle_decay.h"
 #include "data_struct.h"
-#include "data_struct.h"
 #include "Random.h"
 #include "pretty_ostream.h"
 #include "MomentumSamplerShell.h"
@@ -284,6 +283,9 @@ class EmissionFunctionArray {
         const int particle_monval, const double mass,
         const double pT, const double phi,
         const double y_minus_eta_s, const double eta_s);
+    void boost_vector_back_to_lab_frame(iSS_data::Vec4 &p_LRF,
+                                        iSS_data::Vec4 &p_lab,
+                                        iSS_data::Vec4 &umu) const;
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_
