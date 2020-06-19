@@ -4159,7 +4159,6 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
                             + sqrt(  surf->da_mu_LRF[1]*surf->da_mu_LRF[1]
                                    + surf->da_mu_LRF[2]*surf->da_mu_LRF[2]
                                    + surf->da_mu_LRF[3]*surf->da_mu_LRF[3]));
-
     int tries              = 1;
     const int maximum_impatience = 5000;
     while (tries < maximum_impatience) {
@@ -4220,7 +4219,17 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
         double accept_prob = result/(dsigam_fac*2.*f0);
 
         if (ran_gen_ptr->rand_uniform() < accept_prob) {
-            double y = 0.5*log((p0 + pz)/(p0 - pz));
+            // accept the sample
+            // now we need to boost the momentum to the lab frame
+            double p_dot_u = (  px*surf->u_tz[1] + py*surf->u_tz[2]
+                              + pz*surf->u_tz[3]);
+            double plab_0 = p0*surf->u_tz[0] + p_dot_u;
+            double plab_x = px + (p_dot_u/(surf->u_tz[0] + 1) + p0)*surf->u_tz[1];
+            double plab_y = py + (p_dot_u/(surf->u_tz[0] + 1) + p0)*surf->u_tz[2];
+            double plab_z = pz + (p_dot_u/(surf->u_tz[0] + 1) + p0)*surf->u_tz[3];
+            pT = sqrt(plab_x*plab_x + plab_y*plab_y);
+            phi = atan2(plab_y, plab_x);
+            double y = 0.5*log((plab_0 + plab_z)/(plab_0 - plab_z));
             y_minus_eta_s = y - surf->eta;
             return(1);
         }
