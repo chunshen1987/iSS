@@ -19,7 +19,7 @@ include_deltaf_diffusion = 0  # include delta f contribution from diffusion
 bulk_deltaf_kind = 1     # 0 : 14-momentum approximation
                          # 1 : relaxation time approximation
 
-restrict_deltaf = 0      # flag to apply restriction on the size of delta f
+restrict_deltaf = 1      # flag to apply restriction on the size of delta f
 deltaf_max_ratio = 1.0   # the maximum allowed size of delta f w.r.t f0
 
 quantum_statistics = 1   # include quantum statistics or not (1: yes, 0: no)

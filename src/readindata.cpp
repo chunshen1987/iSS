@@ -1152,17 +1152,28 @@ void read_FOdata::transform_to_local_rest_frame(
             {-uy, ux*uy/(ut + 1.), 1. + uy*uy/(ut + 1.), uy*uz/(ut + 1.)},
             {-uz, ux*uz/(ut + 1.), uy*uz/(ut + 1.), 1. + uz*uz/(ut + 1.)}
         };
-        double da[4] = {surf_i.tau*surf_i.da0*cosh_eta + surf_i.da3*sinh_eta,
-                        surf_i.tau*surf_i.da1,
-                        surf_i.tau*surf_i.da2,
-                        surf_i.da3*cosh_eta + surf_i.tau*surf_i.da0*sinh_eta};
+        double da_upper[4] = {
+            surf_i.tau*surf_i.da0*cosh_eta - surf_i.da3*sinh_eta,
+            -surf_i.tau*surf_i.da1,
+            -surf_i.tau*surf_i.da2,
+            -surf_i.da3*cosh_eta + surf_i.tau*surf_i.da0*sinh_eta};
         double da_LRF[4] = {0., 0., 0., 0.};
+        //double udotdsimga = surf_i.tau*(
+        //    surf_i.u0*surf_i.da0 + surf_i.u1*surf_i.da1 + surf_i.u2*surf_i.da2
+        //    + surf_i.u3*surf_i.da3/surf_i.tau);
+        //double udotdsimga2 = ut*da_upper[0] - ux*da_upper[1] - uy*da_upper[2] - uz*da_upper[3];
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                da_LRF[i] += da[j]*LorentzBoost[j][i];
+                da_LRF[i] += LorentzBoost[i][j]*da_upper[j];
             }
-            surf_i.da_mu_LRF[i] = da_LRF[i];
+            if (i == 0) {
+                surf_i.da_mu_LRF[i] = da_LRF[i];
+            } else {
+                surf_i.da_mu_LRF[i] = -da_LRF[i];
+            }
         }
+        //cout << "check: " << udotdsimga << "  " << udotdsimga2 << "  "
+        //     << surf_i.da_mu_LRF[0] << endl;
         double pi_tz[4][4];
         pi_tz[0][0] = (  surf_i.pi00*cosh_eta*cosh_eta
                        + 2.*surf_i.pi03*cosh_eta*sinh_eta

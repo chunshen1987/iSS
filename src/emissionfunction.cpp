@@ -4155,7 +4155,7 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
     const double deltaf_prefactor = (
                             1.0/(2.0*Tdec*Tdec*(surf->Edec + surf->Pdec)));
     const double prefactor_qmu = surf->Bn/(surf->Edec + surf->Pdec);
-    const double dsigam_fac = (surf->da_mu_LRF[0]
+    const double dsigam_fac = (std::abs(surf->da_mu_LRF[0])
                             + sqrt(  surf->da_mu_LRF[1]*surf->da_mu_LRF[1]
                                    + surf->da_mu_LRF[2]*surf->da_mu_LRF[2]
                                    + surf->da_mu_LRF[3]*surf->da_mu_LRF[3]));
