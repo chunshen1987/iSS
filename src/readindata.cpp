@@ -177,6 +177,7 @@ void read_FOdata::read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr) {
     else if (mode == 10)   // MUSIC boost invariant outputs
         read_FOsurfdat_hydro_analysis_boost_invariant(surf_ptr);
     regulate_surface_cells(surf_ptr);
+    transform_to_local_rest_frame(surf_ptr);
 }
 
 
@@ -1096,6 +1097,7 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle,
     print_progressbar(1);
 }
 
+
 void read_FOdata::regulate_Wmunu(double u[4], double Wmunu[4][4],
                                  double Wmunu_regulated[4][4]) {
     double gmunu[4][4] = {
@@ -1107,7 +1109,7 @@ void read_FOdata::regulate_Wmunu(double u[4], double Wmunu[4][4],
     double u_dot_pi[4];
     double u_mu[4];
     for (int i = 0; i < 4; i++) {
-        u_dot_pi[i] = (- u[0]*Wmunu[0][i] + u[1]*Wmunu[1][i] 
+        u_dot_pi[i] = (- u[0]*Wmunu[0][i] + u[1]*Wmunu[1][i]
                        + u[2]*Wmunu[2][i] + u[3]*Wmunu[3][i]);
         u_mu[i] = gmunu[i][i]*u[i];
     }
@@ -1121,9 +1123,85 @@ void read_FOdata::regulate_Wmunu(double u[4], double Wmunu[4][4],
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
             Wmunu_regulated[i][j] = (
-                Wmunu[i][j] + u[i]*u_dot_pi[j] + u[j]*u_dot_pi[i] 
+                Wmunu[i][j] + u[i]*u_dot_pi[j] + u[j]*u_dot_pi[i]
                 + u[i]*u[j]*u_dot_pi_dot_u 
                 - 1./3.*(gmunu[i][j] + u[i]*u[j])*(tr_pi + u_dot_pi_dot_u));
         }
+    }
+}
+
+
+// this function transform all the variables to local rest frame of the fluid
+// cell and trasform them to the t-z coordinate
+void read_FOdata::transform_to_local_rest_frame(
+                                        std::vector<FO_surf> &FOsurf_ptr) {
+    for (auto &surf_i: FOsurf_ptr) {
+        double cosh_eta = cosh(surf_i.eta);
+        double sinh_eta = sinh(surf_i.eta);
+        double ut = surf_i.u0*cosh_eta + surf_i.u3*sinh_eta;
+        double uz = surf_i.u3*cosh_eta + surf_i.u0*sinh_eta;
+        double ux = surf_i.u1;
+        double uy = surf_i.u2;
+        surf_i.u_tz[0] = ut;
+        surf_i.u_tz[1] = ux;
+        surf_i.u_tz[2] = uy;
+        surf_i.u_tz[3] = uz;
+        double LorentzBoost[4][4] = {
+            {ut, -ux, -uy, -uz},
+            {-ux, 1. + ux*ux/(ut + 1.), ux*uy/(ut + 1.), ux*uz/(ut + 1.)},
+            {-uy, ux*uy/(ut + 1.), 1. + uy*uy/(ut + 1.), uy*uz/(ut + 1.)},
+            {-uz, ux*uz/(ut + 1.), uy*uz/(ut + 1.), 1. + uz*uz/(ut + 1.)}
+        };
+        double da[4] = {surf_i.da0*cosh_eta + surf_i.da3*sinh_eta,
+                        surf_i.da1,
+                        surf_i.da2,
+                        surf_i.da3*cosh_eta + surf_i.da0*sinh_eta};
+        double da_LRF[4] = {0., 0., 0., 0.};
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                da_LRF[i] += da[j]*LorentzBoost[j][i];
+            }
+            surf_i.da_mu_LRF[i] = da_LRF[i];
+        }
+        double pi_tz[4][4];
+        pi_tz[0][0] = (  surf_i.pi00*cosh_eta*cosh_eta
+                       + 2.*surf_i.pi03*cosh_eta*sinh_eta
+                       + surf_i.pi33*sinh_eta*sinh_eta);
+        pi_tz[0][1] = surf_i.pi01*cosh_eta + surf_i.pi13*sinh_eta;
+        pi_tz[0][2] = surf_i.pi02*cosh_eta + surf_i.pi23*sinh_eta;
+        pi_tz[0][3] = (  surf_i.pi00*cosh_eta*sinh_eta
+                       + surf_i.pi03*(cosh_eta*cosh_eta + sinh_eta*sinh_eta)
+                       + surf_i.pi33*sinh_eta*cosh_eta);
+        pi_tz[1][0] = pi_tz[0][1];
+        pi_tz[1][1] = surf_i.pi11;
+        pi_tz[1][2] = surf_i.pi12;
+        pi_tz[1][3] = surf_i.pi01*sinh_eta + surf_i.pi13*cosh_eta;
+        pi_tz[2][0] = pi_tz[0][2];
+        pi_tz[2][1] = surf_i.pi12;
+        pi_tz[2][2] = surf_i.pi22;
+        pi_tz[2][3] = surf_i.pi02*sinh_eta + surf_i.pi23*cosh_eta;
+        pi_tz[3][0] = pi_tz[0][3];
+        pi_tz[3][1] = pi_tz[1][3];
+        pi_tz[3][2] = pi_tz[2][3];
+        pi_tz[3][3] = (  surf_i.pi00*sinh_eta*sinh_eta
+                       + 2.*surf_i.pi03*sinh_eta*cosh_eta
+                       + surf_i.pi33*cosh_eta*cosh_eta);
+        double pi_LRF[4][4];
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                pi_LRF[i][j] = 0.;
+                for (int a = 0; a < 4; a++) {
+                    for (int b = 0; b < 4; b++) {
+                        pi_LRF[i][j] += (LorentzBoost[i][a]*pi_tz[a][b]
+                                         *LorentzBoost[b][j]);
+                    }
+                }
+            }
+        }
+        surf_i.piLRF_xx = pi_LRF[1][1];
+        surf_i.piLRF_xy = pi_LRF[1][2];
+        surf_i.piLRF_xz = pi_LRF[1][3];
+        surf_i.piLRF_yy = pi_LRF[2][2];
+        surf_i.piLRF_yz = pi_LRF[2][3];
     }
 }

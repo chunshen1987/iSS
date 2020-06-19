@@ -28,7 +28,7 @@ iSS::~iSS() {
 
 
 void iSS::clear() {
-    FOsurf_ptr.clear();
+    FOsurf_array_.clear();
     particle.clear();
 }
 
@@ -54,11 +54,11 @@ int iSS::shell() {
 int iSS::read_in_FO_surface() {
     read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
                                 particle_table_path_);
-    freeze_out_data.read_in_freeze_out_data(FOsurf_ptr);
-    messager << "total number of cells: " <<  FOsurf_ptr.size();
+    freeze_out_data.read_in_freeze_out_data(FOsurf_array_);
+    messager << "total number of cells: " <<  FOsurf_array_.size();
     messager.flush("info");
     afterburner_type_ = freeze_out_data.get_afterburner_type();
-    freeze_out_data.read_in_chemical_potentials(FOsurf_ptr, particle);
+    freeze_out_data.read_in_chemical_potentials(FOsurf_array_, particle);
     flag_PCE_ = freeze_out_data.get_flag_PCE();
     messager.info(" -- Read in data finished!");
     return(0);
@@ -66,16 +66,16 @@ int iSS::read_in_FO_surface() {
 
 
 void iSS::set_random_seed() {
-    randomSeed  = paraRdr_ptr->getVal("randomSeed");
-    ran_gen_ptr = std::shared_ptr<RandomUtil::Random>(
-                                        new RandomUtil::Random(randomSeed));
+    randomSeed_  = paraRdr_ptr->getVal("randomSeed");
+    ran_gen_ptr_ = std::shared_ptr<RandomUtil::Random>(
+                                        new RandomUtil::Random(randomSeed_));
 }
 
 
 void iSS::set_random_seed(int randomSeed_in) {
-    randomSeed = randomSeed_in;
-    ran_gen_ptr = std::shared_ptr<RandomUtil::Random>(
-                                        new RandomUtil::Random(randomSeed));
+    randomSeed_ = randomSeed_in;
+    ran_gen_ptr_ = std::shared_ptr<RandomUtil::Random>(
+                                        new RandomUtil::Random(randomSeed_));
 }
 
 
@@ -100,11 +100,11 @@ int iSS::generate_samples() {
     // Table eta_tab("tables/eta_gauss_table_30_full.dat");
 
     messager.info("Start computation and generating samples ...");
-    efa = std::unique_ptr<EmissionFunctionArray> (new EmissionFunctionArray(
-                ran_gen_ptr, &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
-                particle, FOsurf_ptr, flag_PCE_, paraRdr_ptr,
+    efa_ = std::unique_ptr<EmissionFunctionArray> (new EmissionFunctionArray(
+                ran_gen_ptr_, &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
+                particle, FOsurf_array_, flag_PCE_, paraRdr_ptr,
                 path_, table_path_, afterburner_type_));
-    efa->shell();
+    efa_->shell();
 
     return(0);
 }

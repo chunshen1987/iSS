@@ -18,18 +18,18 @@ class iSS {
     const std::string table_path_;
     const std::string particle_table_path_;
 
-    std::vector<FO_surf> FOsurf_ptr;
-    std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
+    std::vector<FO_surf> FOsurf_array_;
+    std::shared_ptr<RandomUtil::Random> ran_gen_ptr_;
 
     int Nparticle;
     int flag_PCE_;
     AfterburnerType afterburner_type_;
 
-    long randomSeed;
+    long randomSeed_;
 
     std::vector<particle_info> particle;
 
-    std::unique_ptr<EmissionFunctionArray> efa;
+    std::unique_ptr<EmissionFunctionArray> efa_;
 
     pretty_ostream messager;
 
@@ -49,19 +49,19 @@ class iSS {
     int generate_samples();
 
     int get_number_of_sampled_events() {
-        return(efa->get_number_of_sampled_events());
+        return(efa_->get_number_of_sampled_events());
     };
 
     int get_number_of_particles(int iev) {
-        return(efa->get_number_of_particles(iev));
+        return(efa_->get_number_of_particles(iev));
     };
 
     iSS_Hadron get_hadron(int iev, int ipart) {
-        return(efa->get_hadron(iev, ipart));
+        return(efa_->get_hadron(iev, ipart));
     };
 
     std::vector<iSS_Hadron>* get_hadron_list_iev(const int iev) {
-        return(efa->get_hadron_list_iev(iev));
+        return(efa_->get_hadron_list_iev(iev));
     }
 
     void clear();
