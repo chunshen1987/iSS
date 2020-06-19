@@ -263,10 +263,9 @@ class EmissionFunctionArray {
         double mass, double pdotu, double bulkPi, double Tdec, int sign,
         double f0, const std::array<double, 3> bulkvisCoefficients);
     int sample_momemtum_from_a_fluid_cell(
-        const double mass, const double degen, const int sign,
+        const double mass, const int sign,
         const int baryon, const int strange, const int charge,
-        const double pT_to, const double y_minus_eta_s_range,
-        const double maximum_guess, const FO_surf *surf,
+        const FO_surf *surf,
         const std::array<double, 3> bulkvisCoefficients,
         const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s);

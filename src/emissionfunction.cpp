@@ -3260,7 +3260,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     if (pT_to < 0) {
         pT_to = pT_tab->getLast(1); // use table to determine pT range
     }
-    double y_minus_eta_s_range = paraRdr->getVal("sample_y_minus_eta_s_range");
 
     if (sampling_model > 100) {
         cout << "EmissionFunctionArray::"
@@ -3290,7 +3289,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         const particle_info *particle = &particles[real_particle_idx];
         const double mass = particle->mass;
         const int sign    = particle->sign;
-        const int degen   = particle->gspin;
         const int baryon  = particle->baryon;
         const int strange = particle->strange;
         const int charge  = particle->charge;
@@ -3424,16 +3422,10 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                     deltaf_qmu_coeff = get_deltaf_qmu_coeff(surf->Tdec,
                                                             surf->muB);
 
-                const double maximum_guess = estimate_maximum(
-                        surf, real_particle_idx, mass, sign, degen,
-                        baryon, strange, charge,
-                        z_exp_m_z, bulkvisCoefficients, deltaf_qmu_coeff);
-
                 // next sample pt and phi
                 double pT, phi, y_minus_eta_s;
                 int status = sample_momemtum_from_a_fluid_cell(
-                                mass, degen, sign, baryon, strange, charge,
-                                pT_to, y_minus_eta_s_range, maximum_guess,
+                                mass, sign, baryon, strange, charge,
                                 surf, bulkvisCoefficients, deltaf_qmu_coeff,
                                 pT, phi, y_minus_eta_s);
 
@@ -3472,8 +3464,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                     int status2 = 0;
                     do {
                         status2 = sample_momemtum_from_a_fluid_cell(
-                                mass, degen, sign, -baryon, -strange, -charge,
-                                pT_to, y_minus_eta_s_range, maximum_guess,
+                                mass, sign, -baryon, -strange, -charge,
                                 surf, bulkvisCoefficients, deltaf_qmu_coeff,
                                 pT2, phi2, y_minus_eta_s2);
                     } while (status2 == 0);
@@ -4143,10 +4134,9 @@ double EmissionFunctionArray::get_deltaf_bulk(
 }
 
 int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
-        const double mass, const double degen, const int sign,
+        const double mass, const int sign,
         const int baryon, const int strange, const int charge,
-        const double pT_to, const double y_minus_eta_s_range,
-        const double maximum_guess, const FO_surf *surf,
+        const FO_surf *surf,
         const std::array<double, 3> bulkvisCoefficients,
         const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s
