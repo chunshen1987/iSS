@@ -20,15 +20,18 @@ iSS::iSS(std::string path, std::string table_path,
 
 }
 
+
 iSS::~iSS() {
     clear();
     delete paraRdr_ptr;
 }
 
+
 void iSS::clear() {
     FOsurf_ptr.clear();
     particle.clear();
 }
+
 
 int iSS::shell() {
     int status = read_in_FO_surface();
@@ -46,6 +49,7 @@ int iSS::shell() {
     }
     return(0);
 }
+
 
 int iSS::read_in_FO_surface() {
     read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
@@ -73,6 +77,7 @@ void iSS::set_random_seed(int randomSeed_in) {
     ran_gen_ptr = std::shared_ptr<RandomUtil::Random>(
                                         new RandomUtil::Random(randomSeed));
 }
+
 
 int iSS::generate_samples() {
     // skip others except for these particle
