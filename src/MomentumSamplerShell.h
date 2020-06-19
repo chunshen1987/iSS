@@ -17,7 +17,7 @@ class MomentumSamplerShell {
      std::shared_ptr<FermionMomentumSampler> fermion_sampler_2_;
      std::shared_ptr<BosonMomentumSampler> boson_sampler_0_;
      std::shared_ptr<BosonMomentumSampler> boson_sampler_1_;
-     std::shared_ptr<BosonMomentumSampler> boson_sampler_2-;
+     std::shared_ptr<BosonMomentumSampler> boson_sampler_2_;
 
  public:
     MomentumSamplerShell(std::shared_ptr<RandomUtil::Random> ran_gen_ptr);

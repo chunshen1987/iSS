@@ -11,6 +11,10 @@ set (SOURCES
   readindata.cpp
   particle_decay.cpp
   pretty_ostream.cpp
+  MomentumSamplerShell.cpp
+  BosonMomentumSampler.cpp
+  FermionMomentumSampler.cpp
+  MomentumSamplerBase.cpp
   )
 
 add_library(${lib_name} SHARED ${SOURCES})

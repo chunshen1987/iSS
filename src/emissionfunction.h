@@ -22,6 +22,7 @@
 #include "data_struct.h"
 #include "Random.h"
 #include "pretty_ostream.h"
+#include "MomentumSamplerShell.h"
 
 class EmissionFunctionArray {
  private:
@@ -37,6 +38,7 @@ class EmissionFunctionArray {
     const AfterburnerType afterburner_type_;
 
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
+    std::shared_ptr<MomentumSamplerShell> momentum_sampler_ptr_;
 
     int MC_sampling;
     int number_of_repeated_sampling;

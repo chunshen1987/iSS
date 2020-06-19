@@ -54,6 +54,8 @@ EmissionFunctionArray::EmissionFunctionArray(
         afterburner_type_(afterburner_type), FOsurf_ptr(FOsurf_ptr_in) {
 
     ran_gen_ptr = ran_gen;
+    momentum_sampler_ptr_ = std::shared_ptr<MomentumSamplerShell> (
+            new MomentumSamplerShell(ran_gen_ptr));
 
     // get info
     flag_PCE_ = flag_PCE;
