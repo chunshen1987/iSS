@@ -130,7 +130,7 @@ use_historic_flow_output_format = 0    # 1/0: The "historical flow format"
 
 calculate_vn_to_order = 9              # v_n's are calculated up to this order
 
-sample_upto_desired_particle_number = 0  # flag to run sampling until desired
+sample_upto_desired_particle_number = 1  # flag to run sampling until desired
                                          # particle numbers is reached
 number_of_particles_needed = 100000      # number of hadrons to sample
 number_of_repeated_sampling = 10      # How many times should the sampling be 

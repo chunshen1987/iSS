@@ -4152,59 +4152,57 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
         ) {
     const double Tdec = surf->Tdec;
     const double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
-    const double inv_Tdec  = 1./Tdec;
-    const double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI)*(hbarC*hbarC*hbarC));
     const double deltaf_prefactor = (
                             1.0/(2.0*Tdec*Tdec*(surf->Edec + surf->Pdec)));
     const double prefactor_qmu = surf->Bn/(surf->Edec + surf->Pdec);
+    const double dsigam_fac = (surf->da_mu_LRF[0]
+                            + sqrt(  surf->da_mu_LRF[1]*surf->da_mu_LRF[1]
+                                   + surf->da_mu_LRF[2]*surf->da_mu_LRF[2]
+                                   + surf->da_mu_LRF[3]*surf->da_mu_LRF[3]));
 
-    int tries               = 1;
-    double accept_prob_max  = 0.0;
-    double actual_adjusted_maximum_factor = 1.0;
+    int tries              = 1;
     const int maximum_impatience = 5000;
     while (tries < maximum_impatience) {
-        // refer to calculate_dNArrays function to see how 
+        // refer to calculate_dNArrays function to see how
         // the rate is calculated
         // Basically it is "just Cooper-Frye"
 
-        // sample according to pT dpT
-        pT = sqrt(pT_to*pT_to*ran_gen_ptr->rand_uniform());
+        double p_mag = momentum_sampler_ptr_->Sample_a_momentum(mass, Tdec, mu,
+                                                                sign);
         phi = 2*M_PI*ran_gen_ptr->rand_uniform();
-        y_minus_eta_s = ((1. - 2.*ran_gen_ptr->rand_uniform())
-                         *y_minus_eta_s_range);
+        double cos_theta = 2.*ran_gen_ptr->rand_uniform() - 1.;
+        double sin_theta = sqrt(1. - cos_theta*cos_theta);
+        pT = p_mag*sin_theta;
 
         double mT = sqrt(mass*mass + pT*pT);
         double px = pT*cos(phi);
         double py = pT*sin(phi);
 
-        double p0 = mT*cosh(y_minus_eta_s);  // p0 = p^tau
+        double p0 = sqrt(mass*mass + p_mag*p_mag);
+        double pz = p_mag*cos_theta;
         double p3 = mT*sinh(y_minus_eta_s);  // p3 = tau p^eta
 
-        double pdotu = p0*surf->u0 - px*surf->u1 - py*surf->u2 - p3*surf->u3;
-        double expon = (pdotu - mu)*inv_Tdec;
-        double f0 = 1./(exp(expon) + sign);
+        double pdsigma = (  p0*surf->da_mu_LRF[0] + px*surf->da_mu_LRF[1]
+                          + py*surf->da_mu_LRF[2] + pz*surf->da_mu_LRF[3]);
 
-        double pdsigma = (p0*surf->da0 + px*surf->da1
-                          + py*surf->da2 + p3*surf->da3/surf->tau);
+        double f0 = 1./(exp((p0 - mu)/Tdec) + sign);
 
         // delta f for shear viscosity
         double delta_f_shear = 0.;
         if (INCLUDE_DELTAF == 1) {
             double Wfactor = (
-                  p0*p0*surf->pi00 - 2.0*p0*px*surf->pi01 - 2.0*p0*py*surf->pi02
-                - 2.0*p0*p3*surf->pi03 + px*px*surf->pi11 + 2.0*px*py*surf->pi12
-                + 2.0*px*p3*surf->pi13 + py*py*surf->pi22 + 2.0*py*p3*surf->pi23
-                + p3*p3*surf->pi33);
-
-            delta_f_shear = ((1. - sign*f0)*Wfactor
-                             *deltaf_prefactor);
+                px*px*surf->piLRF_xx + 2.*px*py*surf->piLRF_xy
+                + 2.*px*pz*surf->piLRF_xz
+                + py*py*surf->piLRF_yy + 2.*py*pz*surf->piLRF_yz
+                + pz*pz*(- surf->piLRF_xx - surf->piLRF_yy));
+            delta_f_shear = (1. - sign*f0)*Wfactor*deltaf_prefactor;
         }
 
         // delta f for bulk viscosity
         double delta_f_bulk = 0.;
         if (INCLUDE_BULK_DELTAF == 1) {
             delta_f_bulk = get_deltaf_bulk(
-                                        mass, pdotu, surf->bulkPi/hbarC,
+                                        mass, p0, surf->bulkPi/hbarC,
                                         Tdec, sign, f0, bulkvisCoefficients);
         }
 
@@ -4213,50 +4211,20 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
             double qmufactor = (p0*surf->qmu0 - px*surf->qmu1 - py*surf->qmu2
                                 - p3*surf->qmu3);
-            delta_f_qmu = ((1. - sign*f0)*(prefactor_qmu - baryon/pdotu)
+            delta_f_qmu = ((1. - sign*f0)*(prefactor_qmu - baryon/p0)
                            *qmufactor/deltaf_qmu_coeff);
         }
 
-        double result;
-        double resize_factor = 1.0;
-        if (flag_restrict_deltaf == 1) {
-            // restrict the size of delta f to be smaller
-            // than f_0
-            double ratio_max = deltaf_max_ratio;
-            double deltaf_size = std::abs(delta_f_shear + delta_f_bulk
-                                          + delta_f_qmu);
-            resize_factor = std::min(1., ratio_max/(deltaf_size + 1e-10));
-        }
-        result = (prefactor*degen*f0*pdsigma*surf->tau
-                  *(1. + (delta_f_shear + delta_f_bulk + delta_f_qmu)
-                         *resize_factor));
-
-        double accept_prob = (result/(actual_adjusted_maximum_factor
-                                      *maximum_guess));
-        if (AMOUNT_OF_OUTPUT > 5) {
-            if(accept_prob > accept_prob_max)
-                accept_prob_max = accept_prob;
-        }
-
-        // for debugging
-        if (accept_prob > 1 && AMOUNT_OF_OUTPUT > 1) {
-            cout << "EmissionFunctionArray::"
-                 << "sample_using_dN_dxtdy_4all_particles "
-                 << "warning: emission function is bigger "
-                 << "than 1: " << accept_prob << endl;
-        }
+        double result = (pdsigma/p0*f0
+                  *(1. + (delta_f_shear + delta_f_bulk + delta_f_qmu)));
+        double accept_prob = result/(dsigam_fac*2.*f0);
 
         if (ran_gen_ptr->rand_uniform() < accept_prob) {
+            double y = 0.5*log((p0 + pz)/(p0 - pz));
+            y_minus_eta_s = y - surf->eta;
             return(1);
         }
         tries++;
-    }
-    if (AMOUNT_OF_OUTPUT > 5) {
-        cout << "EmissionFunctionArray::"
-             << "sample_using_dN_dxtdy_4all_particles warning:"
-             << "maximum_impatience reached." << endl;
-        cout << "accept_prob_max = " << accept_prob_max << ", "
-             << "maximum_guess = " << maximum_guess << endl;
     }
     return(0);
 }

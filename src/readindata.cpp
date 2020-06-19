@@ -1152,10 +1152,10 @@ void read_FOdata::transform_to_local_rest_frame(
             {-uy, ux*uy/(ut + 1.), 1. + uy*uy/(ut + 1.), uy*uz/(ut + 1.)},
             {-uz, ux*uz/(ut + 1.), uy*uz/(ut + 1.), 1. + uz*uz/(ut + 1.)}
         };
-        double da[4] = {surf_i.da0*cosh_eta + surf_i.da3*sinh_eta,
-                        surf_i.da1,
-                        surf_i.da2,
-                        surf_i.da3*cosh_eta + surf_i.da0*sinh_eta};
+        double da[4] = {surf_i.tau*surf_i.da0*cosh_eta + surf_i.da3*sinh_eta,
+                        surf_i.tau*surf_i.da1,
+                        surf_i.tau*surf_i.da2,
+                        surf_i.da3*cosh_eta + surf_i.tau*surf_i.da0*sinh_eta};
         double da_LRF[4] = {0., 0., 0., 0.};
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
