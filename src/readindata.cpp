@@ -20,6 +20,7 @@ using std::endl;
 using std::string;
 using std::ostringstream;
 using iSS_data::hbarC;
+using iSS_data::Vec4;
 
 read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
                          string table_path, string particle_table_path) :
@@ -1152,12 +1153,12 @@ void read_FOdata::transform_to_local_rest_frame(
             {-uy, ux*uy/(ut + 1.), 1. + uy*uy/(ut + 1.), uy*uz/(ut + 1.)},
             {-uz, ux*uz/(ut + 1.), uy*uz/(ut + 1.), 1. + uz*uz/(ut + 1.)}
         };
-        double da_upper[4] = {
+        Vec4 da_upper = {
             surf_i.tau*surf_i.da0*cosh_eta - surf_i.da3*sinh_eta,
             -surf_i.tau*surf_i.da1,
             -surf_i.tau*surf_i.da2,
             -surf_i.da3*cosh_eta + surf_i.tau*surf_i.da0*sinh_eta};
-        double da_LRF[4] = {0., 0., 0., 0.};
+        Vec4 da_LRF = {0., 0., 0., 0.};
         //double udotdsimga = surf_i.tau*(
         //    surf_i.u0*surf_i.da0 + surf_i.u1*surf_i.da1 + surf_i.u2*surf_i.da2
         //    + surf_i.u3*surf_i.da3/surf_i.tau);
@@ -1174,6 +1175,25 @@ void read_FOdata::transform_to_local_rest_frame(
         }
         //cout << "check: " << udotdsimga << "  " << udotdsimga2 << "  "
         //     << surf_i.da_mu_LRF[0] << endl;
+
+        // transform the diffusion current
+        Vec4 qmu_tz = {
+            surf_i.qmu0*cosh_eta + surf_i.qmu3*sinh_eta,
+            surf_i.qmu1,
+            surf_i.qmu2,
+            surf_i.qmu3*cosh_eta + surf_i.qmu0*sinh_eta};
+        Vec4 qmu_LRF = {0., 0., 0., 0.};
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                qmu_LRF[i] += LorentzBoost[i][j]*qmu_tz[j];
+            }
+        }
+        //cout << qmu_LRF[0] << endl;
+        surf_i.qmuLRF_x = qmu_LRF[1];
+        surf_i.qmuLRF_y = qmu_LRF[2];
+        surf_i.qmuLRF_z = qmu_LRF[3];
+
+        // transform the shear stress tensor
         double pi_tz[4][4];
         pi_tz[0][0] = (  surf_i.pi00*cosh_eta*cosh_eta
                        + 2.*surf_i.pi03*cosh_eta*sinh_eta

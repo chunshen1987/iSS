@@ -2987,11 +2987,9 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
         double deltaf_qmu_coeff = 1.0;
         double prefactor_qmu = 0.0;
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
-            double qmu0 = surf->qmu0;
-            double qmu1 = surf->qmu1;
-            double qmu2 = surf->qmu2;
-            double qmu3 = surf->qmu3;
-            dsigma_dot_q = tau*(da0*qmu0 + da1*qmu1 + da2*qmu2 + da3*qmu3/tau);
+            dsigma_dot_q = (  surf->qmuLRF_x*surf->da_mu_LRF[1]
+                            + surf->qmuLRF_y*surf->da_mu_LRF[2]
+                            + surf->qmuLRF_z*surf->da_mu_LRF[3]);
 
             double mu_B = surf->muB;
             deltaf_qmu_coeff = get_deltaf_qmu_coeff(temp, mu_B);

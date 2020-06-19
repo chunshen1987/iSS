@@ -62,6 +62,7 @@ typedef struct {
     float da_mu_LRF[4];
     float u_tz[4];
     float piLRF_xx, piLRF_xy, piLRF_xz, piLRF_yy, piLRF_yz;
+    float qmuLRF_x, qmuLRF_y, qmuLRF_z;
     std::vector<float> particle_mu_PCE;
 } FO_surf;
 
