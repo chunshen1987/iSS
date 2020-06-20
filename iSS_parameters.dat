@@ -27,8 +27,8 @@ quantum_statistics = 1   # include quantum statistics or not (1: yes, 0: no)
 output_samples_into_files = 0  # output particle samples into individual files
                                # for individual particle species
 store_samples_in_memory = 1  # flag to store particle samples in memory
-use_OSCAR_format = 1         # output results in OSCAR format
-use_gzip_format = 0          # output results in gzip format (only works with
+use_OSCAR_format = 0         # output results in OSCAR format
+use_gzip_format = 1          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
 perform_decays = 0           # flag to perform resonance decay
 
@@ -130,10 +130,10 @@ use_historic_flow_output_format = 0    # 1/0: The "historical flow format"
 
 calculate_vn_to_order = 9              # v_n's are calculated up to this order
 
-sample_upto_desired_particle_number = 1  # flag to run sampling until desired
+sample_upto_desired_particle_number = 0  # flag to run sampling until desired
                                          # particle numbers is reached
 number_of_particles_needed = 100000      # number of hadrons to sample
-number_of_repeated_sampling = 10      # How many times should the sampling be 
+number_of_repeated_sampling = 2000     # How many times should the sampling be 
                                        # repeated.
 
 sample_pT_up_to = -1                   # Up to this value will pT be sampled; 

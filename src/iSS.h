@@ -11,6 +11,7 @@
 #include "emissionfunction.h"
 #include "Random.h"
 #include "pretty_ostream.h"
+#include "FSSW.h"
 
 class iSS {
  private:
@@ -30,6 +31,7 @@ class iSS {
     std::vector<particle_info> particle;
 
     std::unique_ptr<EmissionFunctionArray> efa_;
+    std::unique_ptr<FSSW> spectra_sampler_;
 
     pretty_ostream messager;
 
@@ -49,19 +51,23 @@ class iSS {
     int generate_samples();
 
     int get_number_of_sampled_events() {
-        return(efa_->get_number_of_sampled_events());
+        //return(efa_->get_number_of_sampled_events());
+        return(spectra_sampler_->get_number_of_sampled_events());
     };
 
     int get_number_of_particles(int iev) {
-        return(efa_->get_number_of_particles(iev));
+        //return(efa_->get_number_of_particles(iev));
+        return(spectra_sampler_->get_number_of_particles(iev));
     };
 
     iSS_Hadron get_hadron(int iev, int ipart) {
-        return(efa_->get_hadron(iev, ipart));
+        //return(efa_->get_hadron(iev, ipart));
+        return(spectra_sampler_->get_hadron(iev, ipart));
     };
 
     std::vector<iSS_Hadron>* get_hadron_list_iev(const int iev) {
-        return(efa_->get_hadron_list_iev(iev));
+        //return(efa_->get_hadron_list_iev(iev));
+        return(spectra_sampler_->get_hadron_list_iev(iev));
     }
 
     void clear();

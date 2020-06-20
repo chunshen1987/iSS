@@ -15,6 +15,7 @@ set (SOURCES
   BosonMomentumSampler.cpp
   FermionMomentumSampler.cpp
   MomentumSamplerBase.cpp
+  FSSW.cpp
   )
 
 add_library(${lib_name} SHARED ${SOURCES})
