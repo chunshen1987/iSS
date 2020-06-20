@@ -4203,9 +4203,11 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
                            *qmufactor/deltaf_qmu_coeff);
         }
 
-        double result = (pdsigma/p0*f0
-                  *(1. + (delta_f_shear + delta_f_bulk + delta_f_qmu)));
-        double accept_prob = result/(dsigam_fac*2.*f0);
+        double fact1 = pdsigma/p0/dsigam_fac;
+        double fact2 = (1. + (delta_f_shear + delta_f_bulk + delta_f_qmu))/2.;
+        fact1 = std::max(0., std::min(1., fact1));
+        fact2 = std::max(0., std::min(1., fact2));
+        double accept_prob = fact1*fact2;
 
         if (ran_gen_ptr->rand_uniform() < accept_prob) {
             // accept the sample
