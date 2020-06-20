@@ -1309,7 +1309,9 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         double &pT, double &phi, double &y_minus_eta_s
         ) {
     const double Tdec = surf->Tdec;
-    const double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
+    const double mu = std::min(mass, static_cast<double>(baryon*surf->muB
+                                                         + strange*surf->muS
+                                                         + charge*surf->muQ));
     const double deltaf_prefactor = (
                             1.0/(2.0*Tdec*Tdec*(surf->Edec + surf->Pdec)));
     const double prefactor_qmu = surf->Bn/(surf->Edec + surf->Pdec);
@@ -1317,7 +1319,7 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
                             + sqrt(  surf->da_mu_LRF[1]*surf->da_mu_LRF[1]
                                    + surf->da_mu_LRF[2]*surf->da_mu_LRF[2]
                                    + surf->da_mu_LRF[3]*surf->da_mu_LRF[3]));
-    int tries              = 1;
+    int tries = 1;
     const int maximum_impatience = 5000;
     while (tries < maximum_impatience) {
         // refer to calculate_dNArrays function to see how
@@ -1326,18 +1328,16 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
 
         double p_mag = momentum_sampler_ptr_->Sample_a_momentum(mass, Tdec, mu,
                                                                 sign);
-        phi = 2*M_PI*ran_gen_ptr->rand_uniform();
+        double phi_candidate = 2*M_PI*ran_gen_ptr->rand_uniform();
         double cos_theta = 2.*ran_gen_ptr->rand_uniform() - 1.;
         double sin_theta = sqrt(1. - cos_theta*cos_theta);
-        pT = p_mag*sin_theta;
+        double pT_candidate = p_mag*sin_theta;
 
-        double mT = sqrt(mass*mass + pT*pT);
-        double px = pT*cos(phi);
-        double py = pT*sin(phi);
+        double px = pT_candidate*cos(phi_candidate);
+        double py = pT_candidate*sin(phi_candidate);
 
         double p0 = sqrt(mass*mass + p_mag*p_mag);
         double pz = p_mag*cos_theta;
-        double p3 = mT*sinh(y_minus_eta_s);  // p3 = tau p^eta
 
         double pdsigma = (  p0*surf->da_mu_LRF[0] + px*surf->da_mu_LRF[1]
                           + py*surf->da_mu_LRF[2] + pz*surf->da_mu_LRF[3]);
@@ -1367,13 +1367,13 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         double delta_f_qmu = 0.0;
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
             double qmufactor = (- px*surf->qmuLRF_x - py*surf->qmuLRF_y
-                                - p3*surf->qmuLRF_z);
+                                - pz*surf->qmuLRF_z);
             delta_f_qmu = ((1. - sign*f0)*(prefactor_qmu - baryon/p0)
                            *qmufactor/deltaf_qmu_coeff);
         }
 
         double fact1 = pdsigma/p0/dsigam_fac;
-        double fact2 = (1. + (delta_f_shear + delta_f_bulk + delta_f_qmu))/2.;
+        double fact2 = (1. + delta_f_shear + delta_f_bulk + delta_f_qmu)/2.;
         fact1 = std::max(0., std::min(1., fact1));
         fact2 = std::max(0., std::min(1., fact2));
         double accept_prob = fact1*fact2;
@@ -1381,9 +1381,10 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         if (ran_gen_ptr->rand_uniform() < accept_prob) {
             // accept the sample
             // now we need to boost the momentum to the lab frame
-            Vec4 pLRF = {p0, px, py, pz};
-            Vec4 umu = {surf->u_tz[0], surf->u_tz[1], surf->u_tz[2],
-                        surf->u_tz[3]};
+            Vec4 pLRF = {static_cast<float>(p0), static_cast<float>(px),
+                         static_cast<float>(py), static_cast<float>(pz)};
+            Vec4 umu = {surf->u_tz[0], surf->u_tz[1],
+                        surf->u_tz[2], surf->u_tz[3]};
             Vec4 pLab = {0., 0., 0., 0.};
             boost_vector_back_to_lab_frame(pLRF, pLab, umu);
 

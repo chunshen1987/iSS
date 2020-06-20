@@ -1,10 +1,10 @@
-hydro_mode = 2           # mode for reading in freeze out information 
+hydro_mode = 1           # mode for reading in freeze out information 
                          # 0: reads outputs from VISH2+1
                          # 1: reads outputs from MUSIC assuming 
                          #    boost-invariant
                          # 2: reads outputs from MUSIC full (3+1)-d
 
-afterburner_type = 2     # 0: PDG_Decay
+afterburner_type = 1     # 0: PDG_Decay
                          # 1: UrQMD
                          # 2: SMASH
 
@@ -13,7 +13,7 @@ turn_on_rhob = 0         # read in net baryon chemical potential
 turn_on_diff = 0         # read in baryon diffusion current
 
 include_deltaf_shear = 1      # include delta f contribution from shear
-include_deltaf_bulk = 0       # include delta f contribution from bulk
+include_deltaf_bulk = 1       # include delta f contribution from bulk
 include_deltaf_diffusion = 0  # include delta f contribution from diffusion
 
 bulk_deltaf_kind = 1     # 0 : 14-momentum approximation
@@ -30,7 +30,7 @@ store_samples_in_memory = 1  # flag to store particle samples in memory
 use_OSCAR_format = 0         # output results in OSCAR format
 use_gzip_format = 1          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
-perform_decays = 0           # flag to perform resonance decay
+perform_decays = 1           # flag to perform resonance decay
 
 local_charge_conservation = 0  # flag to impose local charge conservation
 
@@ -38,7 +38,7 @@ calculate_vn = 0         # 1/0: whether to calculate the
                          # dN/(pt dpt dphi dy) and v_n flows 
                          # (they not required for MC-sampling)
 
-MC_sampling = 4          # 0/1/2/3: whether to perform Monte-Carlo sampling
+MC_sampling = 2          # 0/1/2/3: whether to perform Monte-Carlo sampling
                          # (not required for spectra calculation). 
                          # 0: No sampling.
                          # 1: use dN_dxtdetady to sample.

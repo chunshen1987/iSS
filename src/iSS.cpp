@@ -185,6 +185,7 @@ void iSS::transform_to_local_rest_frame(
                 surf_LRF_i.da_mu_LRF[i] = -da_LRF[i];
             }
         }
+        if (surf_LRF_i.da_mu_LRF[0] < 0) continue;
         //cout << "check: " << udotdsimga << "  " << udotdsimga2 << "  "
         //     << surf_i.da_mu_LRF[0] << endl;
 
@@ -249,4 +250,6 @@ void iSS::transform_to_local_rest_frame(
 
         FOsurf_LRF_ptr.push_back(surf_LRF_i);
     }
+    messager << FOsurf_LRF_ptr.size();
+    messager.flush("info");
 }
