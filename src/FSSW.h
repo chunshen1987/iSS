@@ -58,7 +58,7 @@ class FSSW {
 
     // list for information for all fluid cells
     long FO_length;
-    const std::vector<FO_surf> &FOsurf_ptr;
+    const std::vector<FO_surf_LRF> &FOsurf_ptr;
 
     inline long determine_number_to_sample(
                     double dN, int model=1, double para1=0);
@@ -96,7 +96,7 @@ class FSSW {
     FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
            Table* chosen_particles_in,
            std::vector<particle_info> particles_in,
-           const std::vector<FO_surf> &FOsurf_ptr_in, int flag_PCE,
+           const std::vector<FO_surf_LRF> &FOsurf_ptr_in, int flag_PCE,
            ParameterReader* paraRdr_in, string path, string table_path,
            AfterburnerType afterburner_type);
     ~FSSW();
@@ -151,12 +151,12 @@ class FSSW {
     int sample_momemtum_from_a_fluid_cell(
         const double mass, const int sign,
         const int baryon, const int strange, const int charge,
-        const FO_surf *surf,
+        const FO_surf_LRF *surf,
         const std::array<double, 3> bulkvisCoefficients,
         const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s);
     void add_one_sampled_particle(
-        const int repeated_sampling_idx, const FO_surf *surf,
+        const int repeated_sampling_idx, const FO_surf_LRF *surf,
         const int particle_monval, const double mass,
         const double pT, const double phi,
         const double y_minus_eta_s, const double eta_s);

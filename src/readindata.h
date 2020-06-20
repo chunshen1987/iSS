@@ -67,11 +67,6 @@ class read_FOdata {
     void regulate_surface_cells(std::vector<FO_surf> &surf_ptr);
     void regulate_Wmunu(double u[4], double Wmunu[4][4],
                         double Wmunu_regulated[4][4]);
-
-
-    // this function transform all the variables to local rest frame of the
-    // fluid cell and trasform them to the t-z coordinate
-    void transform_to_local_rest_frame(std::vector<FO_surf> &FOsurf_ptr);
 };
 
 #endif  // SRC_READINDATA_H_

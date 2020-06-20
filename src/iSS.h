@@ -20,6 +20,7 @@ class iSS {
     const std::string particle_table_path_;
 
     std::vector<FO_surf> FOsurf_array_;
+    std::vector<FO_surf_LRF> FOsurf_LRF_array_;
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr_;
 
     int Nparticle;
@@ -71,6 +72,12 @@ class iSS {
     }
 
     void clear();
+
+    // this function transform all the variables to local rest frame of the
+    // fluid cell and trasform them to the t-z coordinate
+    void transform_to_local_rest_frame(
+                std::vector<FO_surf> &FOsurf_ptr,
+                std::vector<FO_surf_LRF> &FOsurf_LRF_ptr);
 };
 
 

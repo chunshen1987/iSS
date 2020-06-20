@@ -43,7 +43,7 @@ using iSS_data::hbarC;
 FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
            Table* chosen_particles_in,
            std::vector<particle_info> particles_in,
-           const std::vector<FO_surf> &FOsurf_ptr_in, int flag_PCE,
+           const std::vector<FO_surf_LRF> &FOsurf_ptr_in, int flag_PCE,
            ParameterReader* paraRdr_in, string path, string table_path,
            AfterburnerType afterburner_type) :
                path_(path), table_path_(table_path),
@@ -515,21 +515,10 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
 
     // loop over all the fluid cells
     for (long l = 0; l < FO_length; l++) {
-        const FO_surf* surf = &FOsurf_ptr[l];
+        const FO_surf_LRF* surf = &FOsurf_ptr[l];
         double temp = surf->Tdec;
-        double tau = surf->tau;
 
-        double gammaT = surf->u0;
-        double ux = surf->u1;
-        double uy = surf->u2;
-        double uz = surf->u3;   // uz = tau*u^\eta
-
-        double da0 = surf->da0;
-        double da1 = surf->da1;
-        double da2 = surf->da2;
-        double da3 = surf->da3;
-
-        double dsigma_dot_u = tau*(da0*gammaT + ux*da1 + uy*da2 + uz*da3/tau);
+        double dsigma_dot_u = surf->da_mu_LRF[0];
 
         // bulk delta f contribution
         double bulkPi = 0.0;
@@ -569,7 +558,7 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         const int baryon  = particle->baryon;
         const int strange = particle->strange;
         const int charge  = particle->charge;
-        double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
+        double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
         if (flag_PCE_ == 1) {
             double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
             mu += mu_PCE;
@@ -851,7 +840,7 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
             while (sample_idx <= number_to_sample) {
                 // first, sample eta and freeze-out cell index
                 long FO_idx = rand1D.rand();
-                const FO_surf *surf = &FOsurf_ptr[FO_idx];
+                const FO_surf_LRF *surf = &FOsurf_ptr[FO_idx];
 
                 if (INCLUDE_BULK_DELTAF == 1)
                     getbulkvisCoefficients(surf->Tdec, bulkvisCoefficients);
@@ -1314,13 +1303,13 @@ double FSSW::get_deltaf_bulk(
 int FSSW::sample_momemtum_from_a_fluid_cell(
         const double mass, const int sign,
         const int baryon, const int strange, const int charge,
-        const FO_surf *surf,
+        const FO_surf_LRF *surf,
         const std::array<double, 3> bulkvisCoefficients,
         const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s
         ) {
     const double Tdec = surf->Tdec;
-    const double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
+    const double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
     const double deltaf_prefactor = (
                             1.0/(2.0*Tdec*Tdec*(surf->Edec + surf->Pdec)));
     const double prefactor_qmu = surf->Bn/(surf->Edec + surf->Pdec);
@@ -1377,8 +1366,8 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         // delta f for diffusion
         double delta_f_qmu = 0.0;
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
-            double qmufactor = (p0*surf->qmu0 - px*surf->qmu1 - py*surf->qmu2
-                                - p3*surf->qmu3);
+            double qmufactor = (- px*surf->qmuLRF_x - py*surf->qmuLRF_y
+                                - p3*surf->qmuLRF_z);
             delta_f_qmu = ((1. - sign*f0)*(prefactor_qmu - baryon/p0)
                            *qmufactor/deltaf_qmu_coeff);
         }
@@ -1412,7 +1401,7 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
 
 
 void FSSW::add_one_sampled_particle(
-                const int repeated_sampling_idx, const FO_surf *surf,
+                const int repeated_sampling_idx, const FO_surf_LRF *surf,
                 const int particle_monval, const double mass,
                 const double pT, const double phi,
                 const double y_minus_eta_s, const double eta_s) {
