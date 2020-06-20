@@ -30,7 +30,6 @@
 #include "Stopwatch.h"
 
 using iSS_data::AMOUNT_OF_OUTPUT;
-using iSS_data::Vec4;
 using std::cout;
 using std::endl;
 using std::string;
@@ -55,8 +54,6 @@ EmissionFunctionArray::EmissionFunctionArray(
         afterburner_type_(afterburner_type), FOsurf_ptr(FOsurf_ptr_in) {
 
     ran_gen_ptr = ran_gen;
-    momentum_sampler_ptr_ = std::shared_ptr<MomentumSamplerShell> (
-            new MomentumSamplerShell(ran_gen_ptr));
 
     // get info
     flag_PCE_ = flag_PCE;
@@ -2987,9 +2984,11 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
         double deltaf_qmu_coeff = 1.0;
         double prefactor_qmu = 0.0;
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
-            dsigma_dot_q = (  surf->qmuLRF_x*surf->da_mu_LRF[1]
-                            + surf->qmuLRF_y*surf->da_mu_LRF[2]
-                            + surf->qmuLRF_z*surf->da_mu_LRF[3]);
+            double qmu0 = surf->qmu0;
+            double qmu1 = surf->qmu1;
+            double qmu2 = surf->qmu2;
+            double qmu3 = surf->qmu3;
+            dsigma_dot_q = tau*(da0*qmu0 + da1*qmu1 + da2*qmu2 + da3*qmu3/tau);
 
             double mu_B = surf->muB;
             deltaf_qmu_coeff = get_deltaf_qmu_coeff(temp, mu_B);
@@ -3258,6 +3257,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     if (pT_to < 0) {
         pT_to = pT_tab->getLast(1); // use table to determine pT range
     }
+    double y_minus_eta_s_range = paraRdr->getVal("sample_y_minus_eta_s_range");
 
     if (sampling_model > 100) {
         cout << "EmissionFunctionArray::"
@@ -3287,6 +3287,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         const particle_info *particle = &particles[real_particle_idx];
         const double mass = particle->mass;
         const int sign    = particle->sign;
+        const int degen   = particle->gspin;
         const int baryon  = particle->baryon;
         const int strange = particle->strange;
         const int charge  = particle->charge;
@@ -3420,10 +3421,16 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                     deltaf_qmu_coeff = get_deltaf_qmu_coeff(surf->Tdec,
                                                             surf->muB);
 
+                const double maximum_guess = estimate_maximum(
+                        surf, real_particle_idx, mass, sign, degen,
+                        baryon, strange, charge,
+                        z_exp_m_z, bulkvisCoefficients, deltaf_qmu_coeff);
+
                 // next sample pt and phi
                 double pT, phi, y_minus_eta_s;
                 int status = sample_momemtum_from_a_fluid_cell(
-                                mass, sign, baryon, strange, charge,
+                                mass, degen, sign, baryon, strange, charge,
+                                pT_to, y_minus_eta_s_range, maximum_guess,
                                 surf, bulkvisCoefficients, deltaf_qmu_coeff,
                                 pT, phi, y_minus_eta_s);
 
@@ -3462,7 +3469,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                     int status2 = 0;
                     do {
                         status2 = sample_momemtum_from_a_fluid_cell(
-                                mass, sign, -baryon, -strange, -charge,
+                                mass, degen, sign, -baryon, -strange, -charge,
+                                pT_to, y_minus_eta_s_range, maximum_guess,
                                 surf, bulkvisCoefficients, deltaf_qmu_coeff,
                                 pT2, phi2, y_minus_eta_s2);
                     } while (status2 == 0);
@@ -4132,65 +4140,69 @@ double EmissionFunctionArray::get_deltaf_bulk(
 }
 
 int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
-        const double mass, const int sign,
+        const double mass, const double degen, const int sign,
         const int baryon, const int strange, const int charge,
-        const FO_surf *surf,
+        const double pT_to, const double y_minus_eta_s_range,
+        const double maximum_guess, const FO_surf *surf,
         const std::array<double, 3> bulkvisCoefficients,
         const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s
         ) {
     const double Tdec = surf->Tdec;
     const double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
+    const double inv_Tdec  = 1./Tdec;
+    const double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI)*(hbarC*hbarC*hbarC));
     const double deltaf_prefactor = (
                             1.0/(2.0*Tdec*Tdec*(surf->Edec + surf->Pdec)));
     const double prefactor_qmu = surf->Bn/(surf->Edec + surf->Pdec);
-    const double dsigam_fac = (std::abs(surf->da_mu_LRF[0])
-                            + sqrt(  surf->da_mu_LRF[1]*surf->da_mu_LRF[1]
-                                   + surf->da_mu_LRF[2]*surf->da_mu_LRF[2]
-                                   + surf->da_mu_LRF[3]*surf->da_mu_LRF[3]));
-    int tries              = 1;
+
+    int tries               = 1;
+    double accept_prob_max  = 0.0;
+    double actual_adjusted_maximum_factor = 1.0;
     const int maximum_impatience = 5000;
     while (tries < maximum_impatience) {
-        // refer to calculate_dNArrays function to see how
+        // refer to calculate_dNArrays function to see how 
         // the rate is calculated
         // Basically it is "just Cooper-Frye"
 
-        double p_mag = momentum_sampler_ptr_->Sample_a_momentum(mass, Tdec, mu,
-                                                                sign);
+        // sample according to pT dpT
+        pT = sqrt(pT_to*pT_to*ran_gen_ptr->rand_uniform());
         phi = 2*M_PI*ran_gen_ptr->rand_uniform();
-        double cos_theta = 2.*ran_gen_ptr->rand_uniform() - 1.;
-        double sin_theta = sqrt(1. - cos_theta*cos_theta);
-        pT = p_mag*sin_theta;
+        y_minus_eta_s = ((1. - 2.*ran_gen_ptr->rand_uniform())
+                         *y_minus_eta_s_range);
 
         double mT = sqrt(mass*mass + pT*pT);
         double px = pT*cos(phi);
         double py = pT*sin(phi);
 
-        double p0 = sqrt(mass*mass + p_mag*p_mag);
-        double pz = p_mag*cos_theta;
+        double p0 = mT*cosh(y_minus_eta_s);  // p0 = p^tau
         double p3 = mT*sinh(y_minus_eta_s);  // p3 = tau p^eta
 
-        double pdsigma = (  p0*surf->da_mu_LRF[0] + px*surf->da_mu_LRF[1]
-                          + py*surf->da_mu_LRF[2] + pz*surf->da_mu_LRF[3]);
+        double pdotu = p0*surf->u0 - px*surf->u1 - py*surf->u2 - p3*surf->u3;
+        double expon = (pdotu - mu)*inv_Tdec;
+        double f0 = 1./(exp(expon) + sign);
 
-        double f0 = 1./(exp((p0 - mu)/Tdec) + sign);
+        double pdsigma = (p0*surf->da0 + px*surf->da1
+                          + py*surf->da2 + p3*surf->da3/surf->tau);
 
         // delta f for shear viscosity
         double delta_f_shear = 0.;
         if (INCLUDE_DELTAF == 1) {
             double Wfactor = (
-                px*px*surf->piLRF_xx + 2.*px*py*surf->piLRF_xy
-                + 2.*px*pz*surf->piLRF_xz
-                + py*py*surf->piLRF_yy + 2.*py*pz*surf->piLRF_yz
-                + pz*pz*(- surf->piLRF_xx - surf->piLRF_yy));
-            delta_f_shear = (1. - sign*f0)*Wfactor*deltaf_prefactor;
+                  p0*p0*surf->pi00 - 2.0*p0*px*surf->pi01 - 2.0*p0*py*surf->pi02
+                - 2.0*p0*p3*surf->pi03 + px*px*surf->pi11 + 2.0*px*py*surf->pi12
+                + 2.0*px*p3*surf->pi13 + py*py*surf->pi22 + 2.0*py*p3*surf->pi23
+                + p3*p3*surf->pi33);
+
+            delta_f_shear = ((1. - sign*f0)*Wfactor
+                             *deltaf_prefactor);
         }
 
         // delta f for bulk viscosity
         double delta_f_bulk = 0.;
         if (INCLUDE_BULK_DELTAF == 1) {
             delta_f_bulk = get_deltaf_bulk(
-                                        mass, p0, surf->bulkPi/hbarC,
+                                        mass, pdotu, surf->bulkPi/hbarC,
                                         Tdec, sign, f0, bulkvisCoefficients);
         }
 
@@ -4199,33 +4211,50 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
             double qmufactor = (p0*surf->qmu0 - px*surf->qmu1 - py*surf->qmu2
                                 - p3*surf->qmu3);
-            delta_f_qmu = ((1. - sign*f0)*(prefactor_qmu - baryon/p0)
+            delta_f_qmu = ((1. - sign*f0)*(prefactor_qmu - baryon/pdotu)
                            *qmufactor/deltaf_qmu_coeff);
         }
 
-        double fact1 = pdsigma/p0/dsigam_fac;
-        double fact2 = (1. + (delta_f_shear + delta_f_bulk + delta_f_qmu))/2.;
-        fact1 = std::max(0., std::min(1., fact1));
-        fact2 = std::max(0., std::min(1., fact2));
-        double accept_prob = fact1*fact2;
+        double result;
+        double resize_factor = 1.0;
+        if (flag_restrict_deltaf == 1) {
+            // restrict the size of delta f to be smaller
+            // than f_0
+            double ratio_max = deltaf_max_ratio;
+            double deltaf_size = std::abs(delta_f_shear + delta_f_bulk
+                                          + delta_f_qmu);
+            resize_factor = std::min(1., ratio_max/(deltaf_size + 1e-10));
+        }
+        result = (prefactor*degen*f0*pdsigma*surf->tau
+                  *(1. + (delta_f_shear + delta_f_bulk + delta_f_qmu)
+                         *resize_factor));
+
+        double accept_prob = (result/(actual_adjusted_maximum_factor
+                                      *maximum_guess));
+        if (AMOUNT_OF_OUTPUT > 5) {
+            if(accept_prob > accept_prob_max)
+                accept_prob_max = accept_prob;
+        }
+
+        // for debugging
+        if (accept_prob > 1 && AMOUNT_OF_OUTPUT > 1) {
+            cout << "EmissionFunctionArray::"
+                 << "sample_using_dN_dxtdy_4all_particles "
+                 << "warning: emission function is bigger "
+                 << "than 1: " << accept_prob << endl;
+        }
 
         if (ran_gen_ptr->rand_uniform() < accept_prob) {
-            // accept the sample
-            // now we need to boost the momentum to the lab frame
-            Vec4 pLRF = {p0, px, py, pz};
-            Vec4 umu = {surf->u_tz[0], surf->u_tz[1], surf->u_tz[2],
-                        surf->u_tz[3]};
-            Vec4 pLab = {0., 0., 0., 0.};
-            boost_vector_back_to_lab_frame(pLRF, pLab, umu);
-
-            // assigned to the return variables
-            pT = sqrt(pLab[1]*pLab[1] + pLab[2]*pLab[2]);
-            phi = atan2(pLab[2], pLab[1]);
-            double y = 0.5*log((pLab[0] + pLab[3])/(pLab[0] - pLab[3]));
-            y_minus_eta_s = y - surf->eta;
             return(1);
         }
         tries++;
+    }
+    if (AMOUNT_OF_OUTPUT > 5) {
+        cout << "EmissionFunctionArray::"
+             << "sample_using_dN_dxtdy_4all_particles warning:"
+             << "maximum_impatience reached." << endl;
+        cout << "accept_prob_max = " << accept_prob_max << ", "
+             << "maximum_guess = " << maximum_guess << endl;
     }
     return(0);
 }
@@ -4397,18 +4426,4 @@ std::string EmissionFunctionArray::add_one_sampled_particle(
                                                     *temp_hadron);
     }
     return(text_string);
-}
-
-
-// this function boost a 4-vector from the fluid local rest frame to
-// the lab frame. The fluid velocity is u^\mu.
-void EmissionFunctionArray::boost_vector_back_to_lab_frame(
-                            Vec4 &p_LRF, Vec4 &p_lab, Vec4 &umu) const {
-    double p_dot_u = 0.;
-    for (int i = 1; i < 4; i++)
-        p_dot_u += p_LRF[i]*umu[i];
-
-    p_lab[0] = p_LRF[0]*umu[0] + p_dot_u;
-    for (int i = 1; i < 4; i++)
-        p_lab[i] = p_LRF[i] + (p_dot_u/(umu[0] + 1) + p_LRF[0])*umu[i];
 }

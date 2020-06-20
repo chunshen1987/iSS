@@ -38,13 +38,14 @@ calculate_vn = 0         # 1/0: whether to calculate the
                          # dN/(pt dpt dphi dy) and v_n flows 
                          # (they not required for MC-sampling)
 
-MC_sampling = 2          # 0/1/2/3: whether to perform Monte-Carlo sampling
+MC_sampling = 4          # 0/1/2/3: whether to perform Monte-Carlo sampling
                          # (not required for spectra calculation). 
-                         # 0: No sampling. 
-                         # 1: use dN_dxtdetady to sample. 
-                         # 2: use dN_dxtdy to sample. 
+                         # 0: No sampling.
+                         # 1: use dN_dxtdetady to sample.
+                         # 2: use dN_dxtdy to sample.
                          # 3: use dN_pTdpTdphidy to sample 
-                         #    (overwrites calculate_vn to be 1). 
+                         #    (overwrites calculate_vn to be 1).
+                         # 4: use FSSW (fast)
                          # Since this parameter controls whether to 
                          # calculate certain arrays, it controls whether to 
                          # perform other related calculations (see below).

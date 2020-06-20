@@ -19,9 +19,9 @@
 #include "ParameterReader.h"
 #include "particle_decay.h"
 #include "data_struct.h"
+#include "data_struct.h"
 #include "Random.h"
 #include "pretty_ostream.h"
-#include "MomentumSamplerShell.h"
 
 class EmissionFunctionArray {
  private:
@@ -37,7 +37,6 @@ class EmissionFunctionArray {
     const AfterburnerType afterburner_type_;
 
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
-    std::shared_ptr<MomentumSamplerShell> momentum_sampler_ptr_;
 
     int MC_sampling;
     int number_of_repeated_sampling;
@@ -263,9 +262,10 @@ class EmissionFunctionArray {
         double mass, double pdotu, double bulkPi, double Tdec, int sign,
         double f0, const std::array<double, 3> bulkvisCoefficients);
     int sample_momemtum_from_a_fluid_cell(
-        const double mass, const int sign,
+        const double mass, const double degen, const int sign,
         const int baryon, const int strange, const int charge,
-        const FO_surf *surf,
+        const double pT_to, const double y_minus_eta_s_range,
+        const double maximum_guess, const FO_surf *surf,
         const std::array<double, 3> bulkvisCoefficients,
         const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s);
@@ -282,9 +282,6 @@ class EmissionFunctionArray {
         const int particle_monval, const double mass,
         const double pT, const double phi,
         const double y_minus_eta_s, const double eta_s);
-    void boost_vector_back_to_lab_frame(iSS_data::Vec4 &p_LRF,
-                                        iSS_data::Vec4 &p_lab,
-                                        iSS_data::Vec4 &umu) const;
 };
 
 #endif  // SRC_EMISSIONFUNCTION_H_

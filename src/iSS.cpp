@@ -94,22 +94,25 @@ int iSS::generate_samples() {
     }
 
     messager.info("Start computation and generating samples ...");
-    spectra_sampler_ = std::unique_ptr<FSSW> (new FSSW(
-                ran_gen_ptr_, &chosen_particles,
+    if (paraRdr_ptr->getVal("MC_sampling") == 4) {
+        spectra_sampler_ = std::unique_ptr<FSSW> (new FSSW(
+                    ran_gen_ptr_, &chosen_particles,
+                    particle, FOsurf_array_, flag_PCE_, paraRdr_ptr,
+                    path_, table_path_, afterburner_type_));
+        spectra_sampler_->shell();
+    } else {
+        Table pT_tab(table_path_ + "/bin_tables/pT_gauss_table.dat");
+        Table phi_tab(table_path_ + "/bin_tables/phi_gauss_table.dat");
+        // eta uniform dist table
+        Table eta_tab(table_path_ + "/bin_tables/eta_uni_table.dat");
+        //Table eta_tab("tables/eta_gauss_table_30_full.dat");
+        efa_ = std::unique_ptr<EmissionFunctionArray> (
+            new EmissionFunctionArray(
+                ran_gen_ptr_, &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
                 particle, FOsurf_array_, flag_PCE_, paraRdr_ptr,
                 path_, table_path_, afterburner_type_));
-    spectra_sampler_->shell();
-
-    //Table pT_tab(table_path_ + "/bin_tables/pT_gauss_table.dat");
-    //Table phi_tab(table_path_ + "/bin_tables/phi_gauss_table.dat");
-    // eta uniform dist table
-    //Table eta_tab(table_path_ + "/bin_tables/eta_uni_table.dat");
-    // Table eta_tab("tables/eta_gauss_table_30_full.dat");
-    //efa_ = std::unique_ptr<EmissionFunctionArray> (new EmissionFunctionArray(
-    //            ran_gen_ptr_, &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
-    //            particle, FOsurf_array_, flag_PCE_, paraRdr_ptr,
-    //            path_, table_path_, afterburner_type_));
-    //efa_->shell();
+        efa_->shell();
+    }
     return(0);
 }
 
