@@ -83,6 +83,7 @@ EmissionFunctionArray::EmissionFunctionArray(
 
     USE_OSCAR_FORMAT         = paraRdr->getVal("use_OSCAR_format");
     USE_GZIP_FORMAT          = paraRdr->getVal("use_gzip_format");
+    USE_BINARY_FORMAT        = paraRdr->getVal("use_binary_format");
     INCLUDE_DELTAF           = paraRdr->getVal("include_deltaf_shear");
     INCLUDE_BULK_DELTAF      = paraRdr->getVal("include_deltaf_bulk");
     bulk_deltaf_kind         = paraRdr->getVal("bulk_deltaf_kind");
@@ -2567,10 +2568,15 @@ void EmissionFunctionArray::shell() {
         }
         if (flag_output_samples_into_files == 1 && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
-        } else if (flag_store_samples_in_memory == 1 && USE_OSCAR_FORMAT) {
-            combine_samples_to_OSCAR();
-        } else if (flag_store_samples_in_memory == 1 && USE_GZIP_FORMAT) {
-            combine_samples_to_gzip_file();
+        }
+        if (flag_store_samples_in_memory == 1) {
+            if (USE_OSCAR_FORMAT) {
+                combine_samples_to_OSCAR();
+            } else if (USE_GZIP_FORMAT) {
+                combine_samples_to_gzip_file();
+            } else if (USE_BINARY_FORMAT) {
+                combine_samples_to_binary_file();
+            }
         }
     } else if (MC_sampling == 3) {
         if (USE_OSCAR_FORMAT) {
@@ -2742,6 +2748,41 @@ void EmissionFunctionArray::combine_samples_to_gzip_file() {
     sw.toc();
     cout << endl
          << " -- combine_samples_to_gzip_file finishes " 
+         << sw.takeTime() << " seconds."
+         << endl;
+}
+
+
+void EmissionFunctionArray::combine_samples_to_binary_file() {
+    Stopwatch sw;
+    sw.tic();
+    messager.info(" -- Now combine sample files to a binary file...");
+
+    // open file for output
+    std::string binary_output_filename = "particle_samples.bin";
+    remove(binary_output_filename.c_str());
+    FILE *outbin = NULL;
+    outbin = fopen(binary_output_filename.c_str(), "wb");
+    for (auto const &ev_i: (*Hadron_list)) {
+        int total_number_of_particles = ev_i->size();
+        fwrite(&total_number_of_particles, sizeof(int), 1, outbin);
+        for (auto &part_i: (*ev_i)) {
+            fwrite(&part_i.pid, sizeof(int), 1, outbin);
+            float array[] = {
+                static_cast<float>(part_i.mass),
+                static_cast<float>(part_i.t), static_cast<float>(part_i.x),
+                static_cast<float>(part_i.y), static_cast<float>(part_i.z),
+                static_cast<float>(part_i.E), static_cast<float>(part_i.px),
+                static_cast<float>(part_i.py), static_cast<float>(part_i.pz),
+            };
+            fwrite(array, sizeof(float), 7, outbin);
+        }
+    }
+    fclose(outbin);
+
+    sw.toc();
+    cout << endl
+         << " -- combine_samples_to_binary_file finishes "
          << sw.takeTime() << " seconds."
          << endl;
 }

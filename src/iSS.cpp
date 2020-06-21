@@ -134,6 +134,7 @@ int iSS::generate_samples() {
 void iSS::transform_to_local_rest_frame(
         std::vector<FO_surf> &FOsurf_ptr,
         std::vector<FO_surf_LRF> &FOsurf_LRF_ptr) {
+    messager.info("Transforming fluid cells to their local rest frame ...");
     for (auto &surf_i: FOsurf_ptr) {
         FO_surf_LRF surf_LRF_i;
         surf_LRF_i.tau = surf_i.tau;
@@ -174,7 +175,8 @@ void iSS::transform_to_local_rest_frame(
         //double udotdsimga = surf_i.tau*(
         //    surf_i.u0*surf_i.da0 + surf_i.u1*surf_i.da1 + surf_i.u2*surf_i.da2
         //    + surf_i.u3*surf_i.da3/surf_i.tau);
-        //double udotdsimga2 = ut*da_upper[0] - ux*da_upper[1] - uy*da_upper[2] - uz*da_upper[3];
+        //double udotdsimga2 = (ut*da_upper[0] - ux*da_upper[1]
+        //                      - uy*da_upper[2] - uz*da_upper[3]);
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 da_LRF[i] += LorentzBoost[i][j]*da_upper[j];
@@ -242,6 +244,8 @@ void iSS::transform_to_local_rest_frame(
                 }
             }
         }
+        //std::cout << pi_LRF[0][0] << "  " << pi_LRF[0][1] << "  "
+        //          << pi_LRF[0][2] << "  " << pi_LRF[0][3] << std::endl;
         surf_LRF_i.piLRF_xx = pi_LRF[1][1];
         surf_LRF_i.piLRF_xy = pi_LRF[1][2];
         surf_LRF_i.piLRF_xz = pi_LRF[1][3];
@@ -250,6 +254,4 @@ void iSS::transform_to_local_rest_frame(
 
         FOsurf_LRF_ptr.push_back(surf_LRF_i);
     }
-    messager << FOsurf_LRF_ptr.size();
-    messager.flush("info");
 }

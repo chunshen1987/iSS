@@ -41,6 +41,7 @@ class FSSW {
     ParameterReader *paraRdr; // used to pass-in parameters
     int USE_OSCAR_FORMAT;
     int USE_GZIP_FORMAT;
+    int USE_BINARY_FORMAT;
     int INCLUDE_DELTAF, INCLUDE_BULK_DELTAF, INCLUDE_DIFFUSION_DELTAF;
     int bulk_deltaf_kind;
 
@@ -113,6 +114,7 @@ class FSSW {
     void combine_samples_to_OSCAR();
     std::string OSCAR_header_filename, OSCAR_output_filename;
     void combine_samples_to_gzip_file();
+    void combine_samples_to_binary_file();
 
     void calculate_dN_analytic(const particle_info* particle, double mu,
                                double Temperature,

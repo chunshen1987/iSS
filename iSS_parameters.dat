@@ -28,8 +28,9 @@ output_samples_into_files = 0  # output particle samples into individual files
                                # for individual particle species
 store_samples_in_memory = 1  # flag to store particle samples in memory
 use_OSCAR_format = 0         # output results in OSCAR format
-use_gzip_format = 1          # output results in gzip format (only works with
+use_gzip_format = 0          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
+use_binary_format = 1        # output results in binary format
 perform_decays = 1           # flag to perform resonance decay
 
 local_charge_conservation = 0  # flag to impose local charge conservation
@@ -38,7 +39,7 @@ calculate_vn = 0         # 1/0: whether to calculate the
                          # dN/(pt dpt dphi dy) and v_n flows 
                          # (they not required for MC-sampling)
 
-MC_sampling = 2          # 0/1/2/3: whether to perform Monte-Carlo sampling
+MC_sampling = 4          # 0/1/2/3: whether to perform Monte-Carlo sampling
                          # (not required for spectra calculation). 
                          # 0: No sampling.
                          # 1: use dN_dxtdetady to sample.

@@ -188,6 +188,7 @@ class EmissionFunctionArray {
     void combine_samples_to_OSCAR();
     std::string OSCAR_header_filename, OSCAR_output_filename;
     void combine_samples_to_gzip_file();
+    void combine_samples_to_binary_file();
 
     // Sample files
     // where samples, its control informations, and its "format file" 
