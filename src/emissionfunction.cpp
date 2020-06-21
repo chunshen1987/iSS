@@ -2775,7 +2775,7 @@ void EmissionFunctionArray::combine_samples_to_binary_file() {
                 static_cast<float>(part_i.E), static_cast<float>(part_i.px),
                 static_cast<float>(part_i.py), static_cast<float>(part_i.pz),
             };
-            fwrite(array, sizeof(float), 7, outbin);
+            fwrite(array, sizeof(float), 9, outbin);
         }
     }
     fclose(outbin);

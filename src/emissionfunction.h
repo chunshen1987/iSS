@@ -54,6 +54,7 @@ class EmissionFunctionArray {
     ParameterReader *paraRdr; // used to pass-in parameters
     int USE_OSCAR_FORMAT;
     int USE_GZIP_FORMAT;
+    int USE_BINARY_FORMAT;
     int INCLUDE_DELTAF, INCLUDE_BULK_DELTAF, INCLUDE_DIFFUSION_DELTAF;
     int bulk_deltaf_kind;
 
