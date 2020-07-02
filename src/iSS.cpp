@@ -17,18 +17,20 @@ iSS::iSS(std::string path, std::string table_path,
     flag_PCE_ = 0;
     paraRdr_ptr = new ParameterReader;
     paraRdr_ptr->readFromFile(inputfile);
-
 }
+
 
 iSS::~iSS() {
     clear();
     delete paraRdr_ptr;
 }
 
+
 void iSS::clear() {
     FOsurf_ptr.clear();
     particle.clear();
 }
+
 
 int iSS::shell() {
     int status = read_in_FO_surface();
@@ -47,10 +49,26 @@ int iSS::shell() {
     return(0);
 }
 
+
 int iSS::read_in_FO_surface() {
     read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
                                 particle_table_path_);
     freeze_out_data.read_in_freeze_out_data(FOsurf_ptr);
+    messager << "total number of cells: " <<  FOsurf_ptr.size();
+    messager.flush("info");
+    afterburner_type_ = freeze_out_data.get_afterburner_type();
+    freeze_out_data.read_in_chemical_potentials(FOsurf_ptr, particle);
+    flag_PCE_ = freeze_out_data.get_flag_PCE();
+    messager.info(" -- Read in data finished!");
+    return(0);
+}
+
+
+int iSS::read_in_FO_surface(std::vector<FO_surf> &surf_vec) {
+    read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
+                                particle_table_path_);
+    FOsurf_ptr = surf_vec;
+    freeze_out_data.regulate_surface_cells(FOsurf_ptr);
     messager << "total number of cells: " <<  FOsurf_ptr.size();
     messager.flush("info");
     afterburner_type_ = freeze_out_data.get_afterburner_type();
@@ -73,6 +91,7 @@ void iSS::set_random_seed(int randomSeed_in) {
     ran_gen_ptr = std::shared_ptr<RandomUtil::Random>(
                                         new RandomUtil::Random(randomSeed));
 }
+
 
 int iSS::generate_samples() {
     // skip others except for these particle
