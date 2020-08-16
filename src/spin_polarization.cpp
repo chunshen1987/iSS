@@ -396,7 +396,7 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
         Smu_tmp[1] += prefactor*(- omega_ty*pmu[3] + omega_tz*pmu[2]
                                  - omega_yz*pmu[0]);
         Smu_tmp[2] += prefactor*(- omega_tz*pmu[1] + omega_tx*pmu[3]
-                                 - omega_xz*pmu[0]);
+                                 + omega_xz*pmu[0]);
         Smu_tmp[3] += prefactor*(omega_ty*pmu[1] - omega_tx*pmu[2]
                                  - omega_xy*pmu[0]);
     }
