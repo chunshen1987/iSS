@@ -52,23 +52,35 @@ class iSS {
     int generate_samples();
 
     int get_number_of_sampled_events() {
-        //return(efa_->get_number_of_sampled_events());
-        return(spectra_sampler_->get_number_of_sampled_events());
+        if (paraRdr_ptr->getVal("MC_sampling") == 4) {
+            return(spectra_sampler_->get_number_of_sampled_events());
+        } else {
+            return(efa_->get_number_of_sampled_events());
+        }
     };
 
     int get_number_of_particles(int iev) {
-        //return(efa_->get_number_of_particles(iev));
-        return(spectra_sampler_->get_number_of_particles(iev));
+        if (paraRdr_ptr->getVal("MC_sampling") == 4) {
+            return(spectra_sampler_->get_number_of_particles(iev));
+        } else {
+            return(efa_->get_number_of_particles(iev));
+        }
     };
 
     iSS_Hadron get_hadron(int iev, int ipart) {
-        //return(efa_->get_hadron(iev, ipart));
-        return(spectra_sampler_->get_hadron(iev, ipart));
+        if (paraRdr_ptr->getVal("MC_sampling") == 4) {
+            return(spectra_sampler_->get_hadron(iev, ipart));
+        } else {
+            return(efa_->get_hadron(iev, ipart));
+        }
     };
 
     std::vector<iSS_Hadron>* get_hadron_list_iev(const int iev) {
-        //return(efa_->get_hadron_list_iev(iev));
-        return(spectra_sampler_->get_hadron_list_iev(iev));
+        if (paraRdr_ptr->getVal("MC_sampling") == 4) {
+            return(spectra_sampler_->get_hadron_list_iev(iev));
+        } else {
+            return(efa_->get_hadron_list_iev(iev));
+        }
     }
 
     void clear();
