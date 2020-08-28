@@ -115,6 +115,5 @@ void iSS::compute_spin_polarization() {
             new SpinPolarization(FOsurf_ptr, particle, path_, table_path_,
                                  *paraRdr_ptr));
     polarizor->compute_spin_polarization_shell();
-    exit(1);
 }
 
