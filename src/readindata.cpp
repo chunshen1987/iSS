@@ -99,6 +99,12 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
             messager.info("the hyper-surface includes vorticity arrays.");
     }
 
+    if (paraRdr->getVal("calculate_polarization") == 1 && !include_vorticity_) {
+        messager.error("The surface does not contains vorticity arrays!");
+        messager.error("Can not compute the spin polarization!");
+        paraRdr->setVal("calculate_polarization", 0);
+    }
+
     fluid_cell_size = 34;
     if (include_vorticity_)
         fluid_cell_size += 24;
@@ -177,13 +183,15 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
         surface_file.read(reinterpret_cast<char*>(&temp), sizeof(float));
         count++;
     }
+    count -= 1;
     if (count % fluid_cell_size != 0) {
         messager << "The input file format is not correct!";
         messager.flush("error");
         messager << "Every line should have " << fluid_cell_size
                  << " variables, but we got " << count
-                 << " variables in total!" << endl;
+                 << " variables in total!";
         messager.flush("error");
+        exit(1);
     }
     int counted_line = count/fluid_cell_size;
     surface_file.close();
@@ -192,6 +200,9 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
 
 
 void read_FOdata::read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr) {
+    int ncells = get_number_of_freezeout_cells();
+    messager << "total number of cells: " <<  ncells;
+    messager.flush("info");
     if (mode == 0)     // VISH2+1 outputs
         read_FOsurfdat_VISH2p1(surf_ptr);
     else if (mode == 1)   // MUSIC boost invariant outputs
