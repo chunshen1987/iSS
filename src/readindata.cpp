@@ -177,6 +177,14 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
         surface_file.read(reinterpret_cast<char*>(&temp), sizeof(float));
         count++;
     }
+    if (count % fluid_cell_size != 0) {
+        messager << "The input file format is not correct!";
+        messager.flush("error");
+        messager << "Every line should have " << fluid_cell_size
+                 << " variables, but we got " << count
+                 << " variables in total!" << endl;
+        messager.flush("error");
+    }
     int counted_line = count/fluid_cell_size;
     surface_file.close();
     return(counted_line);
