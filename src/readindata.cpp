@@ -427,7 +427,6 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     double dummy;
     string input;
     double temp_tau, temp_xpt, temp_ypt, temp_eta;
-    int idx = 0;
     surfdat_stream << path_ << "/surface.dat";
     std::ifstream surfdat;
     if (surface_in_binary) {
@@ -561,7 +560,13 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
                 surf_elem.qmu3 = 0.0e0;
             }
         }
-        idx++;
+
+        double u_dot_dsigma = surf_elem.tau*(
+            surf_elem.u0*surf_elem.da0 + surf_elem.u1*surf_elem.da1
+            + surf_elem.u2*surf_elem.da2
+            + surf_elem.u3*surf_elem.da3/surf_elem.tau);
+        if (u_dot_dsigma < 0) continue;
+
         if (!surfdat.eof()) {
             surf_ptr.push_back(surf_elem);
         }
@@ -782,6 +787,13 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
                 surf_elem.qmu3 = 0.0e0;
             }
         }
+
+        double u_dot_dsigma = surf_elem.tau*(
+            surf_elem.u0*surf_elem.da0 + surf_elem.u1*surf_elem.da1
+            + surf_elem.u2*surf_elem.da2
+            + surf_elem.u3*surf_elem.da3/surf_elem.tau);
+        if (u_dot_dsigma < 0) continue;
+
         if (!surfdat.eof()) {
             surf_ptr.push_back(surf_elem);
         }
