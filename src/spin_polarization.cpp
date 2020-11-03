@@ -24,10 +24,10 @@ SpinPolarization::SpinPolarization(const std::vector<FO_surf> &FOsurf_ptr,
         FOsurf_ptr_(FOsurf_ptr), particle_info_(particles),
         paraRdr_(paraRdr) {
 
-    double dpT = 3.0/(NpT_ - 1);
+    double dpT = 3.0/NpT_;
     pT_arr_.resize(NpT_);
     for (int i = 0; i < NpT_; i++)
-        pT_arr_[i] = 0.0 + i*dpT;
+        pT_arr_[i] = (i + 0.5)*dpT;
     double dphi = 2.*M_PI/Nphi_;
     phi_arr_.resize(Nphi_);
     cos_phi_arr_.resize(Nphi_);
@@ -137,19 +137,19 @@ void SpinPolarization::compute_spin_polarization(const int POI_monval,
 
     for (int iy = 0; iy < Ny_; iy++) {
         cout << "progress: " << iy << "/" << Ny_ << endl;
-        double y = y_arr_[iy];
+        double y = y_arr_[iy];  // y is pseudo-rapidity
         double cosh_y = cosh(y);
         double sinh_y = sinh(y);
         for (int ipT = 0; ipT < NpT_; ipT++) {
             double p_perp = pT_arr_[ipT];
-            double m_perp = sqrt(mass*mass + p_perp*p_perp);
-            double pt = m_perp*cosh_y;
-            double pz = m_perp*sinh_y;
+            //double m_perp = sqrt(mass*mass + p_perp*p_perp);
+            double p0 = sqrt(p_perp*cosh_y*p_perp*cosh_y + mass*mass);
+            double pz = p_perp*sinh_y;
             for (int iphi = 0; iphi < Nphi_; iphi++) {
                 double px = p_perp*cos_phi_arr_[iphi];
                 double py = p_perp*sin_phi_arr_[iphi];
 
-                iSS_data::Vec4 pmu = {pt, px, py, pz};
+                iSS_data::Vec4 pmu = {p0, px, py, pz};
                 iSS_data::Vec4 Smu = {0., 0., 0., 0.};
                 iSS_data::Vec4 Smu_LRF = {0., 0., 0., 0.};
                 double dN = 0.;
@@ -206,11 +206,12 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
         }
     }
 
-    // compute S^mu(pT)
+    // compute S^mu
     double dN = 0.;
     for (int iy = 0; iy < Ny_; iy++) {
         if (std::abs(y_arr_[iy]) > 1.) continue;
         for (int ipT = 0; ipT < NpT_; ipT++) {
+            if (pT_arr_[ipT] < 0.5) continue;
             for (int iphi = 0; iphi < Nphi_; iphi++) {
                 dN_     += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
                 dN      += dN_pTdpTdphidy_[iy][ipT][iphi];
@@ -260,6 +261,7 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
         for (int iy = 0; iy < Ny_; iy++) {
             if (std::abs(y_arr_[iy]) > 1.) continue;
             for (int ipT = 0; ipT < NpT_; ipT++) {
+                if (pT_arr_[ipT] < 0.5) continue;
                 dN_phi_[iphi]     += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
                 dN_phi            += dN_pTdpTdphidy_[iy][ipT][iphi];
                 Smu_phi_[iphi][0] += St_pTdpTdphidy_[iy][ipT][iphi];
@@ -283,6 +285,7 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
     for (int iy = 0; iy < Ny_; iy++) {
         double dN_y = 0.;
         for (int ipT = 0; ipT < NpT_; ipT++) {
+            if (pT_arr_[ipT] < 0.5) continue;
             for (int iphi = 0; iphi < Nphi_; iphi++) {
                 dN_y_[iy]     += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
                 dN_y          += dN_pTdpTdphidy_[iy][ipT][iphi];
