@@ -26,7 +26,7 @@ class FSSW {
     int hydro_mode;   // switch for (2+1)-d or (3+1)-d hypersurface
     int flag_PCE_;
 
-    pretty_ostream messager;
+    pretty_ostream messager_;
 
     const std::string path_;
     const std::string table_path_;
@@ -79,6 +79,18 @@ class FSSW {
     double delta_qmu_coeff_table_dT, delta_qmu_coeff_table_dmu;
     double **deltaf_qmu_coeff_tb;       // kappa_B [1/fm^3]
 
+    // table parameter for bulk deltaf coefficient 14 moments
+    int deltaf_bulk_coeff_14mom_table_length_T_;
+    int deltaf_bulk_coeff_14mom_table_length_mu_;
+    double deltaf_bulk_coeff_14mom_table_T0_;
+    double deltaf_bulk_coeff_14mom_table_mu0_;
+    double deltaf_bulk_coeff_14mom_table_dT_;
+    double deltaf_bulk_coeff_14mom_table_dmu_;
+    double **deltaf_bulk_coeff_14mom_c0_tb_;
+    double **deltaf_bulk_coeff_14mom_c1_tb_;
+    double **deltaf_bulk_coeff_14mom_c2_tb_;
+
+
     // arrays to speed up computing particle yield
     double sf_dx, sf_x_min, sf_x_max;
     int sf_tb_length;
@@ -125,8 +137,12 @@ class FSSW {
     void calculate_dN_dxtdy_for_one_particle_species(const int particle_idx);
     void sample_using_dN_dxtdy_4all_particles_conventional();
 
-    void getbulkvisCoefficients(double Tdec,
+    void getbulkvisCoefficients(const double Tdec,
                                 std::array<double, 3> &bulkvisCoefficients);
+    void getbulkvisCoefficients(const double Tdec, const double mu_B,
+                                std::array<double, 3> &bulkvisCoefficients);
+
+    void load_bulk_deltaf_14mom_table(string filepath);
     void load_deltaf_qmu_coeff_table(std::string filename);
     double get_deltaf_qmu_coeff(double T, double muB);
 
@@ -148,8 +164,9 @@ class FSSW {
                 std::vector< std::vector<iSS_Hadron>* >* input_particle_list);
     int compute_number_of_sampling_needed(int number_of_particles_needed);
     double get_deltaf_bulk(
-        double mass, double pdotu, double bulkPi, double Tdec, int sign,
-        double f0, const std::array<double, 3> bulkvisCoefficients);
+        const double mass, const double pdotu, const double bulkPi,
+        const double Tdec, const int sign, const int baryon,
+        const double f0, const std::array<double, 3> bulkvisCoefficients);
     int sample_momemtum_from_a_fluid_cell(
         const double mass, const int sign,
         const int baryon, const int strange, const int charge,
