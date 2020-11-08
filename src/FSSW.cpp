@@ -568,15 +568,16 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         // bulk delta f contribution
         double bulkPi = 0.0;
         if (INCLUDE_BULK_DELTAF == 1) {
-            if (bulk_deltaf_kind == 0) {
-                bulkPi = surf->bulkPi;
-            } else {
-                bulkPi = surf->bulkPi/hbarC;  // unit in fm^-4
-            }
-            getbulkvisCoefficients(temp, bulkvisCoefficients);
             if (bulk_deltaf_kind == 11) {
                 bulkPi = surf->bulkPi;
                 getbulkvisCoefficients(temp, mu_B, bulkvisCoefficients);
+            } else {
+                if (bulk_deltaf_kind == 0) {
+                    bulkPi = surf->bulkPi;
+                } else {
+                    bulkPi = surf->bulkPi/hbarC;  // unit in fm^-4
+                }
+                getbulkvisCoefficients(temp, bulkvisCoefficients);
             }
         }
 
@@ -607,6 +608,7 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         const int baryon  = particle->baryon;
         const int strange = particle->strange;
         const int charge  = particle->charge;
+        const double mass = particle->mass;
         double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
         if (flag_PCE_ == 1) {
             double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
@@ -616,25 +618,33 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         double prefactor = degen/(2.*M_PI*M_PI);
 
         // calculate dN / (dxt dy)
-        std::array<double, 5> results_ptr = {0.0};
+        std::array<double, 6> results_ptr = {0.0};
         calculate_dN_analytic(particle, mu, temp, results_ptr);
 
         double N_eq = unit_factor*prefactor*dsigma_dot_u*results_ptr[0];
 
         double deltaN_bulk = 0.0;
         if (INCLUDE_BULK_DELTAF == 1) {
-            deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u
-                           *(- bulkPi*bulkvisCoefficients[0])
-                           *(- bulkvisCoefficients[1]*results_ptr[1]
-                             + results_ptr[2]));
+            if (bulk_deltaf_kind == 1) {
+                deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u
+                               *(- bulkPi*bulkvisCoefficients[0])
+                               *(- bulkvisCoefficients[1]*results_ptr[1]
+                                 + results_ptr[2]));
+            } else if (bulk_deltaf_kind == 11) {
+                deltaN_bulk = (
+                    unit_factor*prefactor*dsigma_dot_u*bulkPi
+                    *(  results_ptr[1]*mass*mass*bulkvisCoefficients[0]
+                      + results_ptr[2]*baryon*bulkvisCoefficients[1]
+                      + results_ptr[3]*bulkvisCoefficients[2]));
+            }
         }
 
         double deltaN_qmu = 0.0;
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
             deltaN_qmu = (unit_factor*prefactor
                           *dsigma_dot_q/deltaf_qmu_coeff
-                          *(- prefactor_qmu*results_ptr[3]
-                            - baryon*results_ptr[4]));
+                          *(- prefactor_qmu*results_ptr[4]
+                            - baryon*results_ptr[5]));
         }
 
         total_N = N_eq + deltaN_bulk + deltaN_qmu;
@@ -652,7 +662,7 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
 //***************************************************************************
 void FSSW::calculate_dN_analytic(
         const particle_info* particle, double mu, double Temperature,
-        std::array<double, 5> &results) {
+        std::array<double, 6> &results) {
 /* calculate particle yield using analytic formula as a series sum of Bessel 
    functions. The particle yield emitted from a given fluid cell is 
    \dsigma_mu u^\mu times the return value from this function
@@ -660,6 +670,7 @@ void FSSW::calculate_dN_analytic(
     double N_eq = 0.0;                  // equilibrium contribution
     double deltaN_bulk_term1 = 0.0;     // contribution from bulk delta f
     double deltaN_bulk_term2 = 0.0;     // contribution from bulk delta f
+    double deltaN_bulk_term3 = 0.0;     // contribution from bulk delta f
     double deltaN_qmu_term1 = 0.0;      // contribution from baryon diffusion
     double deltaN_qmu_term2 = 0.0;      // contribution from baryon diffusion
 
@@ -695,10 +706,19 @@ void FSSW::calculate_dN_analytic(
             exit(1);
         }
 
-        if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1) {
+        if (INCLUDE_BULK_DELTAF == 1) {
             double K_1 = get_special_function_K1(arg);
-            deltaN_bulk_term1 += theta*fugacity*(mass*beta*K_1 + 3./n*K_2);
-            deltaN_bulk_term2 += theta*fugacity*K_1;
+            if (bulk_deltaf_kind == 1) {
+                // CE
+                deltaN_bulk_term1 += theta*fugacity*(mass*beta*K_1 + 3*K_2/n);
+                deltaN_bulk_term2 += theta*fugacity*K_1;
+            } else if (bulk_deltaf_kind == 11) {
+                // 14 moments
+                double K_3 = get_special_function_K3(arg);
+                deltaN_bulk_term1 += theta*fugacity*(K_2)/n;  // C_T
+                deltaN_bulk_term2 += theta*fugacity*(mass*beta*K_1 + 3*K_2/n);  // C_B
+                deltaN_bulk_term3 += theta*fugacity*(mass*beta*K_2 + 3*K_3/n);  // C_E
+            }
         }
 
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
@@ -737,12 +757,20 @@ void FSSW::calculate_dN_analytic(
     N_eq = prefactor_Neq*N_eq;
 
     // contribution from bulk viscosity
-    if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1) {
-        deltaN_bulk_term1 = mass*mass/beta*deltaN_bulk_term1;
-        deltaN_bulk_term2 = mass*mass*mass/3.*deltaN_bulk_term2;
+    if (INCLUDE_BULK_DELTAF == 1) {
+        if (bulk_deltaf_kind == 1) {
+            deltaN_bulk_term1 = mass*mass/beta*deltaN_bulk_term1;
+            deltaN_bulk_term2 = mass*mass*mass/3.*deltaN_bulk_term2;
+            deltaN_bulk_term3 = 0.0;
+        } else if (bulk_deltaf_kind == 11) {
+            deltaN_bulk_term1 = mass*mass/beta*deltaN_bulk_term1;
+            deltaN_bulk_term2 = mass*mass/(beta*beta)*deltaN_bulk_term2;
+            deltaN_bulk_term3 = mass*mass*mass/(beta*beta)*deltaN_bulk_term3;
+        }
     } else {
         deltaN_bulk_term1 = 0.0;
         deltaN_bulk_term2 = 0.0;
+        deltaN_bulk_term3 = 0.0;
     }
 
     // contribution from baryon diffusion
@@ -755,8 +783,9 @@ void FSSW::calculate_dN_analytic(
     results[0] = N_eq;
     results[1] = deltaN_bulk_term1;
     results[2] = deltaN_bulk_term2;
-    results[3] = deltaN_qmu_term1;
-    results[4] = deltaN_qmu_term2;
+    results[3] = deltaN_bulk_term3;
+    results[4] = deltaN_qmu_term1;
+    results[5] = deltaN_qmu_term2;
 }
 
 
@@ -1321,14 +1350,16 @@ void FSSW::initialize_special_function_arrays() {
         sf_expint_En = new double* [sf_tb_length];
     }
     for (int i = 0; i < sf_tb_length; i++) {
-        sf_bessel_Kn[i] = new double [2];
+        sf_bessel_Kn[i] = new double [3];
 
         double sf_x = sf_x_min + i*sf_dx;
 
         if (INCLUDE_BULK_DELTAF == 1) {
             sf_bessel_Kn[i][0] = gsl_sf_bessel_K1(sf_x);     // store K_1
+            sf_bessel_Kn[i][2] = gsl_sf_bessel_Kn(3, sf_x);     // store K_3
         } else {
             sf_bessel_Kn[i][0] = 0.0;
+            sf_bessel_Kn[i][2] = 0.0;
         }
 
         sf_bessel_Kn[i][1] = gsl_sf_bessel_Kn(2, sf_x);  // store K_2
@@ -1341,6 +1372,26 @@ void FSSW::initialize_special_function_arrays() {
             }
         }
     }
+}
+
+
+double FSSW::get_special_function_K3(double arg) {
+    double results;
+    if (arg < sf_x_min || arg > sf_x_max-sf_dx) {
+        if (AMOUNT_OF_OUTPUT > 5) {
+            cout << "FSSW::get_special_function_K3: "
+                 << "out of the table bound!" << endl;
+            cout << "sf_x_min = " << sf_x_min << ", sf_x_max = " << sf_x_max
+                 << ", arg = " << arg << endl;
+        }
+        results = gsl_sf_bessel_Kn(3, arg);
+    } else {
+        int idx = static_cast<int>((arg - sf_x_min)/sf_dx);
+        double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
+        results = ((1. - fraction)*sf_bessel_Kn[idx][2]
+                    + fraction*sf_bessel_Kn[idx+1][2]);
+    }
+    return(results);
 }
 
 
@@ -1357,7 +1408,7 @@ double FSSW::get_special_function_K2(double arg) {
     } else {
         int idx = static_cast<int>((arg - sf_x_min)/sf_dx);
         double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
-        results = ((1. - fraction)*sf_bessel_Kn[idx][1] 
+        results = ((1. - fraction)*sf_bessel_Kn[idx][1]
                     + fraction*sf_bessel_Kn[idx+1][1]);
     }
     return(results);
@@ -1377,7 +1428,7 @@ double FSSW::get_special_function_K1(double arg) {
     } else {
         int idx = static_cast<int>((arg - sf_x_min)/sf_dx);
         double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
-        results = ((1. - fraction)*sf_bessel_Kn[idx][0] 
+        results = ((1. - fraction)*sf_bessel_Kn[idx][0]
                     + fraction*sf_bessel_Kn[idx+1][0]);
     }
     return(results);

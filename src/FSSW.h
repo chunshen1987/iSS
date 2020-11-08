@@ -119,6 +119,7 @@ class FSSW {
     void initialize_special_function_arrays();
     double get_special_function_K1(double arg);
     double get_special_function_K2(double arg);
+    double get_special_function_K3(double arg);
     void get_special_function_En(double arg, std::vector<double> &results);
 
     void shell();  // it all starts here...
@@ -130,7 +131,7 @@ class FSSW {
 
     void calculate_dN_analytic(const particle_info* particle, double mu,
                                double Temperature,
-                               std::array<double, 5> &results);
+                               std::array<double, 6> &results);
 
     // the following variables need to be set first in order to
     // call this function
