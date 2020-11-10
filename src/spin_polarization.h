@@ -63,14 +63,16 @@ class SpinPolarization {
     ~SpinPolarization();
 
     void compute_spin_polarization_shell();
-    void compute_spin_polarization(const int POI_monval, const int itype);
+    void compute_spin_polarization(
+            const int POI_monval, const int irap_type, const int itype);
     void compute_spin_polarization_for_a_given_p(
         const particle_info &POI_info, const iSS_data::Vec4 &pmu,
         const int itype, iSS_data::Vec4 &Smu, iSS_data::Vec4 &SmuLRF,
         double &dN);
     void compute_integrated_spin_polarizations();
     void output_integrated_spin_polarizations(
-            const int POI_monval, const std::string vorticity_typename);
+            const int POI_monval, const std::string rap_typename,
+            const std::string vorticity_typename);
 };
 
 #endif  // SRC_SPIN_POLARIZATION_H_

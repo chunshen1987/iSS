@@ -94,19 +94,23 @@ SpinPolarization::~SpinPolarization() {
 
 void SpinPolarization::compute_spin_polarization_shell() {
     std::array<int, 2> POI_list = {3122, -3122};   // Lambda and Anti-Lambda
+    std::string rapidity_typename[2] = {"rapidity", "pseudorapidity"};
     for (const auto &POI_monval: POI_list) {
-        for (unsigned int itype = 0; itype < vorticity_typenames_.size();
-             itype++) {
-            compute_spin_polarization(POI_monval, itype);
-            output_integrated_spin_polarizations(POI_monval,
-                                                 vorticity_typenames_[itype]);
+        for (int irap_type = 0; irap_type < 2; irap_type++) {
+            for (unsigned int itype = 0; itype < vorticity_typenames_.size();
+                 itype++) {
+                compute_spin_polarization(POI_monval, irap_type, itype);
+                output_integrated_spin_polarizations(
+                        POI_monval, rapidity_typename[irap_type],
+                        vorticity_typenames_[itype]);
+            }
         }
     }
 }
 
 
-void SpinPolarization::compute_spin_polarization(const int POI_monval,
-                                                 const int itype) {
+void SpinPolarization::compute_spin_polarization(
+        const int POI_monval, const int irap_type, const int itype) {
     // first clean up previous results
     set_val_in_3D_Matrix(dN_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
     set_val_in_3D_Matrix(St_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
@@ -129,6 +133,11 @@ void SpinPolarization::compute_spin_polarization(const int POI_monval,
 
     cout << "Computing spin polarization for " << POI_info.name
          << ", Monte-carlo index: " << POI_info.monval << endl;
+    if (irap_type == 0) {
+        cout << "Rapidity type : rapidity" << endl;
+    } else {
+        cout << "Rapidity type : pseudo-rapidity" << endl;
+    }
     cout << "spin polarization tensor type : " << vorticity_typenames_[itype]
          << endl;
 
@@ -137,14 +146,22 @@ void SpinPolarization::compute_spin_polarization(const int POI_monval,
 
     for (int iy = 0; iy < Ny_; iy++) {
         cout << "progress: " << iy << "/" << Ny_ << endl;
-        double y = y_arr_[iy];  // y is pseudo-rapidity
+        double y = y_arr_[iy];
         double cosh_y = cosh(y);
         double sinh_y = sinh(y);
         for (int ipT = 0; ipT < NpT_; ipT++) {
             double p_perp = pT_arr_[ipT];
-            //double m_perp = sqrt(mass*mass + p_perp*p_perp);
-            double p0 = sqrt(p_perp*cosh_y*p_perp*cosh_y + mass*mass);
-            double pz = p_perp*sinh_y;
+            double p0, pz;
+            if (irap_type == 0) {
+                // rapidity
+                double m_perp = sqrt(mass*mass + p_perp*p_perp);
+                p0 = m_perp*cosh_y;
+                pz = m_perp*sinh_y;
+            } else {
+                // pseudo-rapidity
+                p0 = sqrt(p_perp*cosh_y*p_perp*cosh_y + mass*mass);
+                pz = p_perp*sinh_y;
+            }
             for (int iphi = 0; iphi < Nphi_; iphi++) {
                 double px = p_perp*cos_phi_arr_[iphi];
                 double py = p_perp*sin_phi_arr_[iphi];
@@ -332,13 +349,14 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
 
 
 void SpinPolarization::output_integrated_spin_polarizations(
-        const int POI_monval, const std::string vorticity_typename) {
+        const int POI_monval, const std::string rap_typename,
+        const std::string vorticity_typename) {
     cout << "output spin polarization results to files ... " << endl;
     std::ofstream of;
 
     std::stringstream Smu_filename;
     Smu_filename << path_ << "/Smu_" << vorticity_typename << "_"
-                 << POI_monval << ".dat";
+                 << rap_typename << "_"<< POI_monval << ".dat";
     remove(Smu_filename.str().c_str());
     of.open(Smu_filename.str().c_str(), std::ios::out);
     of << "# dN S^t  S^x  S^y  S^z S^t_LRF S^x_LRF S^y_LRF S^z_LRF" << endl;
@@ -356,7 +374,7 @@ void SpinPolarization::output_integrated_spin_polarizations(
 
     std::stringstream SmupT_filename;
     SmupT_filename << path_ << "/Smu_pT_" << vorticity_typename << "_"
-                   << POI_monval << ".dat";
+                   << rap_typename << "_" << POI_monval << ".dat";
     remove(SmupT_filename.str().c_str());
     of.open(SmupT_filename.str().c_str(), std::ios::out);
     of << "# pT[GeV]  dN/(pTdpT)[GeV^-2]  S^t(pT)  S^x(pT)  S^y(pT)  S^z(pT)  "
@@ -378,7 +396,7 @@ void SpinPolarization::output_integrated_spin_polarizations(
 
     std::stringstream Smuphi_filename;
     Smuphi_filename << path_ << "/Smu_phi_" << vorticity_typename << "_"
-                    << POI_monval << ".dat";
+                    << rap_typename << "_" << POI_monval << ".dat";
     remove(Smuphi_filename.str().c_str());
     of.open(Smuphi_filename.str().c_str(), std::ios::out);
     of << "# phi  dN/dphi  S^t(phi)  S^x(phi)  S^y(phi)  S^z(phi)  "
@@ -400,7 +418,7 @@ void SpinPolarization::output_integrated_spin_polarizations(
 
     std::stringstream Smuy_filename;
     Smuy_filename << path_ << "/Smu_y_" << vorticity_typename << "_"
-                  << POI_monval << ".dat";
+                  << rap_typename << "_" << POI_monval << ".dat";
     remove(Smuy_filename.str().c_str());
     of.open(Smuy_filename.str().c_str(), std::ios::out);
     of << "# y  dN/dy  S^t(y)  S^x(y)  S^y(y)  S^z(y)  "
@@ -422,7 +440,7 @@ void SpinPolarization::output_integrated_spin_polarizations(
 
     std::stringstream Smu_dpTdphi_filename;
     Smu_dpTdphi_filename << path_ << "/Smu_dpTdphi_" << vorticity_typename
-                         << "_" << POI_monval << ".dat";
+                         << "_" << rap_typename << "_" << POI_monval << ".dat";
     remove(Smu_dpTdphi_filename.str().c_str());
     of.open(Smu_dpTdphi_filename.str().c_str(), std::ios::out);
     of << "# pT[GeV]  phi  dN/(pTdpTdphi)[GeV^-2}  "
@@ -449,7 +467,8 @@ void SpinPolarization::output_integrated_spin_polarizations(
 
     std::stringstream Smu_dpTdphidy_filename;
     Smu_dpTdphidy_filename << path_ << "/Smu_dpTdphidy_" << vorticity_typename
-                           << "_" << POI_monval << ".dat";
+                           << "_" << rap_typename << "_" << POI_monval
+                           << ".dat";
     remove(Smu_dpTdphidy_filename.str().c_str());
     of.open(Smu_dpTdphidy_filename.str().c_str(), std::ios::out);
     of << "# y  pT[GeV]  phi  dN/(pTdpTdphidy)[GeV^-2]  S^t  S^x  S^y  S^z  "
