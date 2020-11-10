@@ -184,7 +184,7 @@ void read_FOdata::read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr) {
 void read_FOdata::read_in_chemical_potentials(
     std::vector<FO_surf> &surf_ptr, std::vector<particle_info> &particle_ptr) {
     int Nparticle = 0;
-    int N_stableparticle;
+    int N_stableparticle = 0;
     Table mu_table;
     if (mode == 0) {      // VISH2+1 output
         std::ifstream particletable(table_path_ + "/EOS_particletable.dat");
