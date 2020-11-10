@@ -47,14 +47,16 @@ void ParameterReader::phraseEquationWithoutComments(string equation)
 {
   if (trim(equation).compare("")==0) return;
   size_t symbolPos = equation.find('=');
-  if (symbolPos==string::npos)
-  {
-    cout << "ParameterReader::phraseEquationWithoutComments error: \"=\" symbol not found in equation assignment " << equation << endl;
-    exit(-1);
+  //if (symbolPos==string::npos)
+  //{
+  //  cout << "ParameterReader::phraseEquationWithoutComments error: \"=\" symbol not found in equation assignment " << equation << endl;
+  //  exit(-1);
+  //}
+  if (symbolPos != string::npos) {
+    string LHS (equation.begin(), equation.begin()+symbolPos);
+    string RHS (equation.begin()+symbolPos+1, equation.end());
+    setVal(LHS, stringToDouble(trim(RHS)));
   }
-  string LHS (equation.begin(), equation.begin()+symbolPos);
-  string RHS (equation.begin()+symbolPos+1, equation.end());
-  setVal(LHS, stringToDouble(trim(RHS)));
 }
 
 

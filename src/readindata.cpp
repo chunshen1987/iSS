@@ -236,15 +236,12 @@ void read_FOdata::read_in_chemical_potentials(
             particletable.close();
         } else if (iEOS_MUSIC_ == 7) {        // s95p-v1.2 for UrQMD
             N_stableparticle = 0;
-            afterburner_type_ = AfterburnerType::UrQMD;
         } else if (iEOS_MUSIC_ == 8) {        // WB
             N_stableparticle = 0;
         } else if (iEOS_MUSIC_ == 9) {        // hotQCD + HRG(UrQMD)
             N_stableparticle = 0;
-            afterburner_type_ = AfterburnerType::UrQMD;
         } else if (iEOS_MUSIC_ == 91) {       // hotQCD + HRG(SMASH)
             N_stableparticle = 0;
-            afterburner_type_ = AfterburnerType::SMASH;
         } else if (iEOS_MUSIC_ >= 10 && iEOS_MUSIC_ <=14) {   // NEoS
             N_stableparticle = 0;
         } else if (iEOS_MUSIC_ == 17) {       // BEST

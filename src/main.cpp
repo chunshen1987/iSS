@@ -31,10 +31,18 @@ int main(int argc, char** argv) {
     cout << endl << "**********************************************************"
          << endl << endl;
 
+    const string table_path = "iSS_tables";
+    const string particle_table_path = "iSS_tables";
+
     string path = "results";
-    string table_path = "iSS_tables";
-    string particle_table_path = "iSS_tables";
     string input_file = "iSS_parameters.dat";
+    if (argc > 1)
+        input_file = argv[1];
+    cout << "input file : " << input_file << endl;
+    if (argc > 2)
+        path = argv[2];
+    cout << "work folder path : " << path << endl;
+
     iSS iSsampler(path, table_path, particle_table_path, input_file);
     // read in parameters
     iSsampler.paraRdr_ptr->readFromArguments(argc, argv);

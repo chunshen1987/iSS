@@ -320,7 +320,8 @@ bool FSSW::particles_are_the_same(int idx1, int idx2) {
 //***************************************************************************
 void FSSW::shell() {
     sample_using_dN_dxtdy_4all_particles_conventional();
-    if (flag_perform_decays == 1) {
+    if (flag_perform_decays == 1
+            && afterburner_type_ != AfterburnerType::SMASH) {
         perform_resonance_feed_down(Hadron_list);
     }
     if (USE_OSCAR_FORMAT) {
@@ -1139,8 +1140,12 @@ void FSSW::getbulkvisCoefficients(
 
 
 void FSSW::load_bulk_deltaf_14mom_table(string filepath) {
+    std::string folder_name = "/urqmd";
+    if (afterburner_type_ == AfterburnerType::SMASH) {
+        folder_name = "/smash_box";
+    }
     std::stringstream file_c0;
-    file_c0 << filepath << "/c0.dat";
+    file_c0 << filepath << folder_name << "/c0.dat";
     ifstream c0_table(file_c0.str().c_str());
     if (!c0_table) {
         messager_ << "Can not found file: " << file_c0.str();
@@ -1148,7 +1153,7 @@ void FSSW::load_bulk_deltaf_14mom_table(string filepath) {
         exit(1);
     }
     std::stringstream file_c1;
-    file_c1 << filepath << "/c1.dat";
+    file_c1 << filepath << folder_name << "/c1.dat";
     ifstream c1_table(file_c1.str().c_str());
     if (!c1_table) {
         messager_ << "Can not found file: " << file_c1.str();
@@ -1156,7 +1161,7 @@ void FSSW::load_bulk_deltaf_14mom_table(string filepath) {
         exit(1);
     }
     std::stringstream file_c2;
-    file_c2 << filepath << "/c2.dat";
+    file_c2 << filepath << folder_name << "/c2.dat";
     ifstream c2_table(file_c2.str().c_str());
     if (!c2_table) {
         messager_ << "Can not found file: " << file_c2.str();
@@ -1542,9 +1547,10 @@ double FSSW::get_deltaf_bulk(
                 *(bulkvisCoefficients[0] - bulkvisCoefficients[1]/E_over_T));
     } else if (bulk_deltaf_kind == 11) {
         // OSU 14 moments
-        delta_f_bulk = ((1. - sign*f0)*(bulkvisCoefficients[0]*mass*mass
-                                        + baryon*bulkvisCoefficients[1]*pdotu
-                                        + bulkvisCoefficients[2]*pdotu*pdotu));
+        delta_f_bulk = ((1. - sign*f0)*bulkPi*(
+                          bulkvisCoefficients[0]*mass*mass
+                        + baryon*bulkvisCoefficients[1]*pdotu
+                        + bulkvisCoefficients[2]*pdotu*pdotu));
     }
     return(delta_f_bulk);
 }
@@ -1608,9 +1614,14 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         // delta f for bulk viscosity
         double delta_f_bulk = 0.;
         if (INCLUDE_BULK_DELTAF == 1) {
-            delta_f_bulk = get_deltaf_bulk(
-                            mass, p0, surf->bulkPi/hbarC,
-                            Tdec, sign, baryon, f0, bulkvisCoefficients);
+            double bulkPi = 0.;
+            if (bulk_deltaf_kind == 11) {
+                bulkPi = surf->bulkPi;
+            } else if (bulk_deltaf_kind == 1) {
+                bulkPi = surf->bulkPi/hbarC;
+            }
+            delta_f_bulk = get_deltaf_bulk(mass, p0, bulkPi, Tdec, sign,
+                                           baryon, f0, bulkvisCoefficients);
         }
 
         // delta f for diffusion
