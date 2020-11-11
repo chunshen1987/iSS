@@ -49,6 +49,7 @@ int iSS::shell() {
         messager.flush("error");
         exit(-1);
     }
+    construct_Tmunu();
     return(0);
 }
 
@@ -254,4 +255,41 @@ void iSS::transform_to_local_rest_frame(
 
         FOsurf_LRF_ptr.push_back(surf_LRF_i);
     }
+}
+
+
+void iSS::construct_Tmunu() {
+    double volume = FOsurf_LRF_array_[0].da_mu_LRF[0];
+    double T[4][4];
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 4; j++)
+            T[i][j] = 0.;
+    int nev = get_number_of_sampled_events();
+    for (int iev = 0; iev < nev; iev++) {
+        int npart = get_number_of_particles(iev);
+        for (int ipart = 0; ipart < npart; ipart++) {
+            iSS_Hadron part_i = get_hadron(iev, ipart);
+            double p[4] = {part_i.E, part_i.px, part_i.py, part_i.pz};
+            for (int ii = 0; ii < 4; ii++)
+                for (int jj = 0; jj < 4; jj++)
+                    T[ii][jj] += p[ii]*p[jj]/p[0];
+        }
+    }
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            T[i][j] /= (nev*volume);
+        }
+    }
+    std::cout << "e = " << T[0][0] << " GeV/fm^3, diff = "
+              << T[0][0] - FOsurf_LRF_array_[0].Edec << std::endl;
+    double trace = T[1][1] + T[2][2] + T[3][3];
+    double Pi = trace/3. - FOsurf_LRF_array_[0].Pdec;
+    double pizz = T[3][3] - Pi - FOsurf_LRF_array_[0].Pdec;
+    std::cout << "pi_zz = " << pizz << " GeV/fm^3, diff = "
+              << pizz + (  FOsurf_LRF_array_[0].piLRF_xx
+                         + FOsurf_LRF_array_[0].piLRF_yy)
+              << std::endl;
+    std::cout << "Bulk Pi = " << Pi << " GeV/fm^3, diff = "
+              << Pi - FOsurf_LRF_array_[0].bulkPi
+              << std::endl;
 }

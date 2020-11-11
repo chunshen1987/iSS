@@ -47,6 +47,8 @@ class iSS {
     void set_random_seed();
     void set_random_seed(int randomSeed_in);
 
+    void construct_Tmunu();
+
     int shell();
     int read_in_FO_surface();
     int generate_samples();
