@@ -1253,7 +1253,7 @@ void FSSW::getbulkvisCoefficients(const double Tdec, const double mu_B,
     double f3 = deltaf_bulk_coeff_14mom_c0_tb_[idx_T2][idx_mu2];
     double f4 = deltaf_bulk_coeff_14mom_c0_tb_[idx_T2][idx_mu1];
     double c0_T4 = (  f1*(1. - x_fraction)*(1. - y_fraction)
-                    + f2*(1. - x_fraction)*y_fraction 
+                    + f2*(1. - x_fraction)*y_fraction
                     + f3*x_fraction*y_fraction
                     + f4*x_fraction*(1. - y_fraction));
     f1 = deltaf_bulk_coeff_14mom_c1_tb_[idx_T1][idx_mu1];
@@ -1261,7 +1261,7 @@ void FSSW::getbulkvisCoefficients(const double Tdec, const double mu_B,
     f3 = deltaf_bulk_coeff_14mom_c1_tb_[idx_T2][idx_mu2];
     f4 = deltaf_bulk_coeff_14mom_c1_tb_[idx_T2][idx_mu1];
     double c1_T3 = (  f1*(1. - x_fraction)*(1. - y_fraction)
-                    + f2*(1. - x_fraction)*y_fraction 
+                    + f2*(1. - x_fraction)*y_fraction
                     + f3*x_fraction*y_fraction
                     + f4*x_fraction*(1. - y_fraction));
     f1 = deltaf_bulk_coeff_14mom_c2_tb_[idx_T1][idx_mu1];
@@ -1269,7 +1269,7 @@ void FSSW::getbulkvisCoefficients(const double Tdec, const double mu_B,
     f3 = deltaf_bulk_coeff_14mom_c2_tb_[idx_T2][idx_mu2];
     f4 = deltaf_bulk_coeff_14mom_c2_tb_[idx_T2][idx_mu1];
     double c2_T4 = (  f1*(1. - x_fraction)*(1. - y_fraction)
-                    + f2*(1. - x_fraction)*y_fraction 
+                    + f2*(1. - x_fraction)*y_fraction
                     + f3*x_fraction*y_fraction
                     + f4*x_fraction*(1. - y_fraction));
     double T3 = Tdec*Tdec*Tdec;
@@ -1549,7 +1549,7 @@ double FSSW::get_deltaf_bulk(
         // OSU 14 moments
         delta_f_bulk = ((1. - sign*f0)*bulkPi*(
                           bulkvisCoefficients[0]*mass*mass
-                        + baryon*bulkvisCoefficients[1]*pdotu
+                        + bulkvisCoefficients[1]*baryon*pdotu
                         + bulkvisCoefficients[2]*pdotu*pdotu));
     }
     return(delta_f_bulk);
@@ -1616,9 +1616,9 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         if (INCLUDE_BULK_DELTAF == 1) {
             double bulkPi = 0.;
             if (bulk_deltaf_kind == 11) {
-                bulkPi = surf->bulkPi;
+                bulkPi = surf->bulkPi;         // GeV/fm^3
             } else if (bulk_deltaf_kind == 1) {
-                bulkPi = surf->bulkPi/hbarC;
+                bulkPi = surf->bulkPi/hbarC;   // 1/fm^4
             }
             delta_f_bulk = get_deltaf_bulk(mass, p0, bulkPi, Tdec, sign,
                                            baryon, f0, bulkvisCoefficients);
