@@ -36,12 +36,25 @@ int main(int argc, char** argv) {
 
     string path = "results";
     string input_file = "iSS_parameters.dat";
-    if (argc > 1)
-        input_file = argv[1];
+    string surface_filename = "surface.dat";
+    if (argc > 1) {
+        std::string s1 = argv[1];
+        if (s1.find("=") == std::string::npos)
+            input_file = s1;
+    }
     cout << "input file : " << input_file << endl;
-    if (argc > 2)
-        path = argv[2];
+    if (argc > 2) {
+        std::string s1 = argv[2];
+        if (s1.find("=") == std::string::npos)
+            path = s1;
+    }
     cout << "work folder path : " << path << endl;
+    if (argc > 3) {
+        std::string s1 = argv[3];
+        if (s1.find("=") == std::string::npos)
+            surface_filename = s1;
+    }
+    cout << "surface filename : " << surface_filename << endl;
 
     iSS iSsampler(path, table_path, particle_table_path, input_file);
     // read in parameters
