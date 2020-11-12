@@ -56,12 +56,14 @@ int main(int argc, char** argv) {
     }
     cout << "surface filename : " << surface_filename << endl;
 
-    iSS iSsampler(path, table_path, particle_table_path, input_file);
+    iSS iSsampler(path, table_path, particle_table_path,
+                  input_file, surface_filename);
     // read in parameters
     iSsampler.paraRdr_ptr->readFromArguments(argc, argv);
     iSsampler.paraRdr_ptr->echo();
 
     int status = iSsampler.shell();
+    iSsampler.perform_checks();
     if (status == 0) {
         cout << "Program executed normally." << endl;
     }

@@ -102,7 +102,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
 
 read_FOdata::~read_FOdata() {}
 
-int read_FOdata::get_number_of_freezeout_cells() {
+int read_FOdata::get_number_of_freezeout_cells(std::string surfaceFilename) {
     int number_of_cells = 0;
     if (mode == 0) {  // outputs from VISH2+1
         ostringstream decdatfile;
@@ -111,7 +111,7 @@ int read_FOdata::get_number_of_freezeout_cells() {
         number_of_cells = block_file.getNumberOfRows();
     } else if (mode == 1) {  // outputs from MUSIC boost-invariant
         ostringstream surface_file;
-        surface_file << path_ << "/surface.dat";
+        surface_file << path_ << "/" << surfaceFilename;
         if (surface_in_binary) {
             number_of_cells = get_number_of_lines_of_binary_surface_file(
                                                         surface_file.str());
@@ -132,7 +132,7 @@ int read_FOdata::get_number_of_freezeout_cells() {
     } else if (mode == 2) {  // outputs from MUSIC full (3+1)-d
         int number_of_lines = 0;
         ostringstream surface_filename;
-        surface_filename << path_ << "/surface.dat";
+        surface_filename << path_ << "/" << surfaceFilename;
         if (surface_in_binary) {
             number_of_cells = get_number_of_lines_of_binary_surface_file(
                                                     surface_filename.str());
@@ -168,13 +168,14 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
 }
 
 
-void read_FOdata::read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr) {
+void read_FOdata::read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr,
+                                          std::string surface_filename) {
     if (mode == 0)     // VISH2+1 outputs
         read_FOsurfdat_VISH2p1(surf_ptr);
     else if (mode == 1)   // MUSIC boost invariant outputs
-        read_FOsurfdat_MUSIC_boost_invariant(surf_ptr);
+        read_FOsurfdat_MUSIC_boost_invariant(surf_ptr, surface_filename);
     else if (mode == 2)   // MUSIC full (3+1)-d outputs
-        read_FOsurfdat_MUSIC(surf_ptr);
+        read_FOsurfdat_MUSIC(surf_ptr, surface_filename);
     else if (mode == 10)   // MUSIC boost invariant outputs
         read_FOsurfdat_hydro_analysis_boost_invariant(surf_ptr);
     regulate_surface_cells(surf_ptr);
@@ -381,7 +382,7 @@ void read_FOdata::read_FOsurfdat_VISH2p1(std::vector<FO_surf> &surf_ptr) {
 }
 
 void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
-                                std::vector<FO_surf> &surf_ptr) {
+                std::vector<FO_surf> &surf_ptr, std::string surface_filename) {
     cout << " -- Read spatial positions of freeze out surface from MUSIC "
          << "(boost-invariant) ...";
     ostringstream surfdat_stream;
@@ -389,7 +390,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     string input;
     double temp_tau, temp_xpt, temp_ypt, temp_eta;
     int idx = 0;
-    surfdat_stream << path_ << "/surface.dat";
+    surfdat_stream << path_ << "/" << surface_filename;
     std::ifstream surfdat;
     if (surface_in_binary) {
         surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);
@@ -603,11 +604,12 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
     return;
 }
 
-void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
+void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
+                                       std::string surface_filename) {
     cout << " -- Read spatial positions of freeze out surface from MUSIC...";
     ostringstream surfdat_stream;
     double dummy;
-    surfdat_stream << path_ << "/surface.dat";
+    surfdat_stream << path_ << "/" << surface_filename;
     std::ifstream surfdat;
     if (surface_in_binary) {
         surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);

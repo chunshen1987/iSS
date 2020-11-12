@@ -18,6 +18,7 @@ class iSS {
     const std::string path_;
     const std::string table_path_;
     const std::string particle_table_path_;
+    const std::string surface_filename_;
 
     std::vector<FO_surf> FOsurf_array_;
     std::vector<FO_surf_LRF> FOsurf_LRF_array_;
@@ -39,7 +40,8 @@ class iSS {
  public:
     iSS(std::string path, std::string table_path="iSS_tables",
         std::string particle_table_path="iSS_tables",
-        std::string inputfile="iSS_parameters.dat");
+        std::string inputfile="iSS_parameters.dat",
+        std::string surface_filename="surface.dat");
     ~iSS();
 
     ParameterReader *paraRdr_ptr;
@@ -47,6 +49,7 @@ class iSS {
     void set_random_seed();
     void set_random_seed(int randomSeed_in);
 
+    void perform_checks();
     void construct_Tmunu();
 
     int shell();

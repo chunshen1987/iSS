@@ -6,14 +6,17 @@
 #include "iSS.h"
 #include "Random.h"
 #include "data_struct.h"
+#include "Histogram.h"
 
 //using namespace std;
 using iSS_data::Vec4;
 
 iSS::iSS(std::string path, std::string table_path,
-         std::string particle_table_path, std::string inputfile) :
+         std::string particle_table_path, std::string inputfile,
+         std::string surface_filename) :
         path_(path), table_path_(table_path),
-        particle_table_path_(particle_table_path) {
+        particle_table_path_(particle_table_path),
+        surface_filename_(surface_filename) {
 
     flag_PCE_ = 0;
     paraRdr_ptr = new ParameterReader;
@@ -49,8 +52,34 @@ int iSS::shell() {
         messager.flush("error");
         exit(-1);
     }
-    construct_Tmunu();
     return(0);
+}
+
+
+void iSS::perform_checks() {
+    messager.info("Performing checks for the samples ...");
+    construct_Tmunu();
+    Histogram hist_pion(0., 5., 100);
+    Histogram hist_proton(0., 5., 100);
+    int nev = get_number_of_sampled_events();
+    for (int iev = 0; iev < nev; iev++) {
+        int npart = get_number_of_particles(iev);
+        for (int ipart = 0; ipart < npart; ipart++) {
+            iSS_Hadron part_i = get_hadron(iev, ipart);
+            //double p[4] = {part_i.E, part_i.px, part_i.py, part_i.pz};
+            if (part_i.pid == 211) {
+                double pT = sqrt(part_i.px*part_i.px + part_i.py*part_i.py);
+                hist_pion.fill(pT, 1.);
+            } else if (part_i.pid == 2212) {
+                double pT = sqrt(part_i.px*part_i.px + part_i.py*part_i.py);
+                hist_proton.fill(pT, 1.);
+            }
+        }
+        hist_pion.add_an_event();
+        hist_proton.add_an_event();
+    }
+    hist_pion.output_histogram("check_211_spectra.dat");
+    hist_proton.output_histogram("check_2212_spectra.dat");
 }
 
 
@@ -59,7 +88,7 @@ int iSS::read_in_FO_surface() {
     read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
                                 particle_table_path_);
     //freeze_out_data.read_in_freeze_out_data(FOsurf_array_);
-    freeze_out_data.read_in_freeze_out_data(FOsurf_temp);
+    freeze_out_data.read_in_freeze_out_data(FOsurf_temp, surface_filename_);
     messager << "total number of cells: " <<  FOsurf_temp.size();
     messager.flush("info");
 
@@ -259,6 +288,7 @@ void iSS::transform_to_local_rest_frame(
 
 
 void iSS::construct_Tmunu() {
+    messager.info("Constructing the fluid cell T^{mu nu} from samples ...");
     double volume = FOsurf_LRF_array_[0].da_mu_LRF[0];
     double T[4][4];
     for (int i = 0; i < 4; i++)
@@ -280,16 +310,17 @@ void iSS::construct_Tmunu() {
             T[i][j] /= (nev*volume);
         }
     }
-    std::cout << "e = " << T[0][0] << " GeV/fm^3, diff = "
-              << T[0][0] - FOsurf_LRF_array_[0].Edec << std::endl;
+    messager << "check: e = " << T[0][0] << " GeV/fm^3, diff = "
+             << T[0][0] - FOsurf_LRF_array_[0].Edec;
+    messager.flush("info");
     double trace = T[1][1] + T[2][2] + T[3][3];
     double Pi = trace/3. - FOsurf_LRF_array_[0].Pdec;
     double pizz = T[3][3] - Pi - FOsurf_LRF_array_[0].Pdec;
-    std::cout << "pi_zz = " << pizz << " GeV/fm^3, diff = "
+    messager << "check: pi_zz = " << pizz << " GeV/fm^3, diff = "
               << pizz + (  FOsurf_LRF_array_[0].piLRF_xx
-                         + FOsurf_LRF_array_[0].piLRF_yy)
-              << std::endl;
-    std::cout << "Bulk Pi = " << Pi << " GeV/fm^3, diff = "
-              << Pi - FOsurf_LRF_array_[0].bulkPi
-              << std::endl;
+                         + FOsurf_LRF_array_[0].piLRF_yy);
+    messager.flush("info");
+    messager << "check: Bulk Pi = " << Pi << " GeV/fm^3, diff = "
+             << Pi - FOsurf_LRF_array_[0].bulkPi;
+    messager.flush("info");
 }

@@ -16,6 +16,7 @@ set (SOURCES
   FermionMomentumSampler.cpp
   MomentumSamplerBase.cpp
   FSSW.cpp
+  Histogram.cpp
   )
 
 add_library(${lib_name} SHARED ${SOURCES})
