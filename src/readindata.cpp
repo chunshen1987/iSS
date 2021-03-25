@@ -107,7 +107,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
 
     fluid_cell_size = 34;
     if (include_vorticity_)
-        fluid_cell_size += 24;
+        fluid_cell_size += 38;
 
     n_eta_skip = 0;
     iEOS_MUSIC_ = 0;
@@ -489,7 +489,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             surf_elem.qmu2 = array_loc[32];
             surf_elem.qmu3 = array_loc[33];
             if (include_vorticity_) {
-                for (int ii = 0; ii < 24; ii++)
+                for (int ii = 0; ii < 38; ii++)
                     surf_elem.vorticity_arr.push_back(array_loc[34+ii]);
             }
         } else {
@@ -721,7 +721,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
             surf_elem.qmu2 = array_loc[32];
             surf_elem.qmu3 = array_loc[33];
             if (include_vorticity_) {
-                for (int ii = 0; ii < 24; ii++)
+                for (int ii = 0; ii < 38; ii++)
                     surf_elem.vorticity_arr.push_back(array_loc[34+ii]);
             }
         } else {
