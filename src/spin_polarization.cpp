@@ -585,12 +585,12 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
 
         Smu_tmp[0] += prefactor*(
             (omega_yz*pmu[1] - omega_xz*pmu[2] + omega_xy*pmu[3])
-            + Flag_MuIP*POI_info.baryon/pdotu*(
+            + Flag_MuIP*hbarC*POI_info.baryon/pdotu*(
                   (ux*pmu[2] - uy*pmu[1])*DmuB_over_T[3]
                 + (uy*pmu[3] - uz*pmu[2])*DmuB_over_T[1]
                 - (ux*pmu[3] - uz*pmu[1])*DmuB_over_T[2]
             )
-            - Flag_SIP*1./(surf.Tdec*pdotu)*(
+            - Flag_SIP*hbarC*1./(surf.Tdec*pdotu)*(
                   (ux*pmu[2] - uy*pmu[1])*pdotsigma[3]
                 + (uy*pmu[3] - uz*pmu[2])*pdotsigma[1]
                 - (ux*pmu[3] - uz*pmu[1])*pdotsigma[2]
@@ -599,12 +599,12 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
 
         Smu_tmp[1] += prefactor*(
             -(- omega_yz*pmu[0] - omega_ty*pmu[3] + omega_tz*pmu[2])
-            - Flag_MuIP*POI_info.baryon/pdotu*(
+            - Flag_MuIP*hbarC*POI_info.baryon/pdotu*(
                 - (uy*pmu[3] - uz*pmu[2])*DmuB_over_T[0]
                 - (ut*pmu[2] - uy*pmu[0])*DmuB_over_T[3]
                 + (ut*pmu[3] - uz*pmu[0])*DmuB_over_T[2]
             )
-            + Flag_SIP*1./(surf.Tdec*pdotu)*(
+            + Flag_SIP*hbarC*1./(surf.Tdec*pdotu)*(
                 - (uy*pmu[3] - uz*pmu[2])*pdotsigma[0]
                 - (ut*pmu[2] - uy*pmu[0])*pdotsigma[3]
                 + (ut*pmu[3] - uz*pmu[0])*pdotsigma[2]
@@ -613,12 +613,12 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
 
         Smu_tmp[2] += prefactor*(
             -(omega_tx*pmu[3] - omega_tz*pmu[1] + omega_xz*pmu[0])
-            - Flag_MuIP*POI_info.baryon/pdotu*(
+            - Flag_MuIP*hbarC*POI_info.baryon/pdotu*(
                   (ut*pmu[1] - ux*pmu[0])*DmuB_over_T[3]
                 - (ut*pmu[3] - uz*pmu[0])*DmuB_over_T[1]
                 + (ux*pmu[3] - uz*pmu[1])*DmuB_over_T[0]
             )
-            + Flag_SIP*1./(surf.Tdec*pdotu)*(
+            + Flag_SIP*hbarC*1./(surf.Tdec*pdotu)*(
                   (ut*pmu[1] - ux*pmu[0])*pdotsigma[3]
                 - (ut*pmu[3] - uz*pmu[0])*pdotsigma[1]
                 + (ux*pmu[3] - uz*pmu[1])*pdotsigma[0]
@@ -627,12 +627,12 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
 
         Smu_tmp[3] += prefactor*(
             -(- omega_tx*pmu[2] + omega_ty*pmu[1] - omega_xy*pmu[0])
-            - Flag_MuIP*POI_info.baryon/pdotu*(
+            - Flag_MuIP*hbarC*POI_info.baryon/pdotu*(
                 - (ut*pmu[1] - ux*pmu[0])*DmuB_over_T[2]
                 + (ut*pmu[2] - uy*pmu[0])*DmuB_over_T[1]
                 - (ux*pmu[2] - uy*pmu[1])*DmuB_over_T[0]
             )
-            + Flag_SIP*1./(surf.Tdec*pdotu)*(
+            + Flag_SIP*hbarC*1./(surf.Tdec*pdotu)*(
                 - (ut*pmu[1] - ux*pmu[0])*pdotsigma[2]
                 + (ut*pmu[2] - uy*pmu[0])*pdotsigma[1]
                 - (ux*pmu[2] - uy*pmu[1])*pdotsigma[0]
