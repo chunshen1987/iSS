@@ -849,6 +849,7 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
         surf_i.pi33 = pi_reg[3][3];
 
         if (include_vorticity_) {
+            // sigma^{\mu\nu} is in Cartesian Coordinates
             double cosh_eta = cosh(surf_i.eta);
             double sinh_eta = sinh(surf_i.eta);
             u_flow[0] = surf_i.u0*cosh_eta + surf_i.u3*sinh_eta;
