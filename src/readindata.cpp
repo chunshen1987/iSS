@@ -847,6 +847,43 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
         surf_i.pi22 = pi_reg[2][2];
         surf_i.pi23 = pi_reg[2][3];
         surf_i.pi33 = pi_reg[3][3];
+
+        if (include_vorticity_) {
+            double cosh_eta = cosh(surf_i.eta);
+            double sinh_eta = sinh(surf_i.eta);
+            u_flow[0] = surf_i.u0*cosh_eta + surf_i.u3*sinh_eta;
+            u_flow[1] = surf_i.u1;
+            u_flow[2] = surf_i.u2;
+            u_flow[3] = surf_i.u3*cosh_eta + surf_i.u0*sinh_eta;
+            pi_init[0][0] = surf_i.vorticity_arr[24];
+            pi_init[0][1] = surf_i.vorticity_arr[25];
+            pi_init[0][2] = surf_i.vorticity_arr[26];
+            pi_init[0][3] = surf_i.vorticity_arr[27];
+            pi_init[1][0] = surf_i.vorticity_arr[25];
+            pi_init[1][1] = surf_i.vorticity_arr[28];
+            pi_init[1][2] = surf_i.vorticity_arr[29];
+            pi_init[1][3] = surf_i.vorticity_arr[30];
+            pi_init[2][0] = surf_i.vorticity_arr[26];
+            pi_init[2][1] = surf_i.vorticity_arr[29];
+            pi_init[2][2] = surf_i.vorticity_arr[31];
+            pi_init[2][3] = surf_i.vorticity_arr[32];
+            pi_init[3][0] = surf_i.vorticity_arr[27];
+            pi_init[3][1] = surf_i.vorticity_arr[30];
+            pi_init[3][2] = surf_i.vorticity_arr[32];
+            pi_init[3][3] = surf_i.vorticity_arr[33];
+
+            regulate_Wmunu(u_flow, pi_init, pi_reg);
+            surf_i.vorticity_arr[24] = pi_reg[0][0];
+            surf_i.vorticity_arr[25] = pi_reg[0][1];
+            surf_i.vorticity_arr[26] = pi_reg[0][2];
+            surf_i.vorticity_arr[27] = pi_reg[0][3];
+            surf_i.vorticity_arr[28] = pi_reg[1][1];
+            surf_i.vorticity_arr[29] = pi_reg[1][2];
+            surf_i.vorticity_arr[30] = pi_reg[1][3];
+            surf_i.vorticity_arr[31] = pi_reg[2][2];
+            surf_i.vorticity_arr[32] = pi_reg[2][3];
+            surf_i.vorticity_arr[33] = pi_reg[3][3];
+        }
     }
 }
 
