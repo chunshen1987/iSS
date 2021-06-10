@@ -474,7 +474,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             ss >> surf_elem.u3;
 
             // thermodynamic quantities at freeze out
-            ss >> dummy; surf_elem.Edec = dummy*hbarC;   
+            ss >> dummy; surf_elem.Edec = dummy*hbarC;
             ss >> dummy; surf_elem.Tdec = dummy*hbarC;
             ss >> dummy; surf_elem.muB = dummy*hbarC;
             ss >> dummy; surf_elem.muS = dummy*hbarC;
@@ -519,7 +519,14 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
         }
         idx++;
         if (!surfdat.eof()) {
-            surf_ptr.push_back(surf_elem);
+            if (surf_elem.Tdec > 0.010) {
+                surf_ptr.push_back(surf_elem);
+            } else {
+                cout << "Freeze-out cell discard, T = " << surf_elem.Tdec
+                     << " GeV, e = " << surf_elem.Edec << " GeV/fm^3,"
+                     << "nB = " << surf_elem.Bn << " 1/fm^3, muB = "
+                     << surf_elem.muB << endl;
+            }
         }
     }
     surfdat.close();
@@ -568,7 +575,7 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
         surf_elem.u2 = surf_elem.u0*temp_vy;
         surf_elem.u3 = 0.0;
 
-        surf_elem.Edec = 0.0;   
+        surf_elem.Edec = 0.0;
         surf_elem.muB = 0.0;
         surf_elem.Pdec = 0.0;
         surf_elem.muS = 0.0;
@@ -730,8 +737,14 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
             }
         }
         if (!surfdat.eof()) {
-            if (surf_elem.Tdec > 0.01)
+            if (surf_elem.Tdec > 0.010) {
                 surf_ptr.push_back(surf_elem);
+            } else {
+                cout << "Freeze-out cell discard, T = " << surf_elem.Tdec
+                     << " GeV, e = " << surf_elem.Edec << " GeV/fm^3,"
+                     << "nB = " << surf_elem.Bn << " 1/fm^3, muB = "
+                     << surf_elem.muB << endl;
+            }
         }
     }
     surfdat.close();

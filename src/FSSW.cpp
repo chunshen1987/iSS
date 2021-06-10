@@ -700,6 +700,7 @@ void FSSW::calculate_dN_analytic(
         if (std::isnan(N_eq)) {
             cout << "N_eq is nan"
                  << ", theta = " << theta << ", n = " << n
+                 << ", T = " << Temperature << "GeV, mu = " << mu << " GeV"
                  << ", exp(mu/T) = " << lambda
                  << ", exp(n*mu/T) = " << fugacity
                  << ", n*m/T = " << arg
