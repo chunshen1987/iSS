@@ -17,6 +17,7 @@ set (SOURCES
     MomentumSamplerBase.cpp
     FSSW.cpp
     spin_polarization.cpp
+    Histogram.cpp
 )
 
 add_library(${lib_name} SHARED ${SOURCES})

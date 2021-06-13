@@ -193,7 +193,10 @@ void SpinPolarization::compute_spin_polarization(
                 double px = p_perp*cos_phi_arr_[iphi];
                 double py = p_perp*sin_phi_arr_[iphi];
 
-                iSS_data::Vec4 pmu = {p0, px, py, pz};
+                iSS_data::Vec4 pmu = {static_cast<float>(p0),
+                                      static_cast<float>(px),
+                                      static_cast<float>(py),
+                                      static_cast<float>(pz)};
                 iSS_data::Vec4 Smu = {0., 0., 0., 0.};
                 iSS_data::Vec4 Smu_LRF = {0., 0., 0., 0.};
                 double dN = 0.;
