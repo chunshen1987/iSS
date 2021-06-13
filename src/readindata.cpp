@@ -100,7 +100,6 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
     }
 }
 
-read_FOdata::~read_FOdata() {}
 
 int read_FOdata::get_number_of_freezeout_cells() {
     int number_of_cells = 0;
@@ -154,6 +153,7 @@ int read_FOdata::get_number_of_freezeout_cells() {
     return(number_of_cells);
 }
 
+
 int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
     std::ifstream surface_file(filename.c_str(), std::ios::binary);
     int count = 0;
@@ -169,11 +169,11 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
 
 
 void read_FOdata::read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr) {
-    if (mode == 0)     // VISH2+1 outputs
+    if (mode == 0)         // VISH2+1 outputs
         read_FOsurfdat_VISH2p1(surf_ptr);
-    else if (mode == 1)   // MUSIC boost invariant outputs
+    else if (mode == 1)    // MUSIC boost invariant outputs
         read_FOsurfdat_MUSIC_boost_invariant(surf_ptr);
-    else if (mode == 2)   // MUSIC full (3+1)-d outputs
+    else if (mode == 2)    // MUSIC full (3+1)-d outputs
         read_FOsurfdat_MUSIC(surf_ptr);
     else if (mode == 10)   // MUSIC boost invariant outputs
         read_FOsurfdat_hydro_analysis_boost_invariant(surf_ptr);
@@ -291,6 +291,7 @@ void read_FOdata::read_in_chemical_potentials(
     }
 }
 
+
 void read_FOdata::read_decdat(std::vector<FO_surf> &surf_ptr) {
     double temp, temp_vx, temp_vy;
     cout <<" -- Read in information on freeze out surface...";
@@ -353,8 +354,8 @@ void read_FOdata::read_decdat(std::vector<FO_surf> &surf_ptr) {
     }
     decdat.close();
     cout << "done" << endl;
-    return;
 }
+
 
 void read_FOdata::read_surfdat(std::vector<FO_surf> &surf_ptr) {
     cout<<" -- Read spatial positions of freeze out surface...";
@@ -371,8 +372,8 @@ void read_FOdata::read_surfdat(std::vector<FO_surf> &surf_ptr) {
     }
     surfdat.close();
     cout << "done" << endl;
-    return;
 }
+
 
 void read_FOdata::read_FOsurfdat_VISH2p1(std::vector<FO_surf> &surf_ptr) {
     cout << " -- Loading the decoupling data from VISH2+1 ...." << endl;
@@ -380,8 +381,8 @@ void read_FOdata::read_FOsurfdat_VISH2p1(std::vector<FO_surf> &surf_ptr) {
     read_decdat(surf_ptr);
     // read the positions of the freeze out surface
     read_surfdat(surf_ptr);
-    return;
 }
+
 
 void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
                                 std::vector<FO_surf> &surf_ptr) {
@@ -521,13 +522,21 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
         }
         idx++;
         if (!surfdat.eof()) {
-            surf_ptr.push_back(surf_elem);
+            if (surf_elem.Tdec > 0.01) {
+                surf_ptr.push_back(surf_elem);
+            } else {
+                cout << "Discard surf elem: T = " << surf_elem.Tdec << " GeV, "
+                     << "Edec = " << surf_elem.Edec << " GeV/fm^3, "
+                     << "rhoB = " << surf_elem.Bn << " 1/fm^3, "
+                     << "muB = " << surf_elem.muB << " GeV. "
+                     << endl;
+            }
         }
     }
     surfdat.close();
     cout << "done" << endl;
-    return;
 }
+
 
 void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
                                         std::vector<FO_surf> &surf_ptr) {
@@ -603,8 +612,8 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
     surfdat.close();
 
     cout << "done" << endl;
-    return;
 }
+
 
 void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
     cout << " -- Read spatial positions of freeze out surface from MUSIC...";
@@ -731,8 +740,15 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr) {
             }
         }
         if (!surfdat.eof()) {
-            if (surf_elem.Tdec > 0.01)
+            if (surf_elem.Tdec > 0.01) {
                 surf_ptr.push_back(surf_elem);
+            } else {
+                cout << "Discard surf elem: T = " << surf_elem.Tdec << " GeV, "
+                     << "Edec = " << surf_elem.Edec << " GeV/fm^3, "
+                     << "rhoB = " << surf_elem.Bn << " 1/fm^3, "
+                     << "muB = " << surf_elem.muB << " GeV. "
+                     << endl;
+            }
         }
     }
     surfdat.close();
@@ -816,8 +832,10 @@ void read_FOdata::read_decdat_mu(int FO_length, int N_stable,
     return;
 }
 
+
 void read_FOdata::read_chemical_potentials_music(
-    int FO_length, std::vector<FO_surf> &FOsurf_ptr, int N_stable, double** particle_mu) {
+    int FO_length, std::vector<FO_surf> &FOsurf_ptr, int N_stable,
+    double** particle_mu) {
     cout << " -- Interpolating chemical potentials for stable particles "
          << "(MUSIC IEOS = " << iEOS_MUSIC_ << ") ...";
 
@@ -851,8 +869,8 @@ void read_FOdata::read_chemical_potentials_music(
     }
 
     cout << "done" << endl;
-    return;
 }
+
 
 int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
     double eps = 1e-15;
@@ -1001,6 +1019,7 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
     return(particle.size());
 }
 
+
 void read_FOdata::calculate_particle_mu_PCE(int Nparticle,
                                             std::vector<FO_surf> &FOsurf_ptr,
                                             int FO_length,
@@ -1129,5 +1148,3 @@ void read_FOdata::regulate_Wmunu(double u[4], double Wmunu[4][4],
         }
     }
 }
-
-

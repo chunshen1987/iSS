@@ -38,7 +38,7 @@ class read_FOdata {
  public:
     read_FOdata(ParameterReader* paraRdr_in, std::string path,
                 std::string table_path, std::string particle_table_path);
-    ~read_FOdata();
+    ~read_FOdata() {};
     int get_number_of_freezeout_cells();
     int get_IEOS_music() const {return(iEOS_MUSIC_);}
     AfterburnerType get_afterburner_type() const {return(afterburner_type_);}
