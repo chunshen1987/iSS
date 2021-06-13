@@ -31,16 +31,39 @@ int main(int argc, char** argv) {
     cout << endl << "**********************************************************"
          << endl << endl;
 
+    const string table_path = "iSS_tables";
+    const string particle_table_path = "iSS_tables";
+
     string path = "results";
-    string table_path = "iSS_tables";
-    string particle_table_path = "iSS_tables";
     string input_file = "iSS_parameters.dat";
-    iSS iSsampler(path, table_path, particle_table_path, input_file);
+    string surface_filename = "surface.dat";
+    if (argc > 1) {
+        std::string s1 = argv[1];
+        if (s1.find("=") == std::string::npos)
+            input_file = s1;
+    }
+    cout << "input file : " << input_file << endl;
+    if (argc > 2) {
+        std::string s1 = argv[2];
+        if (s1.find("=") == std::string::npos)
+            path = s1;
+    }
+    cout << "work folder path : " << path << endl;
+    if (argc > 3) {
+        std::string s1 = argv[3];
+        if (s1.find("=") == std::string::npos)
+            surface_filename = s1;
+    }
+    cout << "surface filename : " << surface_filename << endl;
+
+    iSS iSsampler(path, table_path, particle_table_path,
+                  input_file, surface_filename);
     // read in parameters
     iSsampler.paraRdr_ptr->readFromArguments(argc, argv);
     iSsampler.paraRdr_ptr->echo();
 
     int status = iSsampler.shell();
+    //iSsampler.perform_checks();
     if (status == 0) {
         cout << "Program executed normally." << endl;
     }

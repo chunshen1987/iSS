@@ -93,12 +93,12 @@ void TestBosonSampler(double m, double T, double mu,
         hist.fill(p);
     }
     auto hist_dx = hist.get_bin_width();
-    auto hist_x = hist.get_bin_x();
+    auto hist_x = hist.get_x();
     std::vector<double> pdf_bin(hist_x.size() + 1, 0.);
     for (unsigned int i = 0; i < pdf_bin.size(); i++) {
         pdf_bin[i] = i*hist_dx;
     }
-    auto hist_y = hist.get_bin_count();
+    auto hist_y = hist.get_bin_counts();
     std::vector<double> hist_y_err(hist_x.size(), 0.);
     std::vector<double> pdf(hist_x.size(), 0.);
     for (unsigned int i = 0; i < hist_x.size(); i++) {

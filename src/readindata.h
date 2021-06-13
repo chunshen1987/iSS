@@ -38,20 +38,26 @@ class read_FOdata {
  public:
     read_FOdata(ParameterReader* paraRdr_in, std::string path,
                 std::string table_path, std::string particle_table_path);
+
     ~read_FOdata() {};
-    int get_number_of_freezeout_cells();
+
+    int get_number_of_freezeout_cells(std::string surface_filename);
     int get_IEOS_music() const {return(iEOS_MUSIC_);}
+
     AfterburnerType get_afterburner_type() const {return(afterburner_type_);}
     int get_number_of_lines_of_binary_surface_file(string filename);
     int get_flag_PCE() {return(flag_PCE_);}
-    void read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr);
+    void read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr,
+                                 std::string surface_filename);
     void read_in_chemical_potentials(std::vector<FO_surf> &surf_ptr,
                                      std::vector<particle_info> &particle_ptr);
     void read_decdat(std::vector<FO_surf> &surf_ptr);
     void read_surfdat(std::vector<FO_surf> &surf_ptr);
     void read_FOsurfdat_VISH2p1(std::vector<FO_surf> &surf_ptr);
-    void read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr);
-    void read_FOsurfdat_MUSIC_boost_invariant(std::vector<FO_surf> &surf_ptr);
+    void read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
+                              std::string surface_filename);
+    void read_FOsurfdat_MUSIC_boost_invariant(std::vector<FO_surf> &surf_ptr,
+                                              std::string surface_filename);
     void read_FOsurfdat_hydro_analysis_boost_invariant(
                                         std::vector<FO_surf> &surf_ptr);
     void read_decdat_mu(int FO_length, int N_stable, double** particle_mu);

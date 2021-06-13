@@ -110,17 +110,17 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     }
     // check whether all chosen particles are in the particle list
     if (number_of_chosen_particles != current_idx) {
-        messager << "not all chosen particles are "
+        messager_ << "not all chosen particles are "
                  << "in the pdg particle list!";
-        messager.flush("warning");
-        messager << "There are " << number_of_chosen_particles - current_idx 
+        messager_.flush("warning");
+        messager_ << "There are " << number_of_chosen_particles - current_idx 
                  << " particles can not be found in the pdg particle list!";
-        messager.flush("warning");
-        messager << "Their monte carlo numbers are:";
-        messager.flush("warning");
+        messager_.flush("warning");
+        messager_ << "Their monte carlo numbers are:";
+        messager_.flush("warning");
         for (auto const &ipart : unidentifiedPid_table){
-            messager << ipart;
-            messager.flush("warning");
+            messager_ << ipart;
+            messager_.flush("warning");
         }
         number_of_chosen_particles = current_idx;
     }
@@ -149,10 +149,14 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     gsl_rng_set(gsl_random_r, ran_gen_ptr->get_seed());
 
     // arrays for bulk delta f coefficients
-    if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0) {
-        bulkdf_coeff = new Table (
-            table_path_
-            + "/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat");
+    if (INCLUDE_BULK_DELTAF == 1) {
+        if (bulk_deltaf_kind == 0) {
+            bulkdf_coeff = new Table (
+                table_path_
+                + "/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat");
+        } else if (bulk_deltaf_kind == 11) {
+            load_bulk_deltaf_14mom_table(table_path_ + "/deltaf_tables");
+        }
     }
 
     // load table for diffusion delta f coeffient
@@ -171,8 +175,19 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
 
 //***************************************************************************
 FSSW::~FSSW() {
-    if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 0) {
-        delete bulkdf_coeff;
+    if (INCLUDE_BULK_DELTAF == 1) {
+        if (bulk_deltaf_kind == 0) {
+            delete bulkdf_coeff;
+        } else if (bulk_deltaf_kind == 11) {
+            for (int i = 0; i < deltaf_bulk_coeff_14mom_table_length_T_; i++) {
+                delete[] deltaf_bulk_coeff_14mom_c0_tb_[i];
+                delete[] deltaf_bulk_coeff_14mom_c1_tb_[i];
+                delete[] deltaf_bulk_coeff_14mom_c2_tb_[i];
+            }
+            delete deltaf_bulk_coeff_14mom_c0_tb_;
+            delete deltaf_bulk_coeff_14mom_c1_tb_;
+            delete deltaf_bulk_coeff_14mom_c2_tb_;
+        }
     }
 
     if (INCLUDE_DIFFUSION_DELTAF == 1) {
@@ -305,7 +320,8 @@ bool FSSW::particles_are_the_same(int idx1, int idx2) {
 //***************************************************************************
 void FSSW::shell() {
     sample_using_dN_dxtdy_4all_particles_conventional();
-    if (flag_perform_decays == 1) {
+    if (flag_perform_decays == 1
+            && afterburner_type_ != AfterburnerType::SMASH) {
         perform_resonance_feed_down(Hadron_list);
     }
     if (USE_OSCAR_FORMAT) {
@@ -322,7 +338,7 @@ void FSSW::shell() {
 void FSSW::combine_samples_to_OSCAR() {
     Stopwatch sw;
     sw.tic();
-    messager.info(" -- Now combine sample files to OSCAR file...");
+    messager_.info(" -- Now combine sample files to OSCAR file...");
 
     char line_buffer[500];
 
@@ -454,7 +470,7 @@ void FSSW::combine_samples_to_OSCAR() {
 void FSSW::combine_samples_to_gzip_file() {
     Stopwatch sw;
     sw.tic();
-    messager.info(" -- Now combine sample files to a gzip file...");
+    messager_.info(" -- Now combine sample files to a gzip file...");
 
     // open file for output
     std::string gzip_output_filename = "particle_samples.gz";
@@ -486,7 +502,7 @@ void FSSW::combine_samples_to_gzip_file() {
 void FSSW::combine_samples_to_binary_file() {
     Stopwatch sw;
     sw.tic();
-    messager.info(" -- Now combine sample files to a binary file...");
+    messager_.info(" -- Now combine sample files to a binary file...");
 
     // open file for output
     std::string binary_output_filename = "particle_samples.bin";
@@ -545,18 +561,25 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
     // loop over all the fluid cells
     for (long l = 0; l < FO_length; l++) {
         const FO_surf_LRF* surf = &FOsurf_ptr[l];
-        double temp = surf->Tdec;
+        const double temp = surf->Tdec;
+        const double mu_B = surf->muB;
 
         double dsigma_dot_u = surf->da_mu_LRF[0];
 
         // bulk delta f contribution
         double bulkPi = 0.0;
         if (INCLUDE_BULK_DELTAF == 1) {
-            if (bulk_deltaf_kind == 0)
+            if (bulk_deltaf_kind == 11) {
                 bulkPi = surf->bulkPi;
-            else
-                bulkPi = surf->bulkPi/hbarC;  // unit in fm^-4
-            getbulkvisCoefficients(temp, bulkvisCoefficients);
+                getbulkvisCoefficients(temp, mu_B, bulkvisCoefficients);
+            } else {
+                if (bulk_deltaf_kind == 0) {
+                    bulkPi = surf->bulkPi;
+                } else {
+                    bulkPi = surf->bulkPi/hbarC;  // unit in fm^-4
+                }
+                getbulkvisCoefficients(temp, bulkvisCoefficients);
+            }
         }
 
         // diffusion delta f
@@ -568,7 +591,6 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
                             + surf->qmuLRF_y*surf->da_mu_LRF[2]
                             + surf->qmuLRF_z*surf->da_mu_LRF[3]);
 
-            double mu_B = surf->muB;
             deltaf_qmu_coeff = get_deltaf_qmu_coeff(temp, mu_B);
 
             double rho_B = surf->Bn;
@@ -587,6 +609,7 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         const int baryon  = particle->baryon;
         const int strange = particle->strange;
         const int charge  = particle->charge;
+        const double mass = particle->mass;
         double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
         if (flag_PCE_ == 1) {
             double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
@@ -596,25 +619,33 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         double prefactor = degen/(2.*M_PI*M_PI);
 
         // calculate dN / (dxt dy)
-        std::array<double, 5> results_ptr = {0.0};
+        std::array<double, 6> results_ptr = {0.0};
         calculate_dN_analytic(particle, mu, temp, results_ptr);
 
         double N_eq = unit_factor*prefactor*dsigma_dot_u*results_ptr[0];
 
         double deltaN_bulk = 0.0;
         if (INCLUDE_BULK_DELTAF == 1) {
-            deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u
-                           *(- bulkPi*bulkvisCoefficients[0])
-                           *(- bulkvisCoefficients[1]*results_ptr[1]
-                             + results_ptr[2]));
+            if (bulk_deltaf_kind == 1) {
+                deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u
+                               *(- bulkPi*bulkvisCoefficients[0])
+                               *(- bulkvisCoefficients[1]*results_ptr[1]
+                                 + results_ptr[2]));
+            } else if (bulk_deltaf_kind == 11) {
+                deltaN_bulk = (
+                    unit_factor*prefactor*dsigma_dot_u*bulkPi
+                    *(  results_ptr[1]*mass*mass*bulkvisCoefficients[0]
+                      + results_ptr[2]*baryon*bulkvisCoefficients[1]
+                      + results_ptr[3]*bulkvisCoefficients[2]));
+            }
         }
 
         double deltaN_qmu = 0.0;
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
             deltaN_qmu = (unit_factor*prefactor
                           *dsigma_dot_q/deltaf_qmu_coeff
-                          *(- prefactor_qmu*results_ptr[3]
-                            - baryon*results_ptr[4]));
+                          *(- prefactor_qmu*results_ptr[4]
+                            - baryon*results_ptr[5]));
         }
 
         total_N = N_eq + deltaN_bulk + deltaN_qmu;
@@ -632,7 +663,7 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
 //***************************************************************************
 void FSSW::calculate_dN_analytic(
         const particle_info* particle, double mu, double Temperature,
-        std::array<double, 5> &results) {
+        std::array<double, 6> &results) {
 /* calculate particle yield using analytic formula as a series sum of Bessel 
    functions. The particle yield emitted from a given fluid cell is 
    \dsigma_mu u^\mu times the return value from this function
@@ -640,6 +671,7 @@ void FSSW::calculate_dN_analytic(
     double N_eq = 0.0;                  // equilibrium contribution
     double deltaN_bulk_term1 = 0.0;     // contribution from bulk delta f
     double deltaN_bulk_term2 = 0.0;     // contribution from bulk delta f
+    double deltaN_bulk_term3 = 0.0;     // contribution from bulk delta f
     double deltaN_qmu_term1 = 0.0;      // contribution from baryon diffusion
     double deltaN_qmu_term2 = 0.0;      // contribution from baryon diffusion
 
@@ -668,7 +700,7 @@ void FSSW::calculate_dN_analytic(
         if (std::isnan(N_eq)) {
             cout << "N_eq is nan"
                  << ", theta = " << theta << ", n = " << n
-                 << ", T = " << Temperature << ", mu = " << mu
+                 << ", T = " << Temperature << "GeV, mu = " << mu << " GeV"
                  << ", exp(mu/T) = " << lambda
                  << ", exp(n*mu/T) = " << fugacity
                  << ", n*m/T = " << arg
@@ -676,10 +708,19 @@ void FSSW::calculate_dN_analytic(
             exit(1);
         }
 
-        if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1) {
+        if (INCLUDE_BULK_DELTAF == 1) {
             double K_1 = get_special_function_K1(arg);
-            deltaN_bulk_term1 += theta*fugacity*(mass*beta*K_1 + 3./n*K_2);
-            deltaN_bulk_term2 += theta*fugacity*K_1;
+            if (bulk_deltaf_kind == 1) {
+                // CE
+                deltaN_bulk_term1 += theta*fugacity*(mass*beta*K_1 + 3*K_2/n);
+                deltaN_bulk_term2 += theta*fugacity*K_1;
+            } else if (bulk_deltaf_kind == 11) {
+                // 14 moments
+                double K_3 = get_special_function_K3(arg);
+                deltaN_bulk_term1 += theta*fugacity*(K_2)/n;  // C_T
+                deltaN_bulk_term2 += theta*fugacity*(mass*beta*K_1 + 3*K_2/n);  // C_B
+                deltaN_bulk_term3 += theta*fugacity*(mass*beta*K_2 + 3*K_3/n);  // C_E
+            }
         }
 
         if (INCLUDE_DIFFUSION_DELTAF == 1) {
@@ -718,12 +759,20 @@ void FSSW::calculate_dN_analytic(
     N_eq = prefactor_Neq*N_eq;
 
     // contribution from bulk viscosity
-    if (INCLUDE_BULK_DELTAF == 1 && bulk_deltaf_kind == 1) {
-        deltaN_bulk_term1 = mass*mass/beta*deltaN_bulk_term1;
-        deltaN_bulk_term2 = mass*mass*mass/3.*deltaN_bulk_term2;
+    if (INCLUDE_BULK_DELTAF == 1) {
+        if (bulk_deltaf_kind == 1) {
+            deltaN_bulk_term1 = mass*mass/beta*deltaN_bulk_term1;
+            deltaN_bulk_term2 = mass*mass*mass/3.*deltaN_bulk_term2;
+            deltaN_bulk_term3 = 0.0;
+        } else if (bulk_deltaf_kind == 11) {
+            deltaN_bulk_term1 = mass*mass/beta*deltaN_bulk_term1;
+            deltaN_bulk_term2 = mass*mass/(beta*beta)*deltaN_bulk_term2;
+            deltaN_bulk_term3 = mass*mass*mass/(beta*beta)*deltaN_bulk_term3;
+        }
     } else {
         deltaN_bulk_term1 = 0.0;
         deltaN_bulk_term2 = 0.0;
+        deltaN_bulk_term3 = 0.0;
     }
 
     // contribution from baryon diffusion
@@ -736,8 +785,9 @@ void FSSW::calculate_dN_analytic(
     results[0] = N_eq;
     results[1] = deltaN_bulk_term1;
     results[2] = deltaN_bulk_term2;
-    results[3] = deltaN_qmu_term1;
-    results[4] = deltaN_qmu_term2;
+    results[3] = deltaN_bulk_term3;
+    results[4] = deltaN_qmu_term1;
+    results[5] = deltaN_qmu_term2;
 }
 
 
@@ -770,7 +820,7 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
 */
     Stopwatch sw_total;
     sw_total.tic();
-    messager.info(" Function sample_using_dN_dxtdy_4all_particles started...");
+    messager_.info(" Function sample_using_dN_dxtdy_4all_particles started...");
 
     std::array<double, 3> bulkvisCoefficients = {0.0};
 
@@ -805,11 +855,11 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
     // reusable variables
     // dN_dxtdy for 1 particle
     //vector<double> dN_dxtdy_single_particle(FO_length, 0);
-    messager << "Sampling using dN/dy with "
+    messager_ << "Sampling using dN/dy with "
              << "sample_using_dN_dxtdy_4all_particles function.";
-    messager.flush("info");
-    messager<< "number of repeated sampling = " << number_of_repeated_sampling;
-    messager.flush("info");
+    messager_.flush("info");
+    messager_<< "number of repeated sampling = " << number_of_repeated_sampling;
+    messager_.flush("info");
     for (int n = 0; n < number_of_chosen_particles; n++) {
         int real_particle_idx = chosen_particles_sampling_table[n];
         const particle_info *particle = &particles[real_particle_idx];
@@ -818,9 +868,9 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
         const int baryon  = particle->baryon;
         const int strange = particle->strange;
         const int charge  = particle->charge;
-        messager << "Index: " << n << ", Name: " << particle->name
+        messager_ << "Index: " << n << ", Name: " << particle->name
                  << ", Monte-carlo index: " << particle->monval;
-        messager.flush("info");
+        messager_.flush("info");
         if (local_charge_conservation == 1) {
             if (particle->charge < 0) {
                 cout << "local charge conservation is turn on~ "
@@ -849,9 +899,9 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
             // for (3+1)-d case, dN_dy is total N (summing over all etas)
             dN = dN_dy;
         }
-        messager << " -- Sampling using dN_dy=" << dN_dy << ", "
-                 << "dN=" << dN << "...";
-        messager.flush("info");
+        messager_ << " -- Sampling using dN_dy=" << dN_dy << ", "
+                  << "dN=" << dN << "...";
+        messager_.flush("info");
 
         Stopwatch sw;
         sw.tic();
@@ -872,8 +922,15 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 long FO_idx = rand1D.rand();
                 const FO_surf_LRF *surf = &FOsurf_ptr[FO_idx];
 
-                if (INCLUDE_BULK_DELTAF == 1)
-                    getbulkvisCoefficients(surf->Tdec, bulkvisCoefficients);
+                if (INCLUDE_BULK_DELTAF == 1) {
+                    if (bulk_deltaf_kind == 11) {
+                        getbulkvisCoefficients(surf->Tdec, surf->muB,
+                                               bulkvisCoefficients);
+                    } else {
+                        getbulkvisCoefficients(surf->Tdec,
+                                               bulkvisCoefficients);
+                    }
+                }
 
                 // diffusion delta f
                 double deltaf_qmu_coeff = 1.0;
@@ -944,8 +1001,8 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
 
 
 void FSSW::getbulkvisCoefficients(
-                double Tdec, std::array<double, 3> &bulkvisCoefficients) {
-   double Tdec_fm = Tdec/hbarC;  // [1/fm]
+            const double Tdec, std::array<double, 3> &bulkvisCoefficients) {
+   const double Tdec_fm = Tdec/hbarC;  // [1/fm]
    double Tdec_fm_power[11];    // cache the polynomial power of Tdec_fm
    Tdec_fm_power[1] = Tdec_fm;
    for (int ipower = 2; ipower < 11; ipower++) {
@@ -953,30 +1010,30 @@ void FSSW::getbulkvisCoefficients(
    }
    if (bulk_deltaf_kind == 0) {
        // 14 moment expansion
-        // load from file
+       // load from file
 
-        //B0 [fm^3/GeV^3]
-        bulkvisCoefficients[0] = (
-                        bulkdf_coeff->interp(1, 2, Tdec_fm, 5)/pow(hbarC, 3));
+       //B0 [fm^3/GeV^3]
+       bulkvisCoefficients[0] = (
+                       bulkdf_coeff->interp(1, 2, Tdec_fm, 5)/pow(hbarC, 3));
 
-        // D0 [fm^3/GeV^2]
-        bulkvisCoefficients[1] = (
-                        bulkdf_coeff->interp(1, 3, Tdec_fm, 5)/pow(hbarC, 2));
+       // D0 [fm^3/GeV^2]
+       bulkvisCoefficients[1] = (
+                       bulkdf_coeff->interp(1, 3, Tdec_fm, 5)/pow(hbarC, 2));
 
-        // E0 [fm^3/GeV^3]
-        bulkvisCoefficients[2] = (
-                        bulkdf_coeff->interp(1, 4, Tdec_fm, 5)/pow(hbarC, 3));
+       // E0 [fm^3/GeV^3]
+       bulkvisCoefficients[2] = (
+                       bulkdf_coeff->interp(1, 4, Tdec_fm, 5)/pow(hbarC, 3));
 
-        // parameterization for mu = 0
-        // B0[fm^3/GeV^3]
-        //bulkvisCoefficients[0] = (
-        //              exp(-15.04512474*Tdec_fm + 11.76194266)/pow(hbarC, 3)); 
-        // D0 [fm^3/GeV^2]
-        //bulkvisCoefficients[1] = (
-        //              exp( -12.45699277*Tdec_fm + 11.4949293)/hbarC/hbarC);  
-        // E0 [fm^3/GeV^3]
-        //bulkvisCoefficients[2] = (
-        //            -exp(-14.45087586*Tdec_fm + 11.62716548)/pow(hbarC, 3));
+       // parameterization for mu = 0
+       // B0[fm^3/GeV^3]
+       //bulkvisCoefficients[0] = (
+       //              exp(-15.04512474*Tdec_fm + 11.76194266)/pow(hbarC, 3)); 
+       // D0 [fm^3/GeV^2]
+       //bulkvisCoefficients[1] = (
+       //              exp( -12.45699277*Tdec_fm + 11.4949293)/hbarC/hbarC);  
+       // E0 [fm^3/GeV^3]
+       //bulkvisCoefficients[2] = (
+       //            -exp(-14.45087586*Tdec_fm + 11.62716548)/pow(hbarC, 3));
    } else if(bulk_deltaf_kind == 1) {  // relaxation type
        // parameterization from JF
        // A Polynomial fit to each coefficient -- X is the temperature in fm^-1
@@ -1083,6 +1140,147 @@ void FSSW::getbulkvisCoefficients(
 }
 
 
+void FSSW::load_bulk_deltaf_14mom_table(string filepath) {
+    std::string folder_name = "/urqmd";
+    if (afterburner_type_ == AfterburnerType::SMASH) {
+        folder_name = "/smash_box";
+    }
+    std::stringstream file_c0;
+    file_c0 << filepath << folder_name << "/c0.dat";
+    ifstream c0_table(file_c0.str().c_str());
+    if (!c0_table) {
+        messager_ << "Can not found file: " << file_c0.str();
+        messager_.flush("error");
+        exit(1);
+    }
+    std::stringstream file_c1;
+    file_c1 << filepath << folder_name << "/c1.dat";
+    ifstream c1_table(file_c1.str().c_str());
+    if (!c1_table) {
+        messager_ << "Can not found file: " << file_c1.str();
+        messager_.flush("error");
+        exit(1);
+    }
+    std::stringstream file_c2;
+    file_c2 << filepath << folder_name << "/c2.dat";
+    ifstream c2_table(file_c2.str().c_str());
+    if (!c2_table) {
+        messager_ << "Can not found file: " << file_c2.str();
+        messager_.flush("error");
+        exit(1);
+    }
+
+    // get table size
+    c0_table >> deltaf_bulk_coeff_14mom_table_length_T_
+             >> deltaf_bulk_coeff_14mom_table_length_mu_;
+
+    string dummy;
+    // read header
+    std::getline(c0_table, dummy);
+
+    for (int i = 0; i < 3; i++) {
+        std::getline(c1_table, dummy);
+        std::getline(c2_table, dummy);
+    }
+
+    // allocate 2D tables
+    deltaf_bulk_coeff_14mom_c0_tb_ = (
+            new double* [deltaf_bulk_coeff_14mom_table_length_T_]);
+    deltaf_bulk_coeff_14mom_c1_tb_ = (
+            new double* [deltaf_bulk_coeff_14mom_table_length_T_]);
+    deltaf_bulk_coeff_14mom_c2_tb_ = (
+            new double* [deltaf_bulk_coeff_14mom_table_length_T_]);
+    for (int i = 0; i < deltaf_bulk_coeff_14mom_table_length_T_; i++) {
+        deltaf_bulk_coeff_14mom_c0_tb_[i] = (
+                new double [deltaf_bulk_coeff_14mom_table_length_mu_]);
+        deltaf_bulk_coeff_14mom_c1_tb_[i] = (
+                new double [deltaf_bulk_coeff_14mom_table_length_mu_]);
+        deltaf_bulk_coeff_14mom_c2_tb_[i] = (
+                new double [deltaf_bulk_coeff_14mom_table_length_mu_]);
+    }
+
+    // load 2D table
+    double temp1, temp2;
+    for (int j = 0; j < deltaf_bulk_coeff_14mom_table_length_mu_; j++) {
+        for (int i = 0; i < deltaf_bulk_coeff_14mom_table_length_T_; i++) {
+            c0_table >> temp1 >> temp2 >> deltaf_bulk_coeff_14mom_c0_tb_[i][j];
+            c1_table >> temp1 >> temp2 >> deltaf_bulk_coeff_14mom_c1_tb_[i][j];
+            c2_table >> temp1 >> temp2 >> deltaf_bulk_coeff_14mom_c2_tb_[i][j];
+            if (j == 0) {
+                if (i == 0) {
+                    deltaf_bulk_coeff_14mom_table_T0_ = temp1;
+                    deltaf_bulk_coeff_14mom_table_mu0_ = temp2;
+                } else if (i == 1) {
+                    deltaf_bulk_coeff_14mom_table_dT_ = (
+                            temp1 - deltaf_bulk_coeff_14mom_table_T0_);
+                }
+            } else if (j == 1) {
+                if (i == 0) {
+                    deltaf_bulk_coeff_14mom_table_dmu_ = (
+                            temp2 - deltaf_bulk_coeff_14mom_table_mu0_);
+                }
+            }
+        }
+    }
+    c0_table.close();
+    c1_table.close();
+    c2_table.close();
+}
+
+
+void FSSW::getbulkvisCoefficients(const double Tdec, const double mu_B,
+                                  std::array<double, 3> &bulkvisCoefficients) {
+    int idx_T = static_cast<int>((Tdec - deltaf_bulk_coeff_14mom_table_T0_)
+                                 /deltaf_bulk_coeff_14mom_table_dT_);
+    int idx_mu = static_cast<int>((mu_B - deltaf_bulk_coeff_14mom_table_mu0_)
+                                  /deltaf_bulk_coeff_14mom_table_dmu_);
+    double x_fraction = ((Tdec - deltaf_bulk_coeff_14mom_table_T0_)
+                         /deltaf_bulk_coeff_14mom_table_dT_ - idx_T);
+    double y_fraction = ((mu_B - deltaf_bulk_coeff_14mom_table_mu0_)
+                         /deltaf_bulk_coeff_14mom_table_dmu_ - idx_mu);
+
+    // avoid overflow and underflow
+    int idx_T1 = std::max(
+        0, std::min(deltaf_bulk_coeff_14mom_table_length_T_ - 1, idx_T));
+    int idx_mu1 = std::max(
+        0, std::min(deltaf_bulk_coeff_14mom_table_length_mu_ - 1, idx_mu));
+    int idx_T2 = std::max(
+        0, std::min(deltaf_bulk_coeff_14mom_table_length_T_ - 1, idx_T + 1));
+    int idx_mu2 = std::max(
+        0, std::min(deltaf_bulk_coeff_14mom_table_length_mu_ - 1, idx_mu + 1));
+
+    double f1 = deltaf_bulk_coeff_14mom_c0_tb_[idx_T1][idx_mu1];
+    double f2 = deltaf_bulk_coeff_14mom_c0_tb_[idx_T1][idx_mu2];
+    double f3 = deltaf_bulk_coeff_14mom_c0_tb_[idx_T2][idx_mu2];
+    double f4 = deltaf_bulk_coeff_14mom_c0_tb_[idx_T2][idx_mu1];
+    double c0_T4 = (  f1*(1. - x_fraction)*(1. - y_fraction)
+                    + f2*(1. - x_fraction)*y_fraction
+                    + f3*x_fraction*y_fraction
+                    + f4*x_fraction*(1. - y_fraction));
+    f1 = deltaf_bulk_coeff_14mom_c1_tb_[idx_T1][idx_mu1];
+    f2 = deltaf_bulk_coeff_14mom_c1_tb_[idx_T1][idx_mu2];
+    f3 = deltaf_bulk_coeff_14mom_c1_tb_[idx_T2][idx_mu2];
+    f4 = deltaf_bulk_coeff_14mom_c1_tb_[idx_T2][idx_mu1];
+    double c1_T3 = (  f1*(1. - x_fraction)*(1. - y_fraction)
+                    + f2*(1. - x_fraction)*y_fraction
+                    + f3*x_fraction*y_fraction
+                    + f4*x_fraction*(1. - y_fraction));
+    f1 = deltaf_bulk_coeff_14mom_c2_tb_[idx_T1][idx_mu1];
+    f2 = deltaf_bulk_coeff_14mom_c2_tb_[idx_T1][idx_mu2];
+    f3 = deltaf_bulk_coeff_14mom_c2_tb_[idx_T2][idx_mu2];
+    f4 = deltaf_bulk_coeff_14mom_c2_tb_[idx_T2][idx_mu1];
+    double c2_T4 = (  f1*(1. - x_fraction)*(1. - y_fraction)
+                    + f2*(1. - x_fraction)*y_fraction
+                    + f3*x_fraction*y_fraction
+                    + f4*x_fraction*(1. - y_fraction));
+    double T3 = Tdec*Tdec*Tdec;
+    double T4 = T3*Tdec;
+    bulkvisCoefficients[0] = (c0_T4 - c2_T4)/T4;
+    bulkvisCoefficients[1] = c1_T3/T3;
+    bulkvisCoefficients[2] = (4.*c2_T4 - c0_T4)/T4;
+}
+
+
 void FSSW::load_deltaf_qmu_coeff_table(string filename) {
     ifstream table(filename.c_str());
     deltaf_qmu_coeff_table_length_T = 150;
@@ -1147,7 +1345,7 @@ double FSSW::get_deltaf_qmu_coeff(double T, double muB) {
 
 
 void FSSW::initialize_special_function_arrays() {
-    messager.info("Initializing special function arrays ... ");
+    messager_.info("Initializing special function arrays ... ");
     sf_expint_truncate_order = 10;
     sf_x_min = 0.5;
     sf_x_max = 400;
@@ -1158,14 +1356,16 @@ void FSSW::initialize_special_function_arrays() {
         sf_expint_En = new double* [sf_tb_length];
     }
     for (int i = 0; i < sf_tb_length; i++) {
-        sf_bessel_Kn[i] = new double [2];
+        sf_bessel_Kn[i] = new double [3];
 
         double sf_x = sf_x_min + i*sf_dx;
 
         if (INCLUDE_BULK_DELTAF == 1) {
             sf_bessel_Kn[i][0] = gsl_sf_bessel_K1(sf_x);     // store K_1
+            sf_bessel_Kn[i][2] = gsl_sf_bessel_Kn(3, sf_x);     // store K_3
         } else {
             sf_bessel_Kn[i][0] = 0.0;
+            sf_bessel_Kn[i][2] = 0.0;
         }
 
         sf_bessel_Kn[i][1] = gsl_sf_bessel_Kn(2, sf_x);  // store K_2
@@ -1178,6 +1378,26 @@ void FSSW::initialize_special_function_arrays() {
             }
         }
     }
+}
+
+
+double FSSW::get_special_function_K3(double arg) {
+    double results;
+    if (arg < sf_x_min || arg > sf_x_max-sf_dx) {
+        if (AMOUNT_OF_OUTPUT > 5) {
+            cout << "FSSW::get_special_function_K3: "
+                 << "out of the table bound!" << endl;
+            cout << "sf_x_min = " << sf_x_min << ", sf_x_max = " << sf_x_max
+                 << ", arg = " << arg << endl;
+        }
+        results = gsl_sf_bessel_Kn(3, arg);
+    } else {
+        int idx = static_cast<int>((arg - sf_x_min)/sf_dx);
+        double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
+        results = ((1. - fraction)*sf_bessel_Kn[idx][2]
+                    + fraction*sf_bessel_Kn[idx+1][2]);
+    }
+    return(results);
 }
 
 
@@ -1194,7 +1414,7 @@ double FSSW::get_special_function_K2(double arg) {
     } else {
         int idx = static_cast<int>((arg - sf_x_min)/sf_dx);
         double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
-        results = ((1. - fraction)*sf_bessel_Kn[idx][1] 
+        results = ((1. - fraction)*sf_bessel_Kn[idx][1]
                     + fraction*sf_bessel_Kn[idx+1][1]);
     }
     return(results);
@@ -1214,7 +1434,7 @@ double FSSW::get_special_function_K1(double arg) {
     } else {
         int idx = static_cast<int>((arg - sf_x_min)/sf_dx);
         double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
-        results = ((1. - fraction)*sf_bessel_Kn[idx][0] 
+        results = ((1. - fraction)*sf_bessel_Kn[idx][0]
                     + fraction*sf_bessel_Kn[idx+1][0]);
     }
     return(results);
@@ -1298,8 +1518,9 @@ void FSSW::perform_resonance_feed_down(
 
 
 double FSSW::get_deltaf_bulk(
-        double mass, double pdotu, double bulkPi, double Tdec, int sign,
-        double f0, const std::array<double, 3> bulkvisCoefficients) {
+        const double mass, const double pdotu, const double bulkPi,
+        const double Tdec, const int sign, const int baryon,
+        const double f0, const std::array<double, 3> bulkvisCoefficients) {
     if (INCLUDE_BULK_DELTAF== 0) return(0.0);
     double delta_f_bulk = 0.0;
     if (bulk_deltaf_kind == 0) {
@@ -1325,6 +1546,12 @@ double FSSW::get_deltaf_bulk(
         double E_over_T = pdotu/Tdec;
         delta_f_bulk = (- 1.*(1. - sign*f0)*bulkPi
                 *(bulkvisCoefficients[0] - bulkvisCoefficients[1]/E_over_T));
+    } else if (bulk_deltaf_kind == 11) {
+        // OSU 14 moments
+        delta_f_bulk = ((1. - sign*f0)*bulkPi*(
+                          bulkvisCoefficients[0]*mass*mass
+                        + bulkvisCoefficients[1]*baryon*pdotu
+                        + bulkvisCoefficients[2]*pdotu*pdotu));
     }
     return(delta_f_bulk);
 }
@@ -1388,9 +1615,14 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         // delta f for bulk viscosity
         double delta_f_bulk = 0.;
         if (INCLUDE_BULK_DELTAF == 1) {
-            delta_f_bulk = get_deltaf_bulk(
-                                        mass, p0, surf->bulkPi/hbarC,
-                                        Tdec, sign, f0, bulkvisCoefficients);
+            double bulkPi = 0.;
+            if (bulk_deltaf_kind == 11) {
+                bulkPi = surf->bulkPi;         // GeV/fm^3
+            } else if (bulk_deltaf_kind == 1) {
+                bulkPi = surf->bulkPi/hbarC;   // 1/fm^4
+            }
+            delta_f_bulk = get_deltaf_bulk(mass, p0, bulkPi, Tdec, sign,
+                                           baryon, f0, bulkvisCoefficients);
         }
 
         // delta f for diffusion
