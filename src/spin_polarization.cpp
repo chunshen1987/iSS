@@ -259,15 +259,15 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
             if (pT_arr_[ipT] < 0.5) continue;
             for (int iphi = 0; iphi < Nphi_; iphi++) {
                 dN_     += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                dN      += dN_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_[0] += St_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_[1] += Sx_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_[2] += Sy_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_[3] += Sz_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_[0] += StLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_[1] += SxLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_[2] += SyLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_[3] += SzLRF_pTdpTdphidy_[iy][ipT][iphi];
+                dN      += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                Smu_[0] += St_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                Smu_[1] += Sx_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                Smu_[2] += Sy_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                Smu_[3] += Sz_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                SmuLRF_[0] += StLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                SmuLRF_[1] += SxLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                SmuLRF_[2] += SyLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                SmuLRF_[3] += SzLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
             }
         }
     }
@@ -308,15 +308,15 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
             for (int ipT = 0; ipT < NpT_; ipT++) {
                 if (pT_arr_[ipT] < 0.5) continue;
                 dN_phi_[iphi]     += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                dN_phi            += dN_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_phi_[iphi][0] += St_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_phi_[iphi][1] += Sx_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_phi_[iphi][2] += Sy_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_phi_[iphi][3] += Sz_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_phi_[iphi][0] += StLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_phi_[iphi][1] += SxLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_phi_[iphi][2] += SyLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_phi_[iphi][3] += SzLRF_pTdpTdphidy_[iy][ipT][iphi];
+                dN_phi            += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                Smu_phi_[iphi][0] += St_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                Smu_phi_[iphi][1] += Sx_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                Smu_phi_[iphi][2] += Sy_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                Smu_phi_[iphi][3] += Sz_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                SmuLRF_phi_[iphi][0] += StLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                SmuLRF_phi_[iphi][1] += SxLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                SmuLRF_phi_[iphi][2] += SyLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                SmuLRF_phi_[iphi][3] += SzLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
             }
         }
         for (int i = 0; i < 4; i++) {
@@ -333,15 +333,15 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
             if (pT_arr_[ipT] < 0.5) continue;
             for (int iphi = 0; iphi < Nphi_; iphi++) {
                 dN_y_[iy]     += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                dN_y          += dN_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_y_[iy][0] += St_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_y_[iy][1] += Sx_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_y_[iy][2] += Sy_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_y_[iy][3] += Sz_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_y_[iy][0] += StLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_y_[iy][1] += SxLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_y_[iy][2] += SyLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_y_[iy][3] += SzLRF_pTdpTdphidy_[iy][ipT][iphi];
+                dN_y          += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                Smu_y_[iy][0] += St_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                Smu_y_[iy][1] += Sx_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                Smu_y_[iy][2] += Sy_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                Smu_y_[iy][3] += Sz_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                SmuLRF_y_[iy][0] += StLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                SmuLRF_y_[iy][1] += SxLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                SmuLRF_y_[iy][2] += SyLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                SmuLRF_y_[iy][3] += SzLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
             }
         }
         for (int i = 0; i < 4; i++) {
