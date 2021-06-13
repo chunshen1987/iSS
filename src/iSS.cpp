@@ -7,7 +7,6 @@
 #include "Random.h"
 #include "data_struct.h"
 
-//using namespace std;
 using iSS_data::Vec4;
 
 iSS::iSS(std::string path, std::string table_path,
@@ -42,6 +41,11 @@ int iSS::shell() {
         messager.flush("error");
         exit(-1);
     }
+
+    if (paraRdr_ptr->getVal("calculate_polarization") == 1) {
+        compute_spin_polarization();
+    }
+
     set_random_seed();
     status = generate_samples();
     if (status != 0) {
@@ -68,6 +72,8 @@ int iSS::read_in_FO_surface() {
 
     if (paraRdr_ptr->getVal("MC_sampling") == 4) {
         transform_to_local_rest_frame(FOsurf_temp, FOsurf_LRF_array_);
+        if (paraRdr_ptr->getVal("calculate_polarization") == 1)
+            FOsurf_array_ = FOsurf_temp;
     } else {
         FOsurf_array_ = FOsurf_temp;
     }
@@ -254,4 +260,12 @@ void iSS::transform_to_local_rest_frame(
 
         FOsurf_LRF_ptr.push_back(surf_LRF_i);
     }
+}
+
+
+void iSS::compute_spin_polarization() {
+    polarizor = std::unique_ptr<SpinPolarization> (
+            new SpinPolarization(FOsurf_array_, particle, path_, table_path_,
+                                 *paraRdr_ptr));
+    polarizor->compute_spin_polarization_shell();
 }

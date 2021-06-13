@@ -1209,3 +1209,43 @@ void get_bin_average_and_count(istream& is, ostream& os, vector<double>* bins, l
 
 }
 
+
+double*** create_a_3D_Matrix(const int nx, const int ny, const int nz,
+                             const double val) {
+    double*** Arr_3D = new double** [nx];
+    for (int i = 0; i < nx; i++) {
+        Arr_3D[i] = new double* [ny];
+        for (int j = 0; j < ny; j++) {
+            Arr_3D[i][j] = new double [nz];
+            for (int k = 0; k < nz; k++) {
+                Arr_3D[i][j][k] = val;
+            }
+        }
+    }
+    return(Arr_3D);
+}
+
+
+void delete_a_3D_Matrix(double*** Arr_3D, const int nx, const int ny) {
+    for (int i = 0; i < nx; i++) {
+        for (int j = 0; j < ny; j++) {
+            delete [] Arr_3D[i][j];
+        }
+        delete [] Arr_3D[i];
+    }
+    delete [] Arr_3D;
+}
+
+
+void set_val_in_3D_Matrix(double*** Arr_3D, const int nx, const int ny,
+                          const int nz, const double val) {
+    for (int i = 0; i < nx; i++) {
+        for (int j = 0; j < ny; j++) {
+            for (int k = 0; k < nz; k++) {
+                Arr_3D[i][j][k] = val;
+            }
+        }
+    }
+}
+
+

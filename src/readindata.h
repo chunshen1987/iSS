@@ -20,6 +20,7 @@ class read_FOdata {
 
     int mode;
     bool surface_in_binary;
+    bool include_vorticity_;
     bool quantum_statistics_;
 
     // flag to determine whether the EoS is partial chemical equilibrium or not
@@ -30,6 +31,8 @@ class read_FOdata {
 
     int n_eta_skip;
     int iEOS_MUSIC_;
+
+    int fluid_cell_size;
 
     AfterburnerType afterburner_type_;
 

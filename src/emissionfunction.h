@@ -19,7 +19,6 @@
 #include "ParameterReader.h"
 #include "particle_decay.h"
 #include "data_struct.h"
-#include "data_struct.h"
 #include "Random.h"
 #include "pretty_ostream.h"
 
@@ -154,7 +153,7 @@ class EmissionFunctionArray {
                           std::vector<particle_info> particles_in,
                           const std::vector<FO_surf> &FOsurf_ptr_in,
                           int flag_PCE_in, ParameterReader* paraRdr_in,
-                          std::string path_in, std::string table_path,
+                          std::string path, std::string table_path,
                           AfterburnerType afterburner_type);
     ~EmissionFunctionArray();
 
