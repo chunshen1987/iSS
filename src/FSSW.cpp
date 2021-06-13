@@ -651,7 +651,7 @@ void FSSW::calculate_dN_analytic(
     double lambda = exp(beta*mu);  // fugacity factor
 
     int truncate_order;
-    if (mass < 0.7) {
+    if (mass < 0.7 && Temperature > 0.05) {
         truncate_order = 10.;
     } else {
         truncate_order = 1.;
@@ -668,6 +668,7 @@ void FSSW::calculate_dN_analytic(
         if (std::isnan(N_eq)) {
             cout << "N_eq is nan"
                  << ", theta = " << theta << ", n = " << n
+                 << ", T = " << Temperature << ", mu = " << mu
                  << ", exp(mu/T) = " << lambda
                  << ", exp(n*mu/T) = " << fugacity
                  << ", n*m/T = " << arg
