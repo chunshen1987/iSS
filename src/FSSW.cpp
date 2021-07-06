@@ -156,6 +156,8 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
                 + "/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat");
         } else if (bulk_deltaf_kind == 11) {
             load_bulk_deltaf_14mom_table(table_path_ + "/deltaf_tables");
+        } else if (bulk_deltaf_kind == 21) {
+            load_CE_deltaf_NEOSBQS_table(table_path_ + "/deltaf_tables");
         }
     }
 
@@ -187,6 +189,13 @@ FSSW::~FSSW() {
             delete deltaf_bulk_coeff_14mom_c0_tb_;
             delete deltaf_bulk_coeff_14mom_c1_tb_;
             delete deltaf_bulk_coeff_14mom_c2_tb_;
+        } else if (bulk_deltaf_kind == 21) {
+            for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
+                delete[] deltaf_coeff_CE_NEOSBQS_chat_tb_[i];
+                delete[] deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i];
+            }
+            delete deltaf_coeff_CE_NEOSBQS_chat_tb_;
+            delete deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
         }
     }
 
@@ -1225,6 +1234,67 @@ void FSSW::load_bulk_deltaf_14mom_table(string filepath) {
     c0_table.close();
     c1_table.close();
     c2_table.close();
+}
+
+
+void FSSW::load_CE_deltaf_NEOSBQS_table(string filepath) {
+    std::string folder_name = "/urqmd";
+    if (afterburner_type_ == AfterburnerType::SMASH) {
+        folder_name = "/smash_box";
+    }
+    std::stringstream filename;
+    filename << filepath << folder_name << "/NEoSBQS_CE_deltafCoeff.dat";
+    ifstream NEoS_table(filename.str().c_str());
+    if (!NEoS_table) {
+        messager_ << "Can not found file: " << filename.str();
+        messager_.flush("error");
+        exit(1);
+    }
+
+    // define table size
+    deltaf_coeff_CE_NEOSBQS_table_length_e_ = 145;
+    deltaf_coeff_CE_NEOSBQS_table_length_nB_ = 641;
+
+    string dummy;
+    // read header
+    std::getline(NEoS_table, dummy);
+
+    // allocate 2D tables
+    deltaf_coeff_CE_NEOSBQS_chat_tb_ = (
+            new double* [deltaf_coeff_CE_NEOSBQS_table_length_e_]);
+    deltaf_coeff_CE_NEOSBQS_zetahat_tb_ = (
+            new double* [deltaf_coeff_CE_NEOSBQS_table_length_e_]);
+    for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
+        deltaf_coeff_CE_NEOSBQS_chat_tb_[i] = (
+                new double [deltaf_coeff_CE_NEOSBQS_table_length_nB_]);
+        deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i] = (
+                new double [deltaf_coeff_CE_NEOSBQS_table_length_nB_]);
+    }
+
+    // load 2D table
+    double temp1, temp2;
+    for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
+        for (int j = 0; j < deltaf_coeff_CE_NEOSBQS_table_length_nB_; j++) {
+            NEoS_table >> temp1 >> temp2
+                       >> deltaf_coeff_CE_NEOSBQS_chat_tb_[i][j]
+                       >> deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i][j];
+            if (j == 0) {
+                if (i == 0) {
+                    deltaf_coeff_CE_NEOSBQS_table_e0_ = temp1;
+                    deltaf_coeff_CE_NEOSBQS_table_nB0_ = temp2;
+                } else if (i == 1) {
+                    deltaf_coeff_CE_NEOSBQS_table_de_ = (
+                            temp1 - deltaf_coeff_CE_NEOSBQS_table_e0_);
+                }
+            } else if (j == 1) {
+                if (i == 0) {
+                    deltaf_coeff_CE_NEOSBQS_table_dnB_ = (
+                            temp2 - deltaf_coeff_CE_NEOSBQS_table_nB0_);
+                }
+            }
+        }
+    }
+    NEoS_table.close();
 }
 
 

@@ -91,6 +91,17 @@ class FSSW {
     double **deltaf_bulk_coeff_14mom_c2_tb_;
 
 
+    // table parameter for bulk deltaf coefficient CE for NEOS BQS
+    int deltaf_coeff_CE_NEOSBQS_table_length_e_;
+    int deltaf_coeff_CE_NEOSBQS_table_length_nB_;
+    double deltaf_coeff_CE_NEOSBQS_table_e0_;
+    double deltaf_coeff_CE_NEOSBQS_table_nB0_;
+    double deltaf_coeff_CE_NEOSBQS_table_de_;
+    double deltaf_coeff_CE_NEOSBQS_table_dnB_;
+    double **deltaf_coeff_CE_NEOSBQS_chat_tb_;
+    double **deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
+
+
     // arrays to speed up computing particle yield
     double sf_dx, sf_x_min, sf_x_max;
     int sf_tb_length;
@@ -144,6 +155,7 @@ class FSSW {
                                 std::array<double, 3> &bulkvisCoefficients);
 
     void load_bulk_deltaf_14mom_table(string filepath);
+    void load_CE_deltaf_NEOSBQS_table(string filepath);
     void load_deltaf_qmu_coeff_table(std::string filename);
     double get_deltaf_qmu_coeff(double T, double muB);
 
