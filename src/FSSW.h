@@ -153,6 +153,8 @@ class FSSW {
                                 std::array<double, 3> &bulkvisCoefficients);
     void getbulkvisCoefficients(const double Tdec, const double mu_B,
                                 std::array<double, 3> &bulkvisCoefficients);
+    void getCENEOSBQSCoefficients(const double Edec, const double nB,
+                                  std::array<double, 3> &visCoefficients);
 
     void load_bulk_deltaf_14mom_table(string filepath);
     void load_CE_deltaf_NEOSBQS_table(string filepath);
