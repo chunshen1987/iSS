@@ -100,6 +100,7 @@ class FSSW {
     double deltaf_coeff_CE_NEOSBQS_table_dnB_;
     double **deltaf_coeff_CE_NEOSBQS_chat_tb_;
     double **deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
+    double **deltaf_coeff_CE_NEOSBQS_etahat_tb_;
 
 
     // arrays to speed up computing particle yield

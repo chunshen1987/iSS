@@ -193,9 +193,11 @@ FSSW::~FSSW() {
             for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
                 delete[] deltaf_coeff_CE_NEOSBQS_chat_tb_[i];
                 delete[] deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i];
+                delete[] deltaf_coeff_CE_NEOSBQS_etahat_tb_[i];
             }
             delete deltaf_coeff_CE_NEOSBQS_chat_tb_;
             delete deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
+            delete deltaf_coeff_CE_NEOSBQS_etahat_tb_;
         }
     }
 
@@ -579,15 +581,15 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         double bulkPi = 0.0;
         if (INCLUDE_BULK_DELTAF == 1) {
             if (bulk_deltaf_kind == 21) {
-                bulkPi = surf->bulkPi;
+                bulkPi = surf->bulkPi;    // GeV/fm^3
                 getCENEOSBQSCoefficients(surf->Edec, surf->Bn,
                                          bulkvisCoefficients);
             } else if (bulk_deltaf_kind == 11) {
-                bulkPi = surf->bulkPi;
+                bulkPi = surf->bulkPi;    // GeV/fm^3
                 getbulkvisCoefficients(temp, mu_B, bulkvisCoefficients);
             } else {
                 if (bulk_deltaf_kind == 0) {
-                    bulkPi = surf->bulkPi;
+                    bulkPi = surf->bulkPi;        // unit in GeV/fm^3
                 } else {
                     bulkPi = surf->bulkPi/hbarC;  // unit in fm^-4
                 }
@@ -1276,10 +1278,14 @@ void FSSW::load_CE_deltaf_NEOSBQS_table(string filepath) {
             new double* [deltaf_coeff_CE_NEOSBQS_table_length_e_]);
     deltaf_coeff_CE_NEOSBQS_zetahat_tb_ = (
             new double* [deltaf_coeff_CE_NEOSBQS_table_length_e_]);
+    deltaf_coeff_CE_NEOSBQS_etahat_tb_ = (
+            new double* [deltaf_coeff_CE_NEOSBQS_table_length_e_]);
     for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
         deltaf_coeff_CE_NEOSBQS_chat_tb_[i] = (
                 new double [deltaf_coeff_CE_NEOSBQS_table_length_nB_]);
         deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i] = (
+                new double [deltaf_coeff_CE_NEOSBQS_table_length_nB_]);
+        deltaf_coeff_CE_NEOSBQS_etahat_tb_[i] = (
                 new double [deltaf_coeff_CE_NEOSBQS_table_length_nB_]);
     }
 
@@ -1289,7 +1295,8 @@ void FSSW::load_CE_deltaf_NEOSBQS_table(string filepath) {
         for (int j = 0; j < deltaf_coeff_CE_NEOSBQS_table_length_nB_; j++) {
             NEoS_table >> temp1 >> temp2
                        >> deltaf_coeff_CE_NEOSBQS_chat_tb_[i][j]
-                       >> deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i][j];
+                       >> deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i][j]
+                       >> deltaf_coeff_CE_NEOSBQS_etahat_tb_[i][j];
             if (j == 0) {
                 if (i == 0) {
                     deltaf_coeff_CE_NEOSBQS_table_e0_ = temp1;
@@ -1400,9 +1407,17 @@ void FSSW::getCENEOSBQSCoefficients(const double Edec, const double nB,
                       + f2*(1. - x_fraction)*y_fraction
                       + f3*x_fraction*y_fraction
                       + f4*x_fraction*(1. - y_fraction));
+    f1 = deltaf_coeff_CE_NEOSBQS_etahat_tb_[idx_e1][idx_nB1];
+    f2 = deltaf_coeff_CE_NEOSBQS_etahat_tb_[idx_e1][idx_nB2];
+    f3 = deltaf_coeff_CE_NEOSBQS_etahat_tb_[idx_e2][idx_nB2];
+    f4 = deltaf_coeff_CE_NEOSBQS_etahat_tb_[idx_e2][idx_nB1];
+    double etahat = (  f1*(1. - x_fraction)*(1. - y_fraction)
+                      + f2*(1. - x_fraction)*y_fraction
+                      + f3*x_fraction*y_fraction
+                      + f4*x_fraction*(1. - y_fraction));
     visCoefficients[0] = 1./zetahat;
     visCoefficients[1] = chat;
-    visCoefficients[2] = 0;
+    visCoefficients[2] = etahat;
 }
 
 
@@ -1741,7 +1756,12 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
                 + 2.*px*pz*surf->piLRF_xz
                 + py*py*surf->piLRF_yy + 2.*py*pz*surf->piLRF_yz
                 + pz*pz*(- surf->piLRF_xx - surf->piLRF_yy));
-            delta_f_shear = (1. - sign*f0)*Wfactor*deltaf_prefactor;
+            if (bulk_deltaf_kind == 21) {
+                delta_f_shear = (
+                    (1. - sign*f0)*2.5*Wfactor/bulkvisCoefficients[2]);
+            } else {
+                delta_f_shear = (1. - sign*f0)*Wfactor*deltaf_prefactor;
+            }
         }
 
         // delta f for bulk viscosity
