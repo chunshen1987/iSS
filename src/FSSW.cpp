@@ -1416,7 +1416,7 @@ void FSSW::getCENEOSBQSCoefficients(const double Edec, const double nB,
                       + f3*x_fraction*y_fraction
                       + f4*x_fraction*(1. - y_fraction));
     visCoefficients[0] = 1./zetahat;
-    visCoefficients[1] = chat;
+    visCoefficients[1] = 1./3. - chat;
     visCoefficients[2] = etahat;
 }
 
@@ -1758,7 +1758,8 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
                 + pz*pz*(- surf->piLRF_xx - surf->piLRF_yy));
             if (bulk_deltaf_kind == 21) {
                 delta_f_shear = (
-                    (1. - sign*f0)*2.5*Wfactor/bulkvisCoefficients[2]);
+                    (1. - sign*f0)*Wfactor/(2.*bulkvisCoefficients[2])
+                    /(p0*Tdec));
             } else {
                 delta_f_shear = (1. - sign*f0)*Wfactor*deltaf_prefactor;
             }
