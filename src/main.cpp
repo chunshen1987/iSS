@@ -63,9 +63,13 @@ int main(int argc, char** argv) {
     iSsampler.paraRdr_ptr->echo();
 
     int status = iSsampler.shell();
-    iSsampler.perform_checks();
-    if (status == 0) {
+
+    int testFlag = static_cast<int>(
+            iSsampler.paraRdr_ptr->getVal("perform_checks", 0));
+    if (testFlag == 1)
+        iSsampler.perform_checks();
+
+    if (status == 0)
         cout << "Program executed normally." << endl;
-    }
-    return(0);
+    return(status);
 }
