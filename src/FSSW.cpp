@@ -74,6 +74,12 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     bulk_deltaf_kind         = paraRdr->getVal("bulk_deltaf_kind");
     INCLUDE_DIFFUSION_DELTAF = paraRdr->getVal("include_deltaf_diffusion");
 
+    if (bulk_deltaf_kind == 21) {
+        deltaf_kind_ = 1;
+    } else {
+        deltaf_kind_ = 0;
+    }
+
     local_charge_conservation = paraRdr->getVal("local_charge_conservation");
     number_of_repeated_sampling = (
             paraRdr->getVal("number_of_repeated_sampling"));
@@ -156,9 +162,11 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
                 + "/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat");
         } else if (bulk_deltaf_kind == 11) {
             load_bulk_deltaf_14mom_table(table_path_ + "/deltaf_tables");
-        } else if (bulk_deltaf_kind == 21) {
-            load_CE_deltaf_NEOSBQS_table(table_path_ + "/deltaf_tables");
         }
+    }
+
+    if (deltaf_kind_ == 1) {
+        load_CE_deltaf_NEOSBQS_table(table_path_ + "/deltaf_tables");
     }
 
     // load table for diffusion delta f coeffient
@@ -189,16 +197,18 @@ FSSW::~FSSW() {
             delete deltaf_bulk_coeff_14mom_c0_tb_;
             delete deltaf_bulk_coeff_14mom_c1_tb_;
             delete deltaf_bulk_coeff_14mom_c2_tb_;
-        } else if (bulk_deltaf_kind == 21) {
-            for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
-                delete[] deltaf_coeff_CE_NEOSBQS_chat_tb_[i];
-                delete[] deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i];
-                delete[] deltaf_coeff_CE_NEOSBQS_etahat_tb_[i];
-            }
-            delete deltaf_coeff_CE_NEOSBQS_chat_tb_;
-            delete deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
-            delete deltaf_coeff_CE_NEOSBQS_etahat_tb_;
         }
+    }
+
+    if (deltaf_kind_ == 1) {
+        for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
+            delete[] deltaf_coeff_CE_NEOSBQS_chat_tb_[i];
+            delete[] deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i];
+            delete[] deltaf_coeff_CE_NEOSBQS_etahat_tb_[i];
+        }
+        delete deltaf_coeff_CE_NEOSBQS_chat_tb_;
+        delete deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
+        delete deltaf_coeff_CE_NEOSBQS_etahat_tb_;
     }
 
     if (INCLUDE_DIFFUSION_DELTAF == 1) {
@@ -579,11 +589,13 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
 
         // bulk delta f contribution
         double bulkPi = 0.0;
+        if (deltaf_kind_ == 1) {
+            getCENEOSBQSCoefficients(surf->Edec, surf->Bn,
+                                     bulkvisCoefficients);
+        }
         if (INCLUDE_BULK_DELTAF == 1) {
             if (bulk_deltaf_kind == 21) {
                 bulkPi = surf->bulkPi;    // GeV/fm^3
-                getCENEOSBQSCoefficients(surf->Edec, surf->Bn,
-                                         bulkvisCoefficients);
             } else if (bulk_deltaf_kind == 11) {
                 bulkPi = surf->bulkPi;    // GeV/fm^3
                 getbulkvisCoefficients(temp, mu_B, bulkvisCoefficients);
@@ -942,14 +954,15 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 long FO_idx = rand1D.rand();
                 const FO_surf_LRF *surf = &FOsurf_ptr[FO_idx];
 
+                if (deltaf_kind_ == 1) {
+                    getCENEOSBQSCoefficients(surf->Edec, surf->Bn,
+                                             bulkvisCoefficients);
+                }
                 if (INCLUDE_BULK_DELTAF == 1) {
                     if (bulk_deltaf_kind == 11) {
                         getbulkvisCoefficients(surf->Tdec, surf->muB,
                                                bulkvisCoefficients);
-                    } else if (bulk_deltaf_kind == 21) {
-                        getCENEOSBQSCoefficients(surf->Edec, surf->Bn,
-                                                 bulkvisCoefficients);
-                    } else {
+                    } else if (bulk_deltaf_kind != 21) {
                         getbulkvisCoefficients(surf->Tdec,
                                                bulkvisCoefficients);
                     }
@@ -1756,7 +1769,7 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
                 + 2.*px*pz*surf->piLRF_xz
                 + py*py*surf->piLRF_yy + 2.*py*pz*surf->piLRF_yz
                 + pz*pz*(- surf->piLRF_xx - surf->piLRF_yy));
-            if (bulk_deltaf_kind == 21) {
+            if (deltaf_kind_ == 1) {
                 delta_f_shear = (
                     (1. - sign*f0)*Wfactor/(2.*bulkvisCoefficients[2])
                     /(p0*Tdec));

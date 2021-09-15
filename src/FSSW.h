@@ -43,6 +43,7 @@ class FSSW {
     int USE_GZIP_FORMAT;
     int USE_BINARY_FORMAT;
     int INCLUDE_DELTAF, INCLUDE_BULK_DELTAF, INCLUDE_DIFFUSION_DELTAF;
+    int deltaf_kind_;        // 0: 14-mom, 1: CE
     int bulk_deltaf_kind;
 
     // dN/(dxt dy) for one particle species
