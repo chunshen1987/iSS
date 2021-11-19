@@ -95,6 +95,11 @@ int iSS::read_in_FO_surface() {
     freeze_out_data.read_in_freeze_out_data(FOsurf_temp, surface_filename_);
     messager << "total number of cells: " <<  FOsurf_temp.size();
     messager.flush("info");
+    if (FOsurf_temp.size() == 0) {
+        messager << "No freeze-out fluid cell, exit now ...";
+        messager.flush("Warning");
+        exit(1);
+    }
 
     afterburner_type_ = freeze_out_data.get_afterburner_type();
     freeze_out_data.read_in_chemical_potentials(FOsurf_temp, particle);

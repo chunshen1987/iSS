@@ -43,6 +43,7 @@ class FSSW {
     int USE_GZIP_FORMAT;
     int USE_BINARY_FORMAT;
     int INCLUDE_DELTAF, INCLUDE_BULK_DELTAF, INCLUDE_DIFFUSION_DELTAF;
+    int deltaf_kind_;        // 0: 14-mom, 1: CE
     int bulk_deltaf_kind;
 
     // dN/(dxt dy) for one particle species
@@ -89,6 +90,18 @@ class FSSW {
     double **deltaf_bulk_coeff_14mom_c0_tb_;
     double **deltaf_bulk_coeff_14mom_c1_tb_;
     double **deltaf_bulk_coeff_14mom_c2_tb_;
+
+
+    // table parameter for bulk deltaf coefficient CE for NEOS BQS
+    int deltaf_coeff_CE_NEOSBQS_table_length_e_;
+    int deltaf_coeff_CE_NEOSBQS_table_length_nB_;
+    double deltaf_coeff_CE_NEOSBQS_table_e0_;
+    double deltaf_coeff_CE_NEOSBQS_table_nB0_;
+    double deltaf_coeff_CE_NEOSBQS_table_de_;
+    double deltaf_coeff_CE_NEOSBQS_table_dnB_;
+    double **deltaf_coeff_CE_NEOSBQS_chat_tb_;
+    double **deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
+    double **deltaf_coeff_CE_NEOSBQS_etahat_tb_;
 
 
     // arrays to speed up computing particle yield
@@ -142,8 +155,11 @@ class FSSW {
                                 std::array<double, 3> &bulkvisCoefficients);
     void getbulkvisCoefficients(const double Tdec, const double mu_B,
                                 std::array<double, 3> &bulkvisCoefficients);
+    void getCENEOSBQSCoefficients(const double Edec, const double nB,
+                                  std::array<double, 3> &visCoefficients);
 
     void load_bulk_deltaf_14mom_table(string filepath);
+    void load_CE_deltaf_NEOSBQS_table(string filepath);
     void load_deltaf_qmu_coeff_table(std::string filename);
     double get_deltaf_qmu_coeff(double T, double muB);
 

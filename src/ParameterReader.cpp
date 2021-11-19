@@ -30,7 +30,7 @@ ParameterReader::~ParameterReader()
 
 
 //----------------------------------------------------------------------
-string ParameterReader::removeComments(string str, string commentSymbol)
+string ParameterReader::_removeComments(string str, string commentSymbol)
 /*
   Remove comments from a string "str". Comments are all characters after the string "commentSymbol".
 */
@@ -40,7 +40,7 @@ string ParameterReader::removeComments(string str, string commentSymbol)
 
 
 //----------------------------------------------------------------------
-void ParameterReader::phraseEquationWithoutComments(string equation)
+void ParameterReader::_phraseEquationWithoutComments(string equation)
 /*
   Phrase an equation like "x=1", and store the result into "names" and "values". The equation is first separated according to the equal sign, then the left and right hand side will be trimmed, after that the right hand side will be converted to double type number.
 */
@@ -61,7 +61,7 @@ void ParameterReader::phraseEquationWithoutComments(string equation)
 
 
 //----------------------------------------------------------------------
-long ParameterReader::find(string name)
+long ParameterReader::_find(string name)
 /*
   Check if the parameter with "name" already exists in the internal "names" list. If yes, it returns its
 */
@@ -79,7 +79,7 @@ void ParameterReader::phraseOneLine(string str, string commentSymbol)
 */
 {
   if (trim(str).compare("")==0) return;
-  phraseEquationWithoutComments(removeComments(str, commentSymbol));
+  _phraseEquationWithoutComments(_removeComments(str, commentSymbol));
 }
 
 
@@ -122,7 +122,7 @@ bool ParameterReader::exist(string name)
   Return true if parameter with "name" is registered.
 */
 {
-  return find(name)==-1 ? false: true;
+  return _find(name)==-1 ? false: true;
 }
 
 
@@ -132,7 +132,7 @@ void ParameterReader::setVal(string name, double value)
   Set the parameter with "name" to "value". It is appended to the internal "names" and "values" vector if "name" does not exist; otherwise it is rewitten.
 */
 {
-  long idx = find(name);
+  long idx = _find(name);
   if (idx==-1)
   {
     names->push_back(toLower(trim(name))); values->push_back(value);
@@ -145,19 +145,32 @@ void ParameterReader::setVal(string name, double value)
 
 
 //----------------------------------------------------------------------
-double ParameterReader::getVal(string name)
-/*
-  Get the value for the parameter with "name".
-*/
-{
-  long idx = find(name);
-  if (idx!=-1)
-    return (*values)[idx];
-  else
-  {
-    cout << "ParameterReader::getVal error: parameter with name " << name << " not found." << endl;
-    exit(-1);
-  }
+//! Get the value for the parameter with "name".
+//! if the parameter does not exist, exit the program
+double ParameterReader::getVal(string name) {
+    long idx = _find(name);
+    if (idx != -1) {
+        return (*values)[idx];
+    } else {
+        cout << "ParameterReader::getVal error: parameter with name "
+             << name << " not found." << endl;
+        exit(1);
+    }
+}
+
+
+//----------------------------------------------------------------------
+//! Get the value for the parameter with "name",
+//! if the parameter does not exist, return the provided default value
+double ParameterReader::getVal(string name, double defaultValue) {
+    long idx = _find(name);
+    if (idx != -1) {
+        return (*values)[idx];
+    } else {
+        cout << "ParameterReader::getVal error: parameter with name "
+             << name << " not found." << endl;
+        return(defaultValue);
+    }
 }
 
 
