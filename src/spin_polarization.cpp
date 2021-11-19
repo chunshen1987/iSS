@@ -76,6 +76,8 @@ SpinPolarization::SpinPolarization(const std::vector<FO_surf> &FOsurf_ptr,
     vorticity_typenames_.push_back("Kinetic");
     vorticity_typenames_.push_back("Thermal");
     vorticity_typenames_.push_back("Temperature");
+    thermal_shear_typenames_.push_back("BBPP");
+    thermal_shear_typenames_.push_back("LY");
 }
 
 
@@ -97,32 +99,34 @@ void SpinPolarization::compute_spin_polarization_shell() {
     std::string rapidity_typename[2] = {"rapidity", "pseudorapidity"};
     for (const auto &POI_monval: POI_list) {
         for (int irap_type = 0; irap_type < 2; irap_type++) {
-            //for (unsigned int itype = 0; itype < vorticity_typenames_.size();
-            //     itype++) {
-            //    compute_spin_polarization(POI_monval, irap_type, itype);
-            //    output_integrated_spin_polarizations(
-            //            POI_monval, rapidity_typename[irap_type],
-            //            vorticity_typenames_[itype], 0, 0);
-            //}
             int ivor_type = 2;  // thermal voriticity
             int Flag_MuIP = 0, Flag_SIP = 0;
+            int ithShearType = 0;
             compute_spin_polarization(POI_monval, irap_type, ivor_type,
-                                      Flag_MuIP, Flag_SIP);
+                                      ithShearType, Flag_MuIP, Flag_SIP);
             output_integrated_spin_polarizations(
                 POI_monval, rapidity_typename[irap_type],
-                vorticity_typenames_[ivor_type], Flag_MuIP, Flag_SIP);
+                vorticity_typenames_[ivor_type],
+                thermal_shear_typenames_[ithShearType], Flag_MuIP, Flag_SIP);
+
             Flag_MuIP = 0; Flag_SIP = 1;
+            for (ithShearType = 0; ithShearType < 2; ithShearType++) {
+                compute_spin_polarization(POI_monval, irap_type, ivor_type,
+                                          ithShearType, Flag_MuIP, Flag_SIP);
+                output_integrated_spin_polarizations(
+                    POI_monval, rapidity_typename[irap_type],
+                    vorticity_typenames_[ivor_type],
+                    thermal_shear_typenames_[ithShearType],
+                    Flag_MuIP, Flag_SIP);
+            }
+
+            Flag_MuIP = 1; Flag_SIP = 1; ithShearType = 1;
             compute_spin_polarization(POI_monval, irap_type, ivor_type,
-                                      Flag_MuIP, Flag_SIP);
+                                      ithShearType, Flag_MuIP, Flag_SIP);
             output_integrated_spin_polarizations(
                 POI_monval, rapidity_typename[irap_type],
-                vorticity_typenames_[ivor_type], Flag_MuIP, Flag_SIP);
-            Flag_MuIP = 1; Flag_SIP = 1;
-            compute_spin_polarization(POI_monval, irap_type, ivor_type,
-                                      Flag_MuIP, Flag_SIP);
-            output_integrated_spin_polarizations(
-                POI_monval, rapidity_typename[irap_type],
-                vorticity_typenames_[ivor_type], Flag_MuIP, Flag_SIP);
+                vorticity_typenames_[ivor_type],
+                thermal_shear_typenames_[ithShearType], Flag_MuIP, Flag_SIP);
         }
     }
 }
@@ -130,7 +134,7 @@ void SpinPolarization::compute_spin_polarization_shell() {
 
 void SpinPolarization::compute_spin_polarization(
         const int POI_monval, const int irap_type, const int ivor_type,
-        const int Flag_MuIP, const int Flag_SIP) {
+        const int ithShearType, const int Flag_MuIP, const int Flag_SIP) {
     // first clean up previous results
     set_val_in_3D_Matrix(dN_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
     set_val_in_3D_Matrix(St_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
@@ -160,6 +164,8 @@ void SpinPolarization::compute_spin_polarization(
     }
     cout << "spin polarization tensor type : "
          << vorticity_typenames_[ivor_type] << endl;
+    cout << "thermal shear tensor type : "
+         << thermal_shear_typenames_[ithShearType] << endl;
 
     if (Flag_MuIP == 1)
         cout << "Include muB/T gradients induced (MuIP) polarization ... "
@@ -201,8 +207,8 @@ void SpinPolarization::compute_spin_polarization(
                 iSS_data::Vec4 Smu_LRF = {0., 0., 0., 0.};
                 double dN = 0.;
                 compute_spin_polarization_for_a_given_p(
-                    POI_info, pmu, ivor_type, Flag_MuIP, Flag_SIP,
-                    Smu, Smu_LRF, dN);
+                    POI_info, pmu, ivor_type, ithShearType,
+                    Flag_MuIP, Flag_SIP, Smu, Smu_LRF, dN);
                 dN_pTdpTdphidy_[iy][ipT][iphi] = dN;
                 St_pTdpTdphidy_[iy][ipT][iphi] = prefactor*Smu[0];
                 Sx_pTdpTdphidy_[iy][ipT][iphi] = prefactor*Smu[1];
@@ -382,6 +388,7 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
 void SpinPolarization::output_integrated_spin_polarizations(
         const int POI_monval, const std::string rap_typename,
         const std::string vorticity_typename,
+        const std::string thermal_shear_typenames,
         const int Flag_MuIP, const int Flag_SIP) {
     cout << "output spin polarization results to files ... " << endl;
     std::ofstream of;
@@ -392,7 +399,7 @@ void SpinPolarization::output_integrated_spin_polarizations(
     if (Flag_MuIP == 1)
         fileTypeName << "_" << "wMuIP";
     if (Flag_SIP == 1) 
-        fileTypeName << "_" << "wSIP";
+        fileTypeName << "_wSIP_" << thermal_shear_typenames;
 
     std::stringstream Smu_filename;
     Smu_filename << path_ << "/Smu_" << fileTypeName.str() << ".dat";
@@ -533,7 +540,8 @@ void SpinPolarization::output_integrated_spin_polarizations(
 
 void SpinPolarization::compute_spin_polarization_for_a_given_p(
         const particle_info &POI_info, const iSS_data::Vec4 &pmu,
-        const int ivor_type, const int Flag_MuIP, const int Flag_SIP,
+        const int ivor_type, const int ithShearType,
+        const int Flag_MuIP, const int Flag_SIP,
         iSS_data::Vec4 &Smu, iSS_data::Vec4 &SmuLRF, double &dN) {
     const double hbarC3 = hbarC*hbarC*hbarC;
     double Smu_tmp[4] = {0., 0., 0., 0.};
@@ -556,8 +564,11 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
                                 /hbarC3);    // [GeV^-2]
         const double expon = (pdotu - mu)/surf.Tdec;
         const double f0 = 1./(exp(expon) + POI_info.sign);
+        const double prefactor = pdsigma*f0*(1. - f0);
 
+        dN += pdsigma*f0;
 
+        // thermal vorticity
         const float omega_tx = surf.vorticity_arr[6*ivor_type + 0];
         const float omega_ty = surf.vorticity_arr[6*ivor_type + 1];
         const float omega_tz = surf.vorticity_arr[6*ivor_type + 2];
@@ -568,80 +579,106 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
         float sigma[10];
         for (int j = 0; j < 10; j++)
             sigma[j] = surf.vorticity_arr[24 + j];
-        float pdotsigma[4];
-        pdotsigma[0] = (  pmu[0]*sigma[0] - pmu[1]*sigma[1]
-                        - pmu[2]*sigma[2] - pmu[3]*sigma[3]);
-        pdotsigma[1] = (  pmu[0]*sigma[1] - pmu[1]*sigma[4]
-                        - pmu[2]*sigma[5] - pmu[3]*sigma[6]);
-        pdotsigma[2] = (  pmu[0]*sigma[2] - pmu[1]*sigma[5]
-                        - pmu[2]*sigma[7] - pmu[3]*sigma[8]);
-        pdotsigma[3] = (  pmu[0]*sigma[3] - pmu[1]*sigma[6]
-                        - pmu[2]*sigma[8] - pmu[3]*sigma[9]);
-
-        float DmuB_over_T[4];
-        for (int j = 0; j < 4; j++)
-            DmuB_over_T[j] = surf.vorticity_arr[34 + j];
-
-        const double prefactor = pdsigma*f0*(1. - f0);
-
-        dN += pdsigma*f0;
 
         Smu_tmp[0] += prefactor*(
-            (omega_yz*pmu[1] - omega_xz*pmu[2] + omega_xy*pmu[3])
-            + Flag_MuIP*hbarC*POI_info.baryon/pdotu*(
+            (omega_yz*pmu[1] - omega_xz*pmu[2] + omega_xy*pmu[3]));
+        Smu_tmp[1] += prefactor*(
+            -(- omega_yz*pmu[0] - omega_ty*pmu[3] + omega_tz*pmu[2]));
+        Smu_tmp[2] += prefactor*(
+            -(omega_tx*pmu[3] - omega_tz*pmu[1] + omega_xz*pmu[0]));
+        Smu_tmp[3] += prefactor*(
+            -(- omega_tx*pmu[2] + omega_ty*pmu[1] - omega_xy*pmu[0]));
+
+
+        // thermal shear tensor
+        if (Flag_SIP == 1) {
+            float pdotsigma[4];
+            const double prefactorSIP = prefactor*hbarC/(surf.Tdec*pdotu);
+            if (ithShearType == 0) {
+                // Becattini
+                pdotsigma[0] = (  pmu[0]*sigma[0] - pmu[1]*sigma[1]
+                                - pmu[2]*sigma[2] - pmu[3]*sigma[3]);
+                pdotsigma[1] = (  pmu[0]*sigma[1] - pmu[1]*sigma[4]
+                                - pmu[2]*sigma[5] - pmu[3]*sigma[6]);
+                pdotsigma[2] = (  pmu[0]*sigma[2] - pmu[1]*sigma[5]
+                                - pmu[2]*sigma[7] - pmu[3]*sigma[8]);
+                pdotsigma[3] = (  pmu[0]*sigma[3] - pmu[1]*sigma[6]
+                                - pmu[2]*sigma[8] - pmu[3]*sigma[9]);
+                Smu_tmp[0] += 0.;
+                Smu_tmp[1] += prefactorSIP*(
+                    - pmu[2]*pdotsigma[3] + pmu[3]*pdotsigma[2]);
+                Smu_tmp[2] += prefactorSIP*(
+                    pmu[1]*pdotsigma[3] - pmu[3]*pdotsigma[1]);
+                Smu_tmp[3] += prefactorSIP*(
+                    - pmu[1]*pdotsigma[2] + pmu[2]*pdotsigma[1]);
+            } else {
+                // Liu-Yin
+                double p_perpMu[4] = {
+                    pmu[0] - pdotu*ut,
+                    pmu[1] - pdotu*ux,
+                    pmu[2] - pdotu*uy,
+                    pmu[3] - pdotu*uz,
+                };
+                pdotsigma[0] = (  p_perpMu[0]*sigma[0] - p_perpMu[1]*sigma[1]
+                                - p_perpMu[2]*sigma[2] - p_perpMu[3]*sigma[3]);
+                pdotsigma[1] = (  p_perpMu[0]*sigma[1] - p_perpMu[1]*sigma[4]
+                                - p_perpMu[2]*sigma[5] - p_perpMu[3]*sigma[6]);
+                pdotsigma[2] = (  p_perpMu[0]*sigma[2] - p_perpMu[1]*sigma[5]
+                                - p_perpMu[2]*sigma[7] - p_perpMu[3]*sigma[8]);
+                pdotsigma[3] = (  p_perpMu[0]*sigma[3] - p_perpMu[1]*sigma[6]
+                                - p_perpMu[2]*sigma[8] - p_perpMu[3]*sigma[9]);
+
+                Smu_tmp[0] += - prefactorSIP*(
+                      (ux*pmu[2] - uy*pmu[1])*pdotsigma[3]
+                    + (uy*pmu[3] - uz*pmu[2])*pdotsigma[1]
+                    - (ux*pmu[3] - uz*pmu[1])*pdotsigma[2]
+                );
+                Smu_tmp[1] += prefactorSIP*(
+                    - (uy*pmu[3] - uz*pmu[2])*pdotsigma[0]
+                    - (ut*pmu[2] - uy*pmu[0])*pdotsigma[3]
+                    + (ut*pmu[3] - uz*pmu[0])*pdotsigma[2]
+                );
+                Smu_tmp[2] += prefactorSIP*(
+                      (ut*pmu[1] - ux*pmu[0])*pdotsigma[3]
+                    - (ut*pmu[3] - uz*pmu[0])*pdotsigma[1]
+                    + (ux*pmu[3] - uz*pmu[1])*pdotsigma[0]
+                );
+                Smu_tmp[3] += prefactorSIP*(
+                    - (ut*pmu[1] - ux*pmu[0])*pdotsigma[2]
+                    + (ut*pmu[2] - uy*pmu[0])*pdotsigma[1]
+                    - (ux*pmu[2] - uy*pmu[1])*pdotsigma[0]
+                );
+            }
+        }
+
+        if (Flag_MuIP == 1) {
+            float DmuB_over_T[4];
+            for (int j = 0; j < 4; j++)
+                DmuB_over_T[j] = surf.vorticity_arr[34 + j];
+            const double prefactorMuIP = prefactor*hbarC*POI_info.baryon/pdotu;
+            Smu_tmp[0] += prefactorMuIP*(
                   (ux*pmu[2] - uy*pmu[1])*DmuB_over_T[3]
                 + (uy*pmu[3] - uz*pmu[2])*DmuB_over_T[1]
                 - (ux*pmu[3] - uz*pmu[1])*DmuB_over_T[2]
-            )
-            - Flag_SIP*hbarC*1./(surf.Tdec*pdotu)*(
-                  (ux*pmu[2] - uy*pmu[1])*pdotsigma[3]
-                + (uy*pmu[3] - uz*pmu[2])*pdotsigma[1]
-                - (ux*pmu[3] - uz*pmu[1])*pdotsigma[2]
-            )
-        );
-
-        Smu_tmp[1] += prefactor*(
-            -(- omega_yz*pmu[0] - omega_ty*pmu[3] + omega_tz*pmu[2])
-            - Flag_MuIP*hbarC*POI_info.baryon/pdotu*(
+            );
+            Smu_tmp[1] += - prefactorMuIP*(
                 - (uy*pmu[3] - uz*pmu[2])*DmuB_over_T[0]
                 - (ut*pmu[2] - uy*pmu[0])*DmuB_over_T[3]
                 + (ut*pmu[3] - uz*pmu[0])*DmuB_over_T[2]
-            )
-            + Flag_SIP*hbarC*1./(surf.Tdec*pdotu)*(
-                - (uy*pmu[3] - uz*pmu[2])*pdotsigma[0]
-                - (ut*pmu[2] - uy*pmu[0])*pdotsigma[3]
-                + (ut*pmu[3] - uz*pmu[0])*pdotsigma[2]
-            )
-        );
-
-        Smu_tmp[2] += prefactor*(
-            -(omega_tx*pmu[3] - omega_tz*pmu[1] + omega_xz*pmu[0])
-            - Flag_MuIP*hbarC*POI_info.baryon/pdotu*(
+            );
+            Smu_tmp[2] += - prefactorMuIP*(
                   (ut*pmu[1] - ux*pmu[0])*DmuB_over_T[3]
                 - (ut*pmu[3] - uz*pmu[0])*DmuB_over_T[1]
                 + (ux*pmu[3] - uz*pmu[1])*DmuB_over_T[0]
-            )
-            + Flag_SIP*hbarC*1./(surf.Tdec*pdotu)*(
-                  (ut*pmu[1] - ux*pmu[0])*pdotsigma[3]
-                - (ut*pmu[3] - uz*pmu[0])*pdotsigma[1]
-                + (ux*pmu[3] - uz*pmu[1])*pdotsigma[0]
-            )
-        );
-
-        Smu_tmp[3] += prefactor*(
-            -(- omega_tx*pmu[2] + omega_ty*pmu[1] - omega_xy*pmu[0])
-            - Flag_MuIP*hbarC*POI_info.baryon/pdotu*(
+            );
+            Smu_tmp[3] += - prefactorMuIP*(
                 - (ut*pmu[1] - ux*pmu[0])*DmuB_over_T[2]
                 + (ut*pmu[2] - uy*pmu[0])*DmuB_over_T[1]
                 - (ux*pmu[2] - uy*pmu[1])*DmuB_over_T[0]
-            )
-            + Flag_SIP*hbarC*1./(surf.Tdec*pdotu)*(
-                - (ut*pmu[1] - ux*pmu[0])*pdotsigma[2]
-                + (ut*pmu[2] - uy*pmu[0])*pdotsigma[1]
-                - (ux*pmu[2] - uy*pmu[1])*pdotsigma[0]
-            )
-        );
+            );
+        }
     }
+
     for (int i = 0; i < 4; i++) {
         Smu[i] = Smu_tmp[i];
     }
