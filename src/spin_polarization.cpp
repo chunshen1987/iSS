@@ -593,7 +593,7 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
         // thermal shear tensor
         if (Flag_SIP == 1) {
             float pdotsigma[4];
-            const double prefactorSIP = prefactor*hbarC/(surf.Tdec*pdotu);
+            const double prefactorSIP = prefactor/pdotu;
             if (ithShearType == 0) {
                 // Becattini
                 pdotsigma[0] = (  pmu[0]*sigma[0] - pmu[1]*sigma[1]
