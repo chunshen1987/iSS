@@ -1,6 +1,6 @@
-hydro_mode = 1           # mode for reading in freeze out information 
+hydro_mode = 1           # mode for reading in freeze out information
                          # 0: reads outputs from VISH2+1
-                         # 1: reads outputs from MUSIC assuming 
+                         # 1: reads outputs from MUSIC assuming
                          #    boost-invariant
                          # 2: reads outputs from MUSIC full (3+1)-d
 
@@ -31,7 +31,7 @@ use_OSCAR_format = 0         # output results in OSCAR format
 use_gzip_format = 0          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
 use_binary_format = 1        # output results in binary format
-perform_decays = 1           # flag to perform resonance decay
+perform_decays = 0           # flag to perform resonance decay
 perform_checks = 0           # perform tests for particle samples
 include_spectators = 1       # include spectators (filename: spectators.dat)
 
@@ -137,7 +137,7 @@ calculate_vn_to_order = 9              # v_n's are calculated up to this order
 sample_upto_desired_particle_number = 0  # flag to run sampling until desired
                                          # particle numbers is reached
 number_of_particles_needed = 100000      # number of hadrons to sample
-number_of_repeated_sampling = 2000     # How many times should the sampling be 
+number_of_repeated_sampling = 1000     # How many times should the sampling be 
                                        # repeated.
 
 sample_pT_up_to = -1                   # Up to this value will pT be sampled; 
