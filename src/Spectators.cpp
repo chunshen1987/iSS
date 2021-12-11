@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <cmath>
+#include <vector>
 
 Spectators::Spectators(int mode) {
     mode_ = mode;
@@ -48,4 +49,9 @@ void Spectators::readInSpectatorsFromFile(std::string filename) {
         hadron.pz = mT*sinh(rap);
         spectator_list_.push_back(hadron);
     }
+}
+
+
+std::vector<iSS_Hadron> Spectators::getSpectatorList() const {
+    return(spectator_list_);
 }

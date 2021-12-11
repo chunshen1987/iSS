@@ -23,6 +23,8 @@ class Spectators {
 
     void readInSpectatorsFromFile(std::string filename);
 
+    std::vector<iSS_Hadron> getSpectatorList() const;
+
 };
 
 #endif  // SPECTATORS_H_
