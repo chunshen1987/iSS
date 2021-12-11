@@ -89,14 +89,19 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     flag_store_samples_in_memory = 1;
     Hadron_list = new vector< vector<iSS_Hadron>* >;
 
-    flag_perform_decays = paraRdr->getVal("perform_decays");
-    if (flag_perform_decays == 1) {
+    if (paraRdr->getVal("perform_decays") == 1) {
+        flag_perform_decays_ = true;
         decayer_ptr_ = std::unique_ptr<particle_decay>(new particle_decay(
                                 ran_gen_ptr, afterburner_type_, table_path_));
+    } else {
+        flag_perform_decays_ = false;
     }
 
-    if (paraRdr->getVal("include_spectators", 0) != 0) {
+    int flag_include_spectators = paraRdr->getVal("include_spectators", 0);
+    if (flag_include_spectators != 0) {
         flag_spectators_ = true;
+        spectators_ptr_ = std::unique_ptr<Spectators>(new Spectators(
+                                                flag_include_spectators));
     } else {
         flag_spectators_ = false;
     }
@@ -341,10 +346,11 @@ bool FSSW::particles_are_the_same(int idx1, int idx2) {
 //***************************************************************************
 void FSSW::shell() {
     sample_using_dN_dxtdy_4all_particles_conventional();
-    if (flag_perform_decays == 1
-            && afterburner_type_ != AfterburnerType::SMASH) {
+    if (flag_perform_decays_ && afterburner_type_ != AfterburnerType::SMASH) {
         perform_resonance_feed_down(Hadron_list);
     }
+    if (flag_spectators_)
+        addSpectatorsToHadronList();
     if (USE_OSCAR_FORMAT) {
         combine_samples_to_OSCAR();
     } else if (USE_GZIP_FORMAT) {
@@ -1666,6 +1672,19 @@ void FSSW::perform_resonance_feed_down(
             delete daughter_list;
         }
         temp_list.clear();
+    }
+}
+
+
+void FSSW::addSpectatorsToHadronList() {
+    cout << "Add spectators to the hadron list... " << endl;
+    // loop over events
+    unsigned int nev = Hadron_list->size();
+    for (unsigned int ievent = 0; ievent < nev; ievent++) {
+        auto spectatorList = spectators_ptr_->getSpectatorList();
+        for (auto ispec: spectatorList) {
+            (*Hadron_list)[ievent]->push_back(ispec);
+        }
     }
 }
 

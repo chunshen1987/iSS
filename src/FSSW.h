@@ -16,6 +16,7 @@
 #include "TableFunction.h"
 #include "ParameterReader.h"
 #include "particle_decay.h"
+#include "Spectators.h"
 #include "data_struct.h"
 #include "Random.h"
 #include "pretty_ostream.h"
@@ -115,11 +116,12 @@ class FSSW {
     int flag_store_samples_in_memory;
 
     //! particle decay
-    int flag_perform_decays;
+    bool flag_perform_decays_;
     std::unique_ptr<particle_decay> decayer_ptr_;
 
     //! spectators
     bool flag_spectators_;
+    std::unique_ptr<Spectators> spectators_ptr_;
 
     std::vector< std::vector<iSS_Hadron>* >* Hadron_list;
 
@@ -181,6 +183,8 @@ class FSSW {
     std::vector<iSS_Hadron>* get_hadron_list_iev(const int iev) {
         return(Hadron_list->at(iev));
     }
+
+    void addSpectatorsToHadronList();
 
     void perform_resonance_feed_down(
                 std::vector< std::vector<iSS_Hadron>* >* input_particle_list);
