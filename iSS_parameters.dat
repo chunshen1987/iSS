@@ -33,6 +33,7 @@ use_gzip_format = 0          # output results in gzip format (only works with
 use_binary_format = 1        # output results in binary format
 perform_decays = 1           # flag to perform resonance decay
 perform_checks = 0           # perform tests for particle samples
+include_spectators = 1       # include spectators (filename: spectators.dat)
 
 local_charge_conservation = 0  # flag to impose local charge conservation
 

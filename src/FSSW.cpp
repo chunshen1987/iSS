@@ -102,6 +102,9 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
         flag_spectators_ = true;
         spectators_ptr_ = std::unique_ptr<Spectators>(new Spectators(
                                                 flag_include_spectators));
+        std::ostringstream spectatorFilename;
+        spectatorFilename << path_ << "/spectators.dat";
+        spectators_ptr_->readInSpectatorsFromFile(spectatorFilename.str());
     } else {
         flag_spectators_ = false;
     }
