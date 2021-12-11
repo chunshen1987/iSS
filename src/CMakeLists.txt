@@ -17,6 +17,7 @@ set (SOURCES
   MomentumSamplerBase.cpp
   FSSW.cpp
   Histogram.cpp
+  Spectators.cpp
   )
 
 add_library(${lib_name} SHARED ${SOURCES})
@@ -40,3 +41,12 @@ install(TARGETS ${exe_name} ${lib_name}
         RUNTIME DESTINATION ${CMAKE_HOME_DIRECTORY}
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib/static)
+
+if (unittest)
+    add_executable (unittest_Spectators.e Spectators_UnitTest.cpp)
+    target_link_libraries (unittest_Spectators.e ${lib_name} ${LIBS})
+    install(TARGETS unittest_Spectators.e ${lib_name}
+            RUNTIME DESTINATION ${CMAKE_HOME_DIRECTORY}/test
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib/static)
+endif (unittest)
