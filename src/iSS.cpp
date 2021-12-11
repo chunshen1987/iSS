@@ -8,7 +8,6 @@
 #include "data_struct.h"
 #include "Histogram.h"
 
-//using namespace std;
 using iSS_data::Vec4;
 
 iSS::iSS(std::string path, std::string table_path,

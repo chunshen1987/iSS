@@ -95,6 +95,12 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
                                          table_path_);
     }
 
+    if (paraRdr->getVal("include_spectators", 0) != 0) {
+        flag_spectators_ = true;
+    } else {
+        flag_spectators_ = false;
+    }
+
     // deal with chosen_particle_xxx tables
     number_of_chosen_particles = chosen_particles_in->getNumberOfRows();
     chosen_particles_sampling_table.resize(number_of_chosen_particles, 0);
@@ -119,7 +125,7 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
         messager_ << "not all chosen particles are "
                  << "in the pdg particle list!";
         messager_.flush("warning");
-        messager_ << "There are " << number_of_chosen_particles - current_idx 
+        messager_ << "There are " << number_of_chosen_particles - current_idx
                  << " particles can not be found in the pdg particle list!";
         messager_.flush("warning");
         messager_ << "Their monte carlo numbers are:";
@@ -144,8 +150,8 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
         }
     }
 
-    OSCAR_header_filename = table_path_ + "/OSCAR_header.txt";
-    OSCAR_output_filename = "OSCAR.DAT";
+    OSCAR_header_filename_ = table_path_ + "/OSCAR_header.txt";
+    OSCAR_output_filename_ = "OSCAR.DAT";
 
     dN_dxtdy_for_one_particle_species.resize(FO_length, 0.);
 
@@ -364,15 +370,15 @@ void FSSW::combine_samples_to_OSCAR() {
     char line_buffer[500];
 
     // open file for output
-    remove(OSCAR_output_filename.c_str());
-    ofstream oscar(OSCAR_output_filename.c_str());
+    remove(OSCAR_output_filename_.c_str());
+    ofstream oscar(OSCAR_output_filename_.c_str());
 
     // write header first
-    ifstream header(OSCAR_header_filename.c_str());
+    ifstream header(OSCAR_header_filename_.c_str());
     if (!header.is_open()) {
         cout << endl 
             << "combine_samples_to_OSCAR error: OSCAR header file " 
-            << OSCAR_header_filename.c_str() << " not found." << endl;
+            << OSCAR_header_filename_.c_str() << " not found." << endl;
         exit(-1);
     }
     while (true) {
@@ -428,8 +434,8 @@ void FSSW::combine_samples_to_OSCAR() {
                 total_number_of_particles += number_of_particles[m];
             }
             // sub-header for each event
-            oscar << setw(10) << sample_idx << "  " 
-                  << setw(10) << total_number_of_particles << "  " 
+            oscar << setw(10) << sample_idx << "  "
+                  << setw(10) << total_number_of_particles << "  "
                   << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
 
             // now copy each line from samples file to OSCAR file
@@ -438,7 +444,7 @@ void FSSW::combine_samples_to_OSCAR() {
                 int monval = (
                         particles[chosen_particles_sampling_table[m]].monval);
                 for (long ii = 1; ii <= number_of_particles[m]; ii++) {
-                    oscar << setw(10) << ipart << "  " 
+                    oscar << setw(10) << ipart << "  "
                           << setw(10) << monval << "  ";
                     samples[m]->getline(line_buffer, 500);
                     oscar << line_buffer << endl;
@@ -455,15 +461,15 @@ void FSSW::combine_samples_to_OSCAR() {
             int total_number_of_particles = (*Hadron_list)[iev]->size();
             if (total_number_of_particles > 0) {
                 // sub-header for each event
-                oscar << setw(10) << iev << "  " 
-                      << setw(10) << total_number_of_particles << "  " 
+                oscar << setw(10) << iev << "  "
+                      << setw(10) << total_number_of_particles << "  "
                       << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
                 for (int ipart = 0; ipart < total_number_of_particles;
                      ipart++) {
                     oscar << setw(10) << ipart + 1 << "  "
                           << setw(10) << (*(*Hadron_list)[iev])[ipart].pid
                           << "  ";
-                    sprintf(line_buffer, 
+                    sprintf(line_buffer,
                             "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e",
                             (*(*Hadron_list)[iev])[ipart].px,
                             (*(*Hadron_list)[iev])[ipart].py,

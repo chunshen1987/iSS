@@ -118,6 +118,13 @@ class FSSW {
     int flag_perform_decays;
     particle_decay *decayer_ptr;
 
+    //! spectators
+    bool flag_spectators_;
+
+    std::vector< std::vector<iSS_Hadron>* >* Hadron_list;
+
+    std::string OSCAR_header_filename_, OSCAR_output_filename_;
+
  public:
     FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
            Table* chosen_particles_in,
@@ -127,7 +134,6 @@ class FSSW {
            AfterburnerType afterburner_type);
     ~FSSW();
 
-    std::vector< std::vector<iSS_Hadron>* >* Hadron_list;
 
     void initialize_special_function_arrays();
     double get_special_function_K1(double arg);
@@ -138,7 +144,6 @@ class FSSW {
     void shell();  // it all starts here...
 
     void combine_samples_to_OSCAR();
-    std::string OSCAR_header_filename, OSCAR_output_filename;
     void combine_samples_to_gzip_file();
     void combine_samples_to_binary_file();
 
