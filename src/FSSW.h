@@ -71,7 +71,7 @@ class FSSW {
     bool particles_are_the_same(int, int);
 
     //array for bulk delta f coefficients
-    Table *bulkdf_coeff;
+    std::unique_ptr<Table> bulkdf_coeff_;
 
     // table parameter for diffusion deltaf coefficient
     int deltaf_qmu_coeff_table_length_T;
@@ -116,7 +116,7 @@ class FSSW {
 
     //! particle decay
     int flag_perform_decays;
-    particle_decay *decayer_ptr;
+    std::unique_ptr<particle_decay> decayer_ptr_;
 
     //! spectators
     bool flag_spectators_;

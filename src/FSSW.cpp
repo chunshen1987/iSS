@@ -91,8 +91,8 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
 
     flag_perform_decays = paraRdr->getVal("perform_decays");
     if (flag_perform_decays == 1) {
-        decayer_ptr = new particle_decay(ran_gen_ptr, afterburner_type_,
-                                         table_path_);
+        decayer_ptr_ = std::unique_ptr<particle_decay>(new particle_decay(
+                                ran_gen_ptr, afterburner_type_, table_path_));
     }
 
     if (paraRdr->getVal("include_spectators", 0) != 0) {
@@ -163,9 +163,9 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     // arrays for bulk delta f coefficients
     if (INCLUDE_BULK_DELTAF == 1) {
         if (bulk_deltaf_kind == 0) {
-            bulkdf_coeff = new Table (
+            bulkdf_coeff_ = std::unique_ptr<Table> (new Table (
                 table_path_
-                + "/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat");
+                + "/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat"));
         } else if (bulk_deltaf_kind == 11) {
             load_bulk_deltaf_14mom_table(table_path_ + "/deltaf_tables");
         }
@@ -192,9 +192,7 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
 //***************************************************************************
 FSSW::~FSSW() {
     if (INCLUDE_BULK_DELTAF == 1) {
-        if (bulk_deltaf_kind == 0) {
-            delete bulkdf_coeff;
-        } else if (bulk_deltaf_kind == 11) {
+        if (bulk_deltaf_kind == 11) {
             for (int i = 0; i < deltaf_bulk_coeff_14mom_table_length_T_; i++) {
                 delete[] deltaf_bulk_coeff_14mom_c0_tb_[i];
                 delete[] deltaf_bulk_coeff_14mom_c1_tb_[i];
@@ -242,10 +240,6 @@ FSSW::~FSSW() {
         (*Hadron_list)[i]->clear();
     }
     Hadron_list->clear();
-
-    if (flag_perform_decays == 1) {
-        delete decayer_ptr;
-    }
 }
 //***************************************************************************
 
@@ -1056,15 +1050,15 @@ void FSSW::getbulkvisCoefficients(
 
        //B0 [fm^3/GeV^3]
        bulkvisCoefficients[0] = (
-                       bulkdf_coeff->interp(1, 2, Tdec_fm, 5)/pow(hbarC, 3));
+                       bulkdf_coeff_->interp(1, 2, Tdec_fm, 5)/pow(hbarC, 3));
 
        // D0 [fm^3/GeV^2]
        bulkvisCoefficients[1] = (
-                       bulkdf_coeff->interp(1, 3, Tdec_fm, 5)/pow(hbarC, 2));
+                       bulkdf_coeff_->interp(1, 3, Tdec_fm, 5)/pow(hbarC, 2));
 
        // E0 [fm^3/GeV^3]
        bulkvisCoefficients[2] = (
-                       bulkdf_coeff->interp(1, 4, Tdec_fm, 5)/pow(hbarC, 3));
+                       bulkdf_coeff_->interp(1, 4, Tdec_fm, 5)/pow(hbarC, 3));
 
        // parameterization for mu = 0
        // B0[fm^3/GeV^3]
@@ -1657,10 +1651,10 @@ void FSSW::perform_resonance_feed_down(
         // perform resonance decays
         for (unsigned int ipart = 0; ipart < temp_list.size(); ipart++) {
             vector<iSS_Hadron> *daughter_list = new vector<iSS_Hadron>;
-            decayer_ptr->perform_decays(&temp_list[ipart], daughter_list);
+            decayer_ptr_->perform_decays(&temp_list[ipart], daughter_list);
             for (unsigned int idaughter = 0; idaughter < daughter_list->size();
                     idaughter++) {
-                if (decayer_ptr->check_particle_stable(
+                if (decayer_ptr_->check_particle_stable(
                                         &(*daughter_list)[idaughter]) == 1) {
                     (*input_particle_list)[ievent]->push_back(
                                             (*daughter_list)[idaughter]);
