@@ -46,7 +46,7 @@ if (unittest)
     add_executable (unittest_Spectators.e Spectators_UnitTest.cpp)
     target_link_libraries (unittest_Spectators.e ${lib_name} ${LIBS})
     install(TARGETS unittest_Spectators.e ${lib_name}
-            RUNTIME DESTINATION ${CMAKE_HOME_DIRECTORY}/test
+            RUNTIME DESTINATION ${CMAKE_HOME_DIRECTORY}/tests
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib/static)
 endif (unittest)

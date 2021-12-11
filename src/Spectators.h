@@ -19,6 +19,8 @@ class Spectators {
 
     int getMode() const {return(mode_);}
 
+    int getNumberOfSpectators() const {return(spectator_list_.size());}
+
     void readInSpectatorsFromFile(std::string filename);
 
 };
