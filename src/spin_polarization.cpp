@@ -53,13 +53,22 @@ SpinPolarization::SpinPolarization(const std::vector<FO_surf> &FOsurf_ptr,
     SmuLRF_phi_.resize(Nphi_, {0., 0., 0., 0.});
     SmuLRF_y_.resize(Ny_, {0., 0., 0., 0.});
 
+    Rspin_y_.resize(Ny_, 0.);
+
     for (int i = 0; i < NpT_; i++) {
         std::vector<iSS_data::Vec4> Smu(Nphi_, {0., 0., 0., 0.});
         Smu_pTdpTdphi_.push_back(Smu);
         std::vector<iSS_data::Vec4> SmuLRF(Nphi_, {0., 0., 0., 0.});
         SmuLRF_pTdpTdphi_.push_back(SmuLRF);
+
         std::vector<double> dNtmp(Nphi_, 0.);
         dN_pTdpTdphi_.push_back(dNtmp);
+    }
+    for (int i = 0; i < Ny_; i++) {
+        std::vector<double> Rtmp(NpT_, 0.);
+        Rspin_pTy_.push_back(Rtmp);
+        std::vector<double> dNdpTtmp(NpT_, 0.);
+        dN_dpTdy_.push_back(dNdpTtmp);
     }
 
     dN_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
@@ -240,16 +249,24 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
         Smu_pT_[ipT] = {0.};
         SmuLRF_pT_[ipT] = {0.};
     }
+
     for (int iphi = 0; iphi < Nphi_; iphi++) {
         dN_phi_[iphi] = 0.;
         Smu_phi_[iphi] = {0.};
         SmuLRF_phi_[iphi] = {0.};
     }
+
     for (int iy = 0; iy < Ny_; iy++) {
         dN_y_[iy] = 0.;
         Smu_y_[iy] = {0.};
         SmuLRF_y_[iy] = {0.};
+        Rspin_y_[iy] = 0.;
+        for (int ipT = 0; ipT < NpT_; ipT++) {
+            dN_dpTdy_[iy][ipT] = 0.;
+            Rspin_pTy_[iy][ipT] = 0.;
+        }
     }
+
     for (int ipT = 0; ipT < NpT_; ipT++) {
         for (int iphi = 0; iphi < Nphi_; iphi++) {
             dN_pTdpTdphi_[ipT][iphi] = 0.0;
@@ -382,6 +399,30 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
             dN_pTdpTdphi_[ipT][iphi] *= dy;
         }
     }
+
+    // compute Rspin(pT, y) and Rspin(y)
+    for (int iy = 0; iy < Ny_; iy++) {
+        double dN_y = 0.;
+        for (int ipT = 0; ipT < NpT_; ipT++) {
+            for (int iphi = 0; iphi < Nphi_; iphi++) {
+                double dNtmp = dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                double pxhat = cos(phi_arr_[iphi]);
+                double pyhat = sin(phi_arr_[iphi]);
+                double Rspin = (- Sx_pTdpTdphidy_[iy][ipT][iphi]*pyhat
+                                + Sy_pTdpTdphidy_[iy][ipT][iphi]*pxhat);
+                dN_dpTdy_[iy][ipT]  += dNtmp;
+                Rspin_pTy_[iy][ipT] += Rspin*pT_arr_[ipT];
+
+                if (pT_arr_[ipT] > 0.5) {
+                    dN_y += dNtmp;
+                    Rspin_y_[iy] += Rspin*pT_arr_[ipT];
+                }
+            }
+            Rspin_pTy_[iy][ipT] /= dN_dpTdy_[iy][ipT];
+            dN_dpTdy_[iy][ipT] *= dphi;
+        }
+        Rspin_y_[iy] /= dN_y;
+    }
 }
 
 
@@ -508,33 +549,61 @@ void SpinPolarization::output_integrated_spin_polarizations(
     }
     of.close();
 
-    std::stringstream Smu_dpTdphidy_filename;
-    Smu_dpTdphidy_filename << path_ << "/Smu_dpTdphidy_" << fileTypeName.str()
-                           << ".dat";
-    remove(Smu_dpTdphidy_filename.str().c_str());
-    of.open(Smu_dpTdphidy_filename.str().c_str(), std::ios::out);
-    of << "# y  pT[GeV]  phi  dN/(pTdpTdphidy)[GeV^-2]  S^t  S^x  S^y  S^z  "
-       << "S^t_LRF  S^x_LRF  S^y_LRF  S^z_LRF" << endl;
+    std::stringstream Rspin_pTy_filename;
+    Smu_dpTdphi_filename << path_ << "/Rspin_pTy_" << fileTypeName.str()
+                         << ".dat";
+    remove(Rspin_pTy_filename.str().c_str());
+    of.open(Rspin_pTy_filename.str().c_str(), std::ios::out);
+    of << "# y  pT[GeV]  dN/(dpTdy) [GeV^-1]  Rspin" << endl;
     for (int iy = 0; iy < Ny_; iy++) {
         for (int ipT = 0; ipT < NpT_; ipT++) {
-            for (int iphi = 0; iphi < Nphi_; iphi++) {
-                of << scientific << setw(10) << setprecision(6)
-                   << y_arr_[iy] << "  " << pT_arr_[ipT] << "  "
-                   << phi_arr_[iphi] << "  "
-                   << dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
-                   << St_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
-                   << Sx_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
-                   << Sy_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
-                   << Sz_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
-                   << StLRF_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
-                   << SxLRF_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
-                   << SyLRF_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
-                   << SzLRF_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
-                   << endl;
-            }
+            of << scientific << setw(10) << setprecision(6)
+               << y_arr_[iy] << "  " << pT_arr_[ipT] << "  "
+               << dN_dpTdy_[iy][ipT] << "  "
+               << Rspin_pTy_[iy][ipT] << endl;
         }
     }
     of.close();
+
+    std::stringstream Rspin_y_filename;
+    Smu_dpTdphi_filename << path_ << "/Rspin_y_" << fileTypeName.str()
+                         << ".dat";
+    remove(Rspin_y_filename.str().c_str());
+    of.open(Rspin_y_filename.str().c_str(), std::ios::out);
+    of << "# y  Rspin" << endl;
+    for (int iy = 0; iy < Ny_; iy++) {
+        of << scientific << setw(10) << setprecision(6)
+           << y_arr_[iy] << "  " << Rspin_y_[iy] << endl;
+    }
+    of.close();
+
+    //std::stringstream Smu_dpTdphidy_filename;
+    //Smu_dpTdphidy_filename << path_ << "/Smu_dpTdphidy_" << fileTypeName.str()
+    //                       << ".dat";
+    //remove(Smu_dpTdphidy_filename.str().c_str());
+    //of.open(Smu_dpTdphidy_filename.str().c_str(), std::ios::out);
+    //of << "# y  pT[GeV]  phi  dN/(pTdpTdphidy)[GeV^-2]  S^t  S^x  S^y  S^z  "
+    //   << "S^t_LRF  S^x_LRF  S^y_LRF  S^z_LRF" << endl;
+    //for (int iy = 0; iy < Ny_; iy++) {
+    //    for (int ipT = 0; ipT < NpT_; ipT++) {
+    //        for (int iphi = 0; iphi < Nphi_; iphi++) {
+    //            of << scientific << setw(10) << setprecision(6)
+    //               << y_arr_[iy] << "  " << pT_arr_[ipT] << "  "
+    //               << phi_arr_[iphi] << "  "
+    //               << dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
+    //               << St_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
+    //               << Sx_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
+    //               << Sy_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
+    //               << Sz_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
+    //               << StLRF_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
+    //               << SxLRF_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
+    //               << SyLRF_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
+    //               << SzLRF_pTdpTdphidy_[iy][ipT][iphi]/dN_pTdpTdphidy_[iy][ipT][iphi] << "  "
+    //               << endl;
+    //        }
+    //    }
+    //}
+    //of.close();
 }
 
 

@@ -46,6 +46,10 @@ class SpinPolarization {
     std::vector< std::vector<iSS_data::Vec4> > Smu_pTdpTdphi_;
     std::vector< std::vector<iSS_data::Vec4> > SmuLRF_pTdpTdphi_;
 
+    std::vector<double> Rspin_y_;                     // Rspin(y)
+    std::vector< std::vector<double> > dN_dpTdy_;
+    std::vector< std::vector<double> > Rspin_pTy_;    // Rspin(y, pT)
+
     double ***dN_pTdpTdphidy_;
     double ***St_pTdpTdphidy_;
     double ***Sx_pTdpTdphidy_;
