@@ -550,8 +550,8 @@ void SpinPolarization::output_integrated_spin_polarizations(
     of.close();
 
     std::stringstream Rspin_pTy_filename;
-    Smu_dpTdphi_filename << path_ << "/Rspin_pTy_" << fileTypeName.str()
-                         << ".dat";
+    Rspin_pTy_filename << path_ << "/Rspin_pTy_" << fileTypeName.str()
+                       << ".dat";
     remove(Rspin_pTy_filename.str().c_str());
     of.open(Rspin_pTy_filename.str().c_str(), std::ios::out);
     of << "# y  pT[GeV]  dN/(dpTdy) [GeV^-1]  Rspin" << endl;
@@ -566,8 +566,7 @@ void SpinPolarization::output_integrated_spin_polarizations(
     of.close();
 
     std::stringstream Rspin_y_filename;
-    Smu_dpTdphi_filename << path_ << "/Rspin_y_" << fileTypeName.str()
-                         << ".dat";
+    Rspin_y_filename << path_ << "/Rspin_y_" << fileTypeName.str() << ".dat";
     remove(Rspin_y_filename.str().c_str());
     of.open(Rspin_y_filename.str().c_str(), std::ios::out);
     of << "# y  Rspin" << endl;
