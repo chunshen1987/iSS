@@ -243,7 +243,7 @@ void read_FOdata::read_in_chemical_potentials(
             N_stableparticle = 0;
         } else if (iEOS_MUSIC_ == 91) {       // hotQCD + HRG(SMASH)
             N_stableparticle = 0;
-        } else if (iEOS_MUSIC_ >= 10 && iEOS_MUSIC_ <=14) {   // NEoS
+        } else if (iEOS_MUSIC_ >= 10 && iEOS_MUSIC_ <=15) {   // NEoS
             N_stableparticle = 0;
         } else if (iEOS_MUSIC_ == 17) {       // BEST
             N_stableparticle = 0;
