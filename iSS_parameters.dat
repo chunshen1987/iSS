@@ -137,11 +137,7 @@ calculate_vn_to_order = 9              # v_n's are calculated up to this order
 sample_upto_desired_particle_number = 0  # flag to run sampling until desired
                                          # particle numbers is reached
 number_of_particles_needed = 100000      # number of hadrons to sample
-<<<<<<< HEAD
-number_of_repeated_sampling = 2000     # How many times should the sampling be 
-=======
-number_of_repeated_sampling = 10      # How many times should the sampling be
->>>>>>> Spin_polarization
+number_of_repeated_sampling = 10       # How many times should the sampling be
                                        # repeated.
 
 sample_pT_up_to = -1                   # Up to this value will pT be sampled;
