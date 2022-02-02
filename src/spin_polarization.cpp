@@ -9,6 +9,12 @@
 #include<fstream>
 #include<iomanip>
 
+#ifndef _OPENMP
+    #define omp_get_num_threads() 1
+#else
+    #include <omp.h>
+#endif
+
 using std::cout;
 using std::endl;
 using std::scientific;
@@ -104,6 +110,13 @@ SpinPolarization::~SpinPolarization() {
 
 
 void SpinPolarization::compute_spin_polarization_shell() {
+    #pragma omp parallel for
+    for (int i = 0; i < 2; i++) {
+        if (i == 0) {
+            cout << "OpenMP: using " << omp_get_num_threads()
+                 << " threads." << endl;
+        }
+    }
     std::array<int, 2> POI_list = {3122, -3122};   // Lambda and Anti-Lambda
     std::string rapidity_typename[2] = {"rapidity", "pseudorapidity"};
     for (const auto &POI_monval: POI_list) {
