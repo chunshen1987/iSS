@@ -1288,7 +1288,7 @@ void set_val_in_4D_Matrix(double**** Arr_4D, const int nx, const int ny,
     for (int i = 0; i < nx; i++) {
         for (int j = 0; j < ny; j++) {
             for (int k = 0; k < nz; k++) {
-                for (int l = 0; l < n4; k++) {
+                for (int l = 0; l < n4; l++) {
                     Arr_4D[i][j][k][l] = val;
                 }
             }
