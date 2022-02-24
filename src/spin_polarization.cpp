@@ -78,14 +78,8 @@ SpinPolarization::SpinPolarization(const std::vector<FO_surf> &FOsurf_ptr,
     }
 
     dN_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
-    St_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
-    Sx_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
-    Sy_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
-    Sz_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
-    StLRF_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
-    SxLRF_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
-    SyLRF_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
-    SzLRF_pTdpTdphidy_ = create_a_3D_Matrix(Ny_, NpT_, Nphi_, 0.);
+    Smu_pTdpTdphidy_ = create_a_4D_Matrix(Ny_, NpT_, Nphi_, 4, 0.);
+    SmuLRF_pTdpTdphidy_ = create_a_4D_Matrix(Ny_, NpT_, Nphi_, 4, 0.);
 
     vorticity_typenames_.push_back("KineticSP");
     vorticity_typenames_.push_back("Kinetic");
@@ -98,14 +92,8 @@ SpinPolarization::SpinPolarization(const std::vector<FO_surf> &FOsurf_ptr,
 
 SpinPolarization::~SpinPolarization() {
     delete_a_3D_Matrix(dN_pTdpTdphidy_, Ny_, NpT_);
-    delete_a_3D_Matrix(St_pTdpTdphidy_, Ny_, NpT_);
-    delete_a_3D_Matrix(Sx_pTdpTdphidy_, Ny_, NpT_);
-    delete_a_3D_Matrix(Sy_pTdpTdphidy_, Ny_, NpT_);
-    delete_a_3D_Matrix(Sz_pTdpTdphidy_, Ny_, NpT_);
-    delete_a_3D_Matrix(StLRF_pTdpTdphidy_, Ny_, NpT_);
-    delete_a_3D_Matrix(SxLRF_pTdpTdphidy_, Ny_, NpT_);
-    delete_a_3D_Matrix(SyLRF_pTdpTdphidy_, Ny_, NpT_);
-    delete_a_3D_Matrix(SzLRF_pTdpTdphidy_, Ny_, NpT_);
+    delete_a_4D_Matrix(Smu_pTdpTdphidy_, Ny_, NpT_, Nphi_);
+    delete_a_4D_Matrix(SmuLRF_pTdpTdphidy_, Ny_, NpT_, Nphi_);
 }
 
 
@@ -159,14 +147,8 @@ void SpinPolarization::compute_spin_polarization(
         const int ithShearType, const int Flag_MuIP, const int Flag_SIP) {
     // first clean up previous results
     set_val_in_3D_Matrix(dN_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
-    set_val_in_3D_Matrix(St_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
-    set_val_in_3D_Matrix(Sx_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
-    set_val_in_3D_Matrix(Sy_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
-    set_val_in_3D_Matrix(Sz_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
-    set_val_in_3D_Matrix(StLRF_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
-    set_val_in_3D_Matrix(SxLRF_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
-    set_val_in_3D_Matrix(SyLRF_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
-    set_val_in_3D_Matrix(SzLRF_pTdpTdphidy_, Ny_, NpT_, Nphi_, 0.0);
+    set_val_in_4D_Matrix(Smu_pTdpTdphidy_, Ny_, NpT_, Nphi_, 4, 0.0);
+    set_val_in_4D_Matrix(SmuLRF_pTdpTdphidy_, Ny_, NpT_, Nphi_, 4, 0.0);
 
     // find the information about the particle of interest
     particle_info POI_info;
@@ -232,14 +214,11 @@ void SpinPolarization::compute_spin_polarization(
                     POI_info, pmu, ivor_type, ithShearType,
                     Flag_MuIP, Flag_SIP, Smu, Smu_LRF, dN);
                 dN_pTdpTdphidy_[iy][ipT][iphi] = dN;
-                St_pTdpTdphidy_[iy][ipT][iphi] = prefactor*Smu[0];
-                Sx_pTdpTdphidy_[iy][ipT][iphi] = prefactor*Smu[1];
-                Sy_pTdpTdphidy_[iy][ipT][iphi] = prefactor*Smu[2];
-                Sz_pTdpTdphidy_[iy][ipT][iphi] = prefactor*Smu[3];
-                StLRF_pTdpTdphidy_[iy][ipT][iphi] = prefactor*Smu_LRF[0];
-                SxLRF_pTdpTdphidy_[iy][ipT][iphi] = prefactor*Smu_LRF[1];
-                SyLRF_pTdpTdphidy_[iy][ipT][iphi] = prefactor*Smu_LRF[2];
-                SzLRF_pTdpTdphidy_[iy][ipT][iphi] = prefactor*Smu_LRF[3];
+                for (int mu = 0; mu < 4; mu++) {
+                    Smu_pTdpTdphidy_[iy][ipT][iphi][mu] = prefactor*Smu[mu];
+                    SmuLRF_pTdpTdphidy_[iy][ipT][iphi][mu] = (
+                                                        prefactor*Smu_LRF[mu]);
+                }
             }
         }
     }
@@ -297,16 +276,14 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
         for (int ipT = 0; ipT < NpT_; ipT++) {
             if (pT_arr_[ipT] < 0.5) continue;
             for (int iphi = 0; iphi < Nphi_; iphi++) {
-                dN_     += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                dN      += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                Smu_[0] += St_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                Smu_[1] += Sx_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                Smu_[2] += Sy_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                Smu_[3] += Sz_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                SmuLRF_[0] += StLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                SmuLRF_[1] += SxLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                SmuLRF_[2] += SyLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                SmuLRF_[3] += SzLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                dN_ += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                dN  += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                for (int mu = 0; mu < 4; mu++) {
+                    Smu_[mu] += (
+                        Smu_pTdpTdphidy_[iy][ipT][iphi][mu]*pT_arr_[ipT]);
+                    SmuLRF_[mu] += (
+                        SmuLRF_pTdpTdphidy_[iy][ipT][iphi][mu]*pT_arr_[ipT]);
+                }
             }
         }
     }
@@ -321,15 +298,12 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
         for (int iy = 0; iy < Ny_; iy++) {
             if (std::abs(y_arr_[iy]) > 1.) continue;
             for (int iphi = 0; iphi < Nphi_; iphi++) {
-                dN_pT_[ipT]     += dN_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_pT_[ipT][0] += St_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_pT_[ipT][1] += Sx_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_pT_[ipT][2] += Sy_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_pT_[ipT][3] += Sz_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_pT_[ipT][0] += StLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_pT_[ipT][1] += SxLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_pT_[ipT][2] += SyLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_pT_[ipT][3] += SzLRF_pTdpTdphidy_[iy][ipT][iphi];
+                dN_pT_[ipT] += dN_pTdpTdphidy_[iy][ipT][iphi];
+                for (int mu = 0; mu < 4; mu++) {
+                    Smu_pT_[ipT][mu] += Smu_pTdpTdphidy_[iy][ipT][iphi][mu];
+                    SmuLRF_pT_[ipT][mu] += (
+                            SmuLRF_pTdpTdphidy_[iy][ipT][iphi][mu]);
+                }
             }
         }
         for (int i = 0; i < 4; i++) {
@@ -346,16 +320,14 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
             if (std::abs(y_arr_[iy]) > 1.) continue;
             for (int ipT = 0; ipT < NpT_; ipT++) {
                 if (pT_arr_[ipT] < 0.5) continue;
-                dN_phi_[iphi]     += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                dN_phi            += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                Smu_phi_[iphi][0] += St_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                Smu_phi_[iphi][1] += Sx_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                Smu_phi_[iphi][2] += Sy_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                Smu_phi_[iphi][3] += Sz_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                SmuLRF_phi_[iphi][0] += StLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                SmuLRF_phi_[iphi][1] += SxLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                SmuLRF_phi_[iphi][2] += SyLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                SmuLRF_phi_[iphi][3] += SzLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                dN_phi_[iphi] += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                dN_phi        += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                for (int mu = 0; mu < 4; mu++) {
+                    Smu_phi_[iphi][mu] += (
+                        Smu_pTdpTdphidy_[iy][ipT][iphi][mu]*pT_arr_[ipT]);
+                    SmuLRF_phi_[iphi][mu] += (
+                        SmuLRF_pTdpTdphidy_[iy][ipT][iphi][mu]*pT_arr_[ipT]);
+                }
             }
         }
         for (int i = 0; i < 4; i++) {
@@ -371,16 +343,14 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
         for (int ipT = 0; ipT < NpT_; ipT++) {
             if (pT_arr_[ipT] < 0.5) continue;
             for (int iphi = 0; iphi < Nphi_; iphi++) {
-                dN_y_[iy]     += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                dN_y          += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                Smu_y_[iy][0] += St_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                Smu_y_[iy][1] += Sx_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                Smu_y_[iy][2] += Sy_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                Smu_y_[iy][3] += Sz_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                SmuLRF_y_[iy][0] += StLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                SmuLRF_y_[iy][1] += SxLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                SmuLRF_y_[iy][2] += SyLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
-                SmuLRF_y_[iy][3] += SzLRF_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                dN_y_[iy] += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                dN_y      += dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
+                for (int mu = 0; mu < 4; mu++) {
+                    Smu_y_[iy][mu] += (
+                        Smu_pTdpTdphidy_[iy][ipT][iphi][mu]*pT_arr_[ipT]);
+                    SmuLRF_y_[iy][mu] += (
+                        SmuLRF_pTdpTdphidy_[iy][ipT][iphi][mu]*pT_arr_[ipT]);
+                }
             }
         }
         for (int i = 0; i < 4; i++) {
@@ -395,15 +365,13 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
         for (int iphi = 0; iphi < Nphi_; iphi++) {
             for (int iy = 0; iy < Ny_; iy++) {
                 if (std::abs(y_arr_[iy]) > 1.) continue;
-                dN_pTdpTdphi_[ipT][iphi]     += dN_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_pTdpTdphi_[ipT][iphi][0] += St_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_pTdpTdphi_[ipT][iphi][1] += Sx_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_pTdpTdphi_[ipT][iphi][2] += Sy_pTdpTdphidy_[iy][ipT][iphi];
-                Smu_pTdpTdphi_[ipT][iphi][3] += Sz_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_pTdpTdphi_[ipT][iphi][0] += StLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_pTdpTdphi_[ipT][iphi][1] += SxLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_pTdpTdphi_[ipT][iphi][2] += SyLRF_pTdpTdphidy_[iy][ipT][iphi];
-                SmuLRF_pTdpTdphi_[ipT][iphi][3] += SzLRF_pTdpTdphidy_[iy][ipT][iphi];
+                dN_pTdpTdphi_[ipT][iphi] += dN_pTdpTdphidy_[iy][ipT][iphi];
+                for (int mu = 0; mu < 4; mu++) {
+                    Smu_pTdpTdphi_[ipT][iphi][mu] += (
+                            Smu_pTdpTdphidy_[iy][ipT][iphi][mu]);
+                    SmuLRF_pTdpTdphi_[ipT][iphi][mu] += (
+                            SmuLRF_pTdpTdphidy_[iy][ipT][iphi][mu]);
+                }
             }
             for (int i = 0; i < 4; i++) {
                 Smu_pTdpTdphi_[ipT][iphi][i] /= dN_pTdpTdphi_[ipT][iphi];
@@ -421,8 +389,8 @@ void SpinPolarization::compute_integrated_spin_polarizations() {
                 double dNtmp = dN_pTdpTdphidy_[iy][ipT][iphi]*pT_arr_[ipT];
                 double pxhat = cos(phi_arr_[iphi]);
                 double pyhat = sin(phi_arr_[iphi]);
-                double Rspin = (- Sx_pTdpTdphidy_[iy][ipT][iphi]*pyhat
-                                + Sy_pTdpTdphidy_[iy][ipT][iphi]*pxhat);
+                double Rspin = (- Smu_pTdpTdphidy_[iy][ipT][iphi][1]*pyhat
+                                + Smu_pTdpTdphidy_[iy][ipT][iphi][2]*pxhat);
                 dN_dpTdy_[iy][ipT]  += dNtmp;
                 Rspin_pTy_[iy][ipT] += Rspin*pT_arr_[ipT];
 

@@ -81,5 +81,11 @@ void delete_a_3D_Matrix(double*** Arr_3D, const int nx, const int ny);
 
 void set_val_in_3D_Matrix(double*** Arr_3D, const int nx, const int ny,
                           const int nz, const double val);
+double**** create_a_4D_Matrix(const int nx, const int ny, const int nz,
+                              const int n4, const double val);
+void delete_a_4D_Matrix(double**** Arr_4D, const int nx, const int ny,
+                        const int nz);
+void set_val_in_4D_Matrix(double**** Arr_4D, const int nx, const int ny,
+                          const int nz, const int n4, const double val);
 
 #endif

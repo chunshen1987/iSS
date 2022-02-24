@@ -51,14 +51,8 @@ class SpinPolarization {
     std::vector< std::vector<double> > Rspin_pTy_;    // Rspin(y, pT)
 
     double ***dN_pTdpTdphidy_;
-    double ***St_pTdpTdphidy_;
-    double ***Sx_pTdpTdphidy_;
-    double ***Sy_pTdpTdphidy_;
-    double ***Sz_pTdpTdphidy_;
-    double ***StLRF_pTdpTdphidy_;
-    double ***SxLRF_pTdpTdphidy_;
-    double ***SyLRF_pTdpTdphidy_;
-    double ***SzLRF_pTdpTdphidy_;
+    double ****Smu_pTdpTdphidy_;
+    double ****SmuLRF_pTdpTdphidy_;
 
  public:
     SpinPolarization(const std::vector<FO_surf> &FOsurf_ptr,

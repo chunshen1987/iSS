@@ -1249,3 +1249,51 @@ void set_val_in_3D_Matrix(double*** Arr_3D, const int nx, const int ny,
 }
 
 
+double**** create_a_4D_Matrix(const int nx, const int ny, const int nz,
+                             const int n4, const double val) {
+    double**** Arr_4D = new double*** [nx];
+    for (int i = 0; i < nx; i++) {
+        Arr_4D[i] = new double** [ny];
+        for (int j = 0; j < ny; j++) {
+            Arr_4D[i][j] = new double* [nz];
+            for (int k = 0; k < nz; k++) {
+                Arr_4D[i][j][k] = new double [n4];
+                for (int l = 0; l < n4; l++) {
+                    Arr_4D[i][j][k][l] = val;
+                }
+            }
+        }
+    }
+    return(Arr_4D);
+}
+
+
+void delete_a_4D_Matrix(double**** Arr_4D, const int nx, const int ny,
+                        const int nz) {
+    for (int i = 0; i < nx; i++) {
+        for (int j = 0; j < ny; j++) {
+            for (int k = 0; k < nz; k++) {
+                delete [] Arr_4D[i][j][k];
+            }
+            delete [] Arr_4D[i][j];
+        }
+        delete [] Arr_4D[i];
+    }
+    delete [] Arr_4D;
+}
+
+
+void set_val_in_4D_Matrix(double**** Arr_4D, const int nx, const int ny,
+                          const int nz, const int n4, const double val) {
+    for (int i = 0; i < nx; i++) {
+        for (int j = 0; j < ny; j++) {
+            for (int k = 0; k < nz; k++) {
+                for (int l = 0; l < n4; k++) {
+                    Arr_4D[i][j][k][l] = val;
+                }
+            }
+        }
+    }
+}
+
+
