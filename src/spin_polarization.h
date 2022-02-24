@@ -70,7 +70,8 @@ class SpinPolarization {
         const int ivor_type, const int ithShearType,
         const int Flag_MuIP, const int Flag_SIP,
         iSS_data::Vec4 &Smu, iSS_data::Vec4 &SmuLRF, double &dN);
-    void compute_integrated_spin_polarizations();
+    void compute_integrated_spin_polarizations(double ****SmuMat,
+                                               double ****SmuLRFMat);
     void output_integrated_spin_polarizations(
             const int POI_monval, const std::string rap_typename,
             const std::string vorticity_typename,
