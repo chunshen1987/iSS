@@ -18,6 +18,7 @@ class SpinPolarization {
     const std::vector<particle_info> &particle_info_;
     std::vector<std::string> vorticity_typenames_;
     std::vector<std::string> thermal_shear_typenames_;
+    std::vector<std::string> rapidity_typenames_;
     const ParameterReader &paraRdr_;
 
     const int NpT_  = 30;
@@ -53,6 +54,12 @@ class SpinPolarization {
     double ***dN_pTdpTdphidy_;
     double ****Smu_pTdpTdphidy_;
     double ****SmuLRF_pTdpTdphidy_;
+    double ****SmuSIP1_pTdpTdphidy_;
+    double ****SmuSIP1LRF_pTdpTdphidy_;
+    double ****SmuSIP2_pTdpTdphidy_;
+    double ****SmuSIP2LRF_pTdpTdphidy_;
+    double ****SmuFull_pTdpTdphidy_;
+    double ****SmuFullLRF_pTdpTdphidy_;
 
  public:
     SpinPolarization(const std::vector<FO_surf> &FOsurf_ptr,
@@ -62,14 +69,15 @@ class SpinPolarization {
     ~SpinPolarization();
 
     void compute_spin_polarization_shell();
-    void compute_spin_polarization(
-            const int POI_monval, const int irap_type, const int ivor_type,
-            const int ithShearType, const int Flag_MuIP, const int Flag_SIP);
+    void compute_spin_polarization(const int POI_monval,
+                                   const int irap_type, const int ivor_type);
     void compute_spin_polarization_for_a_given_p(
         const particle_info &POI_info, const iSS_data::Vec4 &pmu,
-        const int ivor_type, const int ithShearType,
-        const int Flag_MuIP, const int Flag_SIP,
-        iSS_data::Vec4 &Smu, iSS_data::Vec4 &SmuLRF, double &dN);
+        const int ivor_type, double &dN,
+        iSS_data::Vec4 &Smu, iSS_data::Vec4 &SmuLRF,
+        iSS_data::Vec4 &SmuSIP1, iSS_data::Vec4 &SmuSIP1LRF,
+        iSS_data::Vec4 &SmuSIP2, iSS_data::Vec4 &SmuSIP2LRF,
+        iSS_data::Vec4 &SmuFull, iSS_data::Vec4 &SmuFullLRF);
     void compute_integrated_spin_polarizations(double ****SmuMat,
                                                double ****SmuLRFMat);
     void output_integrated_spin_polarizations(
@@ -77,6 +85,8 @@ class SpinPolarization {
             const std::string vorticity_typename,
             const std::string thermal_shear_typenames,
             const int Flag_MuIP, const int Flag_SIP);
+    void transformSmuToLRF(const double mass, const iSS_data::Vec4 &pmu,
+                           double Smu[], iSS_data::Vec4 &SmuLRF) const;
 };
 
 #endif  // SRC_SPIN_POLARIZATION_H_
