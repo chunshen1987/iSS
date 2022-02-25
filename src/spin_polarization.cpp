@@ -120,13 +120,20 @@ void SpinPolarization::compute_spin_polarization_shell() {
         }
     }
 
-    int irap_type = static_cast<int>(
-                        paraRdr_.getVal("polarizationRapType", 1));
+    // by default we compute Polarization in rapidity and pseudorapidity
+    int PolRapType = static_cast<int>(paraRdr_.getVal("polarizationRapType",
+                                                      2));
     int ivor_type = 2;  // thermal voriticity
 
     std::array<int, 2> POI_list = {3122, -3122};   // Lambda and Anti-Lambda
     for (const auto &POI_monval: POI_list) {
-        compute_spin_polarization(POI_monval, irap_type, ivor_type);
+        if (PolRapType < 2) {
+            compute_spin_polarization(POI_monval, PolRapType, ivor_type);
+        } else {
+            for (int irap = 0; irap < PolRapType; irap++) {
+                compute_spin_polarization(POI_monval, irap, ivor_type);
+            }
+        }
     }
 }
 

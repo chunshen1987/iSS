@@ -36,7 +36,7 @@ perform_checks = 0           # perform tests for particle samples
 local_charge_conservation = 0  # flag to impose local charge conservation
 
 calculate_polarization = 1     # 1/0: whether to compute spin polarization for Lambda/anti-Lambda
-polarizationRapType = 1        # 0: rapidity; 1: pseudorapidity
+polarizationRapType = 1        # 0: rapidity; 1: pseudorapidity; 2: both
 
 calculate_vn = 0         # 1/0: whether to calculate the
                          # dN/(pt dpt dphi dy) and v_n flows
