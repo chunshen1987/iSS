@@ -119,12 +119,14 @@ void SpinPolarization::compute_spin_polarization_shell() {
                  << " threads." << endl;
         }
     }
+
+    int irap_type = static_cast<int>(
+                        paraRdr_.getVal("polarizationRapType", 1));
+    int ivor_type = 2;  // thermal voriticity
+
     std::array<int, 2> POI_list = {3122, -3122};   // Lambda and Anti-Lambda
     for (const auto &POI_monval: POI_list) {
-        for (int irap_type = 0; irap_type < 2; irap_type++) {
-            int ivor_type = 2;  // thermal voriticity
-            compute_spin_polarization(POI_monval, irap_type, ivor_type);
-        }
+        compute_spin_polarization(POI_monval, irap_type, ivor_type);
     }
 }
 
