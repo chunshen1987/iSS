@@ -212,17 +212,6 @@ FSSW::~FSSW() {
         }
     }
 
-    if (deltaf_kind_ == 1) {
-        for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
-            delete[] deltaf_coeff_CE_NEOSBQS_chat_tb_[i];
-            delete[] deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i];
-            delete[] deltaf_coeff_CE_NEOSBQS_etahat_tb_[i];
-        }
-        delete deltaf_coeff_CE_NEOSBQS_chat_tb_;
-        delete deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
-        delete deltaf_coeff_CE_NEOSBQS_etahat_tb_;
-    }
-
     if (INCLUDE_DIFFUSION_DELTAF == 1) {
         for (int i = 0; i < deltaf_qmu_coeff_table_length_T; i++) {
             delete [] deltaf_qmu_coeff_tb[i];
@@ -1288,49 +1277,105 @@ void FSSW::load_CE_deltaf_NEOSBQS_table(string filepath) {
     }
 
     // define table size
-    deltaf_coeff_CE_NEOSBQS_table_length_e_ = 145;
-    deltaf_coeff_CE_NEOSBQS_table_length_nB_ = 641;
+    deltaf_coeff_NEOSBQS_table_length_e_ = 145;
+    deltaf_coeff_NEOSBQS_table_length_nB_ = 641;
 
     string dummy;
     // read header
     std::getline(NEoS_table, dummy);
 
     // allocate 2D tables
-    deltaf_coeff_CE_NEOSBQS_chat_tb_ = (
-            new double* [deltaf_coeff_CE_NEOSBQS_table_length_e_]);
-    deltaf_coeff_CE_NEOSBQS_zetahat_tb_ = (
-            new double* [deltaf_coeff_CE_NEOSBQS_table_length_e_]);
-    deltaf_coeff_CE_NEOSBQS_etahat_tb_ = (
-            new double* [deltaf_coeff_CE_NEOSBQS_table_length_e_]);
-    for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
-        deltaf_coeff_CE_NEOSBQS_chat_tb_[i] = (
-                new double [deltaf_coeff_CE_NEOSBQS_table_length_nB_]);
-        deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i] = (
-                new double [deltaf_coeff_CE_NEOSBQS_table_length_nB_]);
-        deltaf_coeff_CE_NEOSBQS_etahat_tb_[i] = (
-                new double [deltaf_coeff_CE_NEOSBQS_table_length_nB_]);
+    for (int i = 0; i < deltaf_coeff_NEOSBQS_table_length_e_; i++) {
+        std::vector<double> temp(deltaf_coeff_NEOSBQS_table_length_nB_, 0);
+        deltaf_coeff_CE_NEOSBQS_chat_tb_.push_back(temp);
+        deltaf_coeff_CE_NEOSBQS_zetahat_tb_.push_back(temp);
+        deltaf_coeff_CE_NEOSBQS_etahat_tb_.push_back(temp);
     }
 
     // load 2D table
     double temp1, temp2;
-    for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
-        for (int j = 0; j < deltaf_coeff_CE_NEOSBQS_table_length_nB_; j++) {
+    for (int i = 0; i < deltaf_coeff_NEOSBQS_table_length_e_; i++) {
+        for (int j = 0; j < deltaf_coeff_NEOSBQS_table_length_nB_; j++) {
             NEoS_table >> temp1 >> temp2
                        >> deltaf_coeff_CE_NEOSBQS_chat_tb_[i][j]
                        >> deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i][j]
                        >> deltaf_coeff_CE_NEOSBQS_etahat_tb_[i][j];
             if (j == 0) {
                 if (i == 0) {
-                    deltaf_coeff_CE_NEOSBQS_table_e0_ = temp1;
-                    deltaf_coeff_CE_NEOSBQS_table_nB0_ = temp2;
+                    deltaf_coeff_NEOSBQS_table_e0_ = temp1;
+                    deltaf_coeff_NEOSBQS_table_nB0_ = temp2;
                 } else if (i == 1) {
-                    deltaf_coeff_CE_NEOSBQS_table_de_ = (
-                            temp1 - deltaf_coeff_CE_NEOSBQS_table_e0_);
+                    deltaf_coeff_NEOSBQS_table_de_ = (
+                            temp1 - deltaf_coeff_NEOSBQS_table_e0_);
                 }
             } else if (j == 1) {
                 if (i == 0) {
-                    deltaf_coeff_CE_NEOSBQS_table_dnB_ = (
-                            temp2 - deltaf_coeff_CE_NEOSBQS_table_nB0_);
+                    deltaf_coeff_NEOSBQS_table_dnB_ = (
+                            temp2 - deltaf_coeff_NEOSBQS_table_nB0_);
+                }
+            }
+        }
+    }
+    NEoS_table.close();
+}
+
+
+void FSSW::load_14mom_deltaf_NEOSBQS_table(string filepath) {
+    std::string folder_name = "/urqmd";
+    if (afterburner_type_ == AfterburnerType::SMASH) {
+        folder_name = "/smash_box";
+    }
+    std::stringstream filename;
+    filename << filepath << folder_name << "/NEoSBQS_22mom_deltafCoeff.dat";
+    ifstream NEoS_table(filename.str().c_str());
+    if (!NEoS_table) {
+        messager_ << "Can not found file: " << filename.str();
+        messager_.flush("error");
+        exit(1);
+    }
+
+    // define table size
+    deltaf_coeff_NEOSBQS_table_length_e_ = 145;
+    deltaf_coeff_NEOSBQS_table_length_nB_ = 641;
+
+    string dummy;
+    // read header
+    std::getline(NEoS_table, dummy);
+
+    // allocate 2D tables
+    for (int i = 0; i < deltaf_coeff_NEOSBQS_table_length_e_; i++) {
+        std::vector<double> temp(deltaf_coeff_NEOSBQS_table_length_nB_, 0);
+        deltaf_coeff_14mom_NEOSBQS_shear_tb_.push_back(temp);
+        deltaf_coeff_14mom_NEOSBQS_Pi_uu_tb_.push_back(temp);
+        deltaf_coeff_14mom_NEOSBQS_Pi_tr_tb_.push_back(temp);
+        deltaf_coeff_14mom_NEOSBQS_Pi_Bu_tb_.push_back(temp);
+        deltaf_coeff_14mom_NEOSBQS_Pi_Su_tb_.push_back(temp);
+        deltaf_coeff_14mom_NEOSBQS_Pi_Qu_tb_.push_back(temp);
+    }
+
+    // load 2D table
+    double temp1, temp2;
+    for (int i = 0; i < deltaf_coeff_NEOSBQS_table_length_e_; i++) {
+        for (int j = 0; j < deltaf_coeff_NEOSBQS_table_length_nB_; j++) {
+            NEoS_table >> temp1 >> temp2
+                       >> deltaf_coeff_14mom_NEOSBQS_shear_tb_[i][j]
+                       >> deltaf_coeff_14mom_NEOSBQS_Pi_uu_tb_[i][j]
+                       >> deltaf_coeff_14mom_NEOSBQS_Pi_tr_tb_[i][j]
+                       >> deltaf_coeff_14mom_NEOSBQS_Pi_Bu_tb_[i][j]
+                       >> deltaf_coeff_14mom_NEOSBQS_Pi_Su_tb_[i][j]
+                       >> deltaf_coeff_14mom_NEOSBQS_Pi_Qu_tb_[i][j];
+            if (j == 0) {
+                if (i == 0) {
+                    deltaf_coeff_NEOSBQS_table_e0_ = temp1;
+                    deltaf_coeff_NEOSBQS_table_nB0_ = temp2;
+                } else if (i == 1) {
+                    deltaf_coeff_NEOSBQS_table_de_ = (
+                            temp1 - deltaf_coeff_NEOSBQS_table_e0_);
+                }
+            } else if (j == 1) {
+                if (i == 0) {
+                    deltaf_coeff_NEOSBQS_table_dnB_ = (
+                            temp2 - deltaf_coeff_NEOSBQS_table_nB0_);
                 }
             }
         }
@@ -1394,24 +1439,24 @@ void FSSW::getbulkvisCoefficients(const double Tdec, const double mu_B,
 
 void FSSW::getCENEOSBQSCoefficients(const double Edec, const double nB,
                                     std::array<double, 3> &visCoefficients) {
-    int idx_e = static_cast<int>((Edec - deltaf_coeff_CE_NEOSBQS_table_e0_)
-                                 /deltaf_coeff_CE_NEOSBQS_table_de_);
-    int idx_nB = static_cast<int>((nB - deltaf_coeff_CE_NEOSBQS_table_nB0_)
-                                  /deltaf_coeff_CE_NEOSBQS_table_dnB_);
-    double x_fraction = ((Edec - deltaf_coeff_CE_NEOSBQS_table_e0_)
-                         /deltaf_coeff_CE_NEOSBQS_table_de_ - idx_e);
-    double y_fraction = ((nB - deltaf_coeff_CE_NEOSBQS_table_nB0_)
-                         /deltaf_coeff_CE_NEOSBQS_table_dnB_ - idx_nB);
+    int idx_e = static_cast<int>((Edec - deltaf_coeff_NEOSBQS_table_e0_)
+                                 /deltaf_coeff_NEOSBQS_table_de_);
+    int idx_nB = static_cast<int>((nB - deltaf_coeff_NEOSBQS_table_nB0_)
+                                  /deltaf_coeff_NEOSBQS_table_dnB_);
+    double x_fraction = ((Edec - deltaf_coeff_NEOSBQS_table_e0_)
+                         /deltaf_coeff_NEOSBQS_table_de_ - idx_e);
+    double y_fraction = ((nB - deltaf_coeff_NEOSBQS_table_nB0_)
+                         /deltaf_coeff_NEOSBQS_table_dnB_ - idx_nB);
 
     // avoid overflow and underflow
     int idx_e1 = std::max(
-        0, std::min(deltaf_coeff_CE_NEOSBQS_table_length_e_ - 1, idx_e));
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 1, idx_e));
     int idx_nB1 = std::max(
-        0, std::min(deltaf_coeff_CE_NEOSBQS_table_length_nB_ - 1, idx_nB));
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB));
     int idx_e2 = std::max(
-        0, std::min(deltaf_coeff_CE_NEOSBQS_table_length_e_ - 1, idx_e + 1));
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 1, idx_e + 1));
     int idx_nB2 = std::max(
-        0, std::min(deltaf_coeff_CE_NEOSBQS_table_length_nB_ - 1, idx_nB + 1));
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB + 1));
 
     double f1 = deltaf_coeff_CE_NEOSBQS_chat_tb_[idx_e1][idx_nB1];
     double f2 = deltaf_coeff_CE_NEOSBQS_chat_tb_[idx_e1][idx_nB2];

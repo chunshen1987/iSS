@@ -94,15 +94,21 @@ class FSSW {
 
 
     // table parameter for bulk deltaf coefficient CE for NEOS BQS
-    int deltaf_coeff_CE_NEOSBQS_table_length_e_;
-    int deltaf_coeff_CE_NEOSBQS_table_length_nB_;
-    double deltaf_coeff_CE_NEOSBQS_table_e0_;
-    double deltaf_coeff_CE_NEOSBQS_table_nB0_;
-    double deltaf_coeff_CE_NEOSBQS_table_de_;
-    double deltaf_coeff_CE_NEOSBQS_table_dnB_;
-    double **deltaf_coeff_CE_NEOSBQS_chat_tb_;
-    double **deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
-    double **deltaf_coeff_CE_NEOSBQS_etahat_tb_;
+    int deltaf_coeff_NEOSBQS_table_length_e_;
+    int deltaf_coeff_NEOSBQS_table_length_nB_;
+    double deltaf_coeff_NEOSBQS_table_e0_;
+    double deltaf_coeff_NEOSBQS_table_nB0_;
+    double deltaf_coeff_NEOSBQS_table_de_;
+    double deltaf_coeff_NEOSBQS_table_dnB_;
+    std::vector<std::vector<double>> deltaf_coeff_CE_NEOSBQS_chat_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_CE_NEOSBQS_etahat_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_14mom_NEOSBQS_shear_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_14mom_NEOSBQS_Pi_uu_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_14mom_NEOSBQS_Pi_tr_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_14mom_NEOSBQS_Pi_Bu_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_14mom_NEOSBQS_Pi_Su_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_14mom_NEOSBQS_Pi_Qu_tb_;
 
 
     // arrays to speed up computing particle yield
@@ -167,6 +173,7 @@ class FSSW {
 
     void load_bulk_deltaf_14mom_table(string filepath);
     void load_CE_deltaf_NEOSBQS_table(string filepath);
+    void load_14mom_deltaf_NEOSBQS_table(string filepath);
     void load_deltaf_qmu_coeff_table(std::string filename);
     double get_deltaf_qmu_coeff(double T, double muB);
 
