@@ -1458,33 +1458,60 @@ void FSSW::getCENEOSBQSCoefficients(const double Edec, const double nB,
     int idx_nB2 = std::max(
         0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB + 1));
 
-    double f1 = deltaf_coeff_CE_NEOSBQS_chat_tb_[idx_e1][idx_nB1];
-    double f2 = deltaf_coeff_CE_NEOSBQS_chat_tb_[idx_e1][idx_nB2];
-    double f3 = deltaf_coeff_CE_NEOSBQS_chat_tb_[idx_e2][idx_nB2];
-    double f4 = deltaf_coeff_CE_NEOSBQS_chat_tb_[idx_e2][idx_nB1];
-    double chat = (  f1*(1. - x_fraction)*(1. - y_fraction)
-                   + f2*(1. - x_fraction)*y_fraction
-                   + f3*x_fraction*y_fraction
-                   + f4*x_fraction*(1. - y_fraction));
-    f1 = deltaf_coeff_CE_NEOSBQS_zetahat_tb_[idx_e1][idx_nB1];
-    f2 = deltaf_coeff_CE_NEOSBQS_zetahat_tb_[idx_e1][idx_nB2];
-    f3 = deltaf_coeff_CE_NEOSBQS_zetahat_tb_[idx_e2][idx_nB2];
-    f4 = deltaf_coeff_CE_NEOSBQS_zetahat_tb_[idx_e2][idx_nB1];
-    double zetahat = (  f1*(1. - x_fraction)*(1. - y_fraction)
-                      + f2*(1. - x_fraction)*y_fraction
-                      + f3*x_fraction*y_fraction
-                      + f4*x_fraction*(1. - y_fraction));
-    f1 = deltaf_coeff_CE_NEOSBQS_etahat_tb_[idx_e1][idx_nB1];
-    f2 = deltaf_coeff_CE_NEOSBQS_etahat_tb_[idx_e1][idx_nB2];
-    f3 = deltaf_coeff_CE_NEOSBQS_etahat_tb_[idx_e2][idx_nB2];
-    f4 = deltaf_coeff_CE_NEOSBQS_etahat_tb_[idx_e2][idx_nB1];
-    double etahat = (  f1*(1. - x_fraction)*(1. - y_fraction)
-                      + f2*(1. - x_fraction)*y_fraction
-                      + f3*x_fraction*y_fraction
-                      + f4*x_fraction*(1. - y_fraction));
+    double chat = bilinearInterp(deltaf_coeff_CE_NEOSBQS_chat_tb_,
+                                 idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                 x_fraction, y_fraction);
+    double zetahat = bilinearInterp(deltaf_coeff_CE_NEOSBQS_zetahat_tb_,
+                                    idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                    x_fraction, y_fraction);
+    double etahat = bilinearInterp(deltaf_coeff_CE_NEOSBQS_etahat_tb_,
+                                   idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                   x_fraction, y_fraction);
     visCoefficients[0] = 1./zetahat;
     visCoefficients[1] = 1./3. - chat;
     visCoefficients[2] = etahat;
+}
+
+
+void FSSW::get14momNEOSBQSCoefficients(const double Edec, const double nB,
+                                       std::array<double, 6> &visCoefficients) {
+    int idx_e = static_cast<int>((Edec - deltaf_coeff_NEOSBQS_table_e0_)
+                                 /deltaf_coeff_NEOSBQS_table_de_);
+    int idx_nB = static_cast<int>((nB - deltaf_coeff_NEOSBQS_table_nB0_)
+                                  /deltaf_coeff_NEOSBQS_table_dnB_);
+    double x_fraction = ((Edec - deltaf_coeff_NEOSBQS_table_e0_)
+                         /deltaf_coeff_NEOSBQS_table_de_ - idx_e);
+    double y_fraction = ((nB - deltaf_coeff_NEOSBQS_table_nB0_)
+                         /deltaf_coeff_NEOSBQS_table_dnB_ - idx_nB);
+
+    // avoid overflow and underflow
+    int idx_e1 = std::max(
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 1, idx_e));
+    int idx_nB1 = std::max(
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB));
+    int idx_e2 = std::max(
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 1, idx_e + 1));
+    int idx_nB2 = std::max(
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB + 1));
+
+    visCoefficients[0] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_shear_tb_,
+                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                        x_fraction, y_fraction);
+    visCoefficients[1] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_uu_tb_,
+                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                        x_fraction, y_fraction);
+    visCoefficients[2] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_tr_tb_,
+                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                        x_fraction, y_fraction);
+    visCoefficients[3] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_Bu_tb_,
+                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                        x_fraction, y_fraction);
+    visCoefficients[4] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_Su_tb_,
+                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                        x_fraction, y_fraction);
+    visCoefficients[5] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_Qu_tb_,
+                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                        x_fraction, y_fraction);
 }
 
 
@@ -1937,4 +1964,19 @@ void FSSW::boost_vector_back_to_lab_frame(
     p_lab[0] = p_LRF[0]*umu[0] + p_dot_u;
     for (int i = 1; i < 4; i++)
         p_lab[i] = p_LRF[i] + (p_dot_u/(umu[0] + 1) + p_LRF[0])*umu[i];
+}
+
+
+double FSSW::bilinearInterp(std::vector<std::vector<double>>&mat,
+                            int idx_e1, int idx_e2, int idx_nB1, int idx_nB2,
+                            double x_fraction, double y_fraction) {
+    double f1 = mat[idx_e1][idx_nB1];
+    double f2 = mat[idx_e1][idx_nB2];
+    double f3 = mat[idx_e2][idx_nB2];
+    double f4 = mat[idx_e2][idx_nB1];
+    double f = (  f1*(1. - x_fraction)*(1. - y_fraction)
+                + f2*(1. - x_fraction)*y_fraction
+                + f3*x_fraction*y_fraction
+                + f4*x_fraction*(1. - y_fraction));
+    return(f);
 }

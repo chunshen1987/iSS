@@ -170,6 +170,8 @@ class FSSW {
                                 std::array<double, 3> &bulkvisCoefficients);
     void getCENEOSBQSCoefficients(const double Edec, const double nB,
                                   std::array<double, 3> &visCoefficients);
+    void get14momNEOSBQSCoefficients(const double Edec, const double nB,
+                                     std::array<double, 6> &visCoefficients);
 
     void load_bulk_deltaf_14mom_table(string filepath);
     void load_CE_deltaf_NEOSBQS_table(string filepath);
@@ -215,6 +217,9 @@ class FSSW {
     void boost_vector_back_to_lab_frame(iSS_data::Vec4 &p_LRF,
                                         iSS_data::Vec4 &p_lab,
                                         iSS_data::Vec4 &umu) const;
+    double bilinearInterp(std::vector<std::vector<double>>&mat,
+                          int idx_e1, int idx_e2, int idx_nB1, int idx_nB2,
+                          double x_fraction, double y_fraction);
 };
 
 #endif  // SRC_FSSW_H_
