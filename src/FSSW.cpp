@@ -766,7 +766,7 @@ void FSSW::calculate_dN_analytic(
             } else if (bulk_deltaf_kind_ == 11 || bulk_deltaf_kind_ == 20) {
                 // 14-moment/22-moment
                 double K_3 = get_special_function_K3(arg);
-                deltaN_bulk_term1 += theta*fugacity*(K_2)/n;  // mass
+                deltaN_bulk_term1 += theta*fugacity*K_2;  // mass
                 deltaN_bulk_term2 += theta*fugacity*(mass*beta*K_1 + 3*K_2/n);  // E
                 deltaN_bulk_term3 += theta*fugacity*(mass*beta*K_2 + 3*K_3/n);  // E^2
             }
