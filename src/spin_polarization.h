@@ -19,7 +19,7 @@ class SpinPolarization {
     std::vector<std::string> vorticity_typenames_;
     std::vector<std::string> thermal_shear_typenames_;
     std::vector<std::string> rapidity_typenames_;
-    const ParameterReader &paraRdr_;
+    ParameterReader &paraRdr_;
 
     const int NpT_  = 30;
     const int Nphi_ = 48;
