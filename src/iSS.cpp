@@ -49,14 +49,16 @@ int iSS::shell() {
         compute_spin_polarization();
     }
 
-    set_random_seed();
-    status = generate_samples();
-    if (status != 0) {
-        messager << "Some errors happened in generating particle samples";
-        messager.flush("error");
-        exit(-1);
+    if (paraRdr_ptr->getVal("MC_sampling") != 0) {
+        set_random_seed();
+        status = generate_samples();
+        if (status != 0) {
+            messager << "Some errors happened in generating particle samples";
+            messager.flush("error");
+            exit(-1);
+        }
+        return(0);
     }
-    return(0);
 }
 
 
