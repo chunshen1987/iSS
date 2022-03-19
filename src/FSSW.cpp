@@ -419,7 +419,7 @@ void FSSW::combine_samples_to_OSCAR() {
         }
 
         // big loop for generating OSCAR
-        if (AMOUNT_OF_OUTPUT > 0) print_progressbar(-1);
+        if (AMOUNT_OF_OUTPUT > 7) print_progressbar(-1);
         for (long sample_idx=1; sample_idx<=number_of_repeated_sampling; 
              sample_idx++) {
             // read-in number of particles for each species
@@ -447,7 +447,7 @@ void FSSW::combine_samples_to_OSCAR() {
                     ipart ++;
                 }
             }
-            if (AMOUNT_OF_OUTPUT > 0) {
+            if (AMOUNT_OF_OUTPUT > 7) {
                 print_progressbar(static_cast<double>(
                             sample_idx/number_of_repeated_sampling));
             }
@@ -703,9 +703,11 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
     }
 
     sw.toc();
-    cout << endl
-         << " -- calculate_dN_dxtdy_for_one_particle_species finished in "
-         << sw.takeTime() << " seconds." << endl;
+    if (AMOUNT_OF_OUTPUT > 2) {
+        cout << endl
+             << " -- calculate_dN_dxtdy_for_one_particle_species finished in "
+             << sw.takeTime() << " seconds." << endl;
+    }
 }
 
 
@@ -957,7 +959,7 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
         Stopwatch sw;
         sw.tic();
 
-        if (AMOUNT_OF_OUTPUT > 0) {
+        if (AMOUNT_OF_OUTPUT > 7) {
             print_progressbar(-1);
         }
 
@@ -1042,17 +1044,19 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 }
             }
 
-            if (AMOUNT_OF_OUTPUT>0) {
+            if (AMOUNT_OF_OUTPUT > 7) {
                 print_progressbar(
                         static_cast<double>(repeated_sampling_idx)
                                             /number_of_repeated_sampling);
             }
         }
-        if (AMOUNT_OF_OUTPUT > 0) print_progressbar(1);
+        if (AMOUNT_OF_OUTPUT > 7) print_progressbar(1);
 
         sw.toc();
-        cout << endl << "Sampling finished in " 
-             << sw.takeTime() << " seconds." << endl;
+        if (AMOUNT_OF_OUTPUT > 2) {
+            cout << endl << "Sampling finished in " 
+                 << sw.takeTime() << " seconds." << endl;
+        }
 
     }   // n; particle loop
 
