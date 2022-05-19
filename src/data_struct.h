@@ -8,7 +8,7 @@
 namespace iSS_data {
     const double hbarC=0.197327053;  //GeV*fm
 
-    typedef std::array<double, 4> Vec4;
+    typedef std::array<float, 4> Vec4;
     typedef std::array<double, 10> ViscousVec;
 
     const int NUMBER_OF_LINES_TO_WRITE = 100000;
@@ -61,6 +61,19 @@ typedef struct {
     float qmu0, qmu1, qmu2, qmu3;
     std::vector<float> particle_mu_PCE;
 } FO_surf;
+
+
+typedef struct {
+    float tau, xpt, ypt, eta;
+    iSS_data::Vec4 da_mu_LRF;
+    iSS_data::Vec4 u_tz;
+    float Edec, Tdec, Pdec;
+    float Bn, muB, muS, muQ;
+    float bulkPi;
+    float piLRF_xx, piLRF_xy, piLRF_xz, piLRF_yy, piLRF_yz;
+    float qmuLRF_x, qmuLRF_y, qmuLRF_z;
+    std::vector<float> particle_mu_PCE;
+} FO_surf_LRF;
 
 
 struct iSS_Hadron {

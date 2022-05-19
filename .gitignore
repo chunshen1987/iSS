@@ -2,8 +2,11 @@
 *.~
 .DS_Store
 results/
-test/
+tests/*.e
 iSS.e
 *.DAT
 build/*
 lib/*
+particle_samples*.gz
+particle_samples*.bin
+particle_samples*.dat

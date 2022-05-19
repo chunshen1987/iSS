@@ -1,0 +1,6 @@
+EOS_to_use  91
+Include_Bulk_Visc_Yes_1_No_0  1
+Include_Rhob_Yes_1_No_0  0
+turn_on_baryon_diffusion  0
+freeze_surface_in_binary  0
+EndOfData

@@ -1,6 +1,6 @@
-hydro_mode = 2           # mode for reading in freeze out information 
+hydro_mode = 1           # mode for reading in freeze out information
                          # 0: reads outputs from VISH2+1
-                         # 1: reads outputs from MUSIC assuming 
+                         # 1: reads outputs from MUSIC assuming
                          #    boost-invariant
                          # 2: reads outputs from MUSIC full (3+1)-d
 
@@ -13,13 +13,16 @@ turn_on_rhob = 0         # read in net baryon chemical potential
 turn_on_diff = 0         # read in baryon diffusion current
 
 include_deltaf_shear = 1      # include delta f contribution from shear
-include_deltaf_bulk = 0       # include delta f contribution from bulk
+include_deltaf_bulk = 1       # include delta f contribution from bulk
 include_deltaf_diffusion = 0  # include delta f contribution from diffusion
 
-bulk_deltaf_kind = 1     # 0 : 14-momentum approximation
-                         # 1 : relaxation time approximation
+bulk_deltaf_kind = 1     # 0 : 14-moment approximation (s95p-v0-PCE)
+                         # 1 : relaxation time approximation [default]
+                         # 11: OSU 14-moment
+                         # 20: WSU 22-moment (NEoS-BQS) shear and bulk
+                         # 21: WSU Chapman-Enskog (NEoS-BQS) shear and bulk
 
-restrict_deltaf = 0      # flag to apply restriction on the size of delta f
+restrict_deltaf = 1      # flag to apply restriction on the size of delta f
 deltaf_max_ratio = 1.0   # the maximum allowed size of delta f w.r.t f0
 
 quantum_statistics = 1   # include quantum statistics or not (1: yes, 0: no)
@@ -27,10 +30,13 @@ quantum_statistics = 1   # include quantum statistics or not (1: yes, 0: no)
 output_samples_into_files = 0  # output particle samples into individual files
                                # for individual particle species
 store_samples_in_memory = 1  # flag to store particle samples in memory
-use_OSCAR_format = 1         # output results in OSCAR format
+use_OSCAR_format = 0         # output results in OSCAR format
 use_gzip_format = 0          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
+use_binary_format = 1        # output results in binary format
 perform_decays = 0           # flag to perform resonance decay
+perform_checks = 0           # perform tests for particle samples
+include_spectators = 1       # include spectators (filename: spectators.dat)
 
 local_charge_conservation = 0  # flag to impose local charge conservation
 
@@ -38,13 +44,14 @@ calculate_vn = 0         # 1/0: whether to calculate the
                          # dN/(pt dpt dphi dy) and v_n flows 
                          # (they not required for MC-sampling)
 
-MC_sampling = 2          # 0/1/2/3: whether to perform Monte-Carlo sampling
+MC_sampling = 4          # 0/1/2/3: whether to perform Monte-Carlo sampling
                          # (not required for spectra calculation). 
-                         # 0: No sampling. 
-                         # 1: use dN_dxtdetady to sample. 
-                         # 2: use dN_dxtdy to sample. 
+                         # 0: No sampling.
+                         # 1: use dN_dxtdetady to sample.
+                         # 2: use dN_dxtdy to sample.
                          # 3: use dN_pTdpTdphidy to sample 
-                         #    (overwrites calculate_vn to be 1). 
+                         #    (overwrites calculate_vn to be 1).
+                         # 4: use FSSW (fast)
                          # Since this parameter controls whether to 
                          # calculate certain arrays, it controls whether to 
                          # perform other related calculations (see below).
@@ -133,7 +140,7 @@ calculate_vn_to_order = 9              # v_n's are calculated up to this order
 sample_upto_desired_particle_number = 0  # flag to run sampling until desired
                                          # particle numbers is reached
 number_of_particles_needed = 100000      # number of hadrons to sample
-number_of_repeated_sampling = 10      # How many times should the sampling be 
+number_of_repeated_sampling = 1000     # How many times should the sampling be 
                                        # repeated.
 
 sample_pT_up_to = -1                   # Up to this value will pT be sampled; 
