@@ -110,21 +110,6 @@ int iSS::read_in_FO_surface() {
 }
 
 
-int iSS::read_in_FO_surface(std::vector<FO_surf> &surf_vec) {
-    read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
-                                particle_table_path_);
-    FOsurf_ptr = surf_vec;
-    freeze_out_data.regulate_surface_cells(FOsurf_ptr);
-    messager << "total number of cells: " <<  FOsurf_ptr.size();
-    messager.flush("info");
-    afterburner_type_ = freeze_out_data.get_afterburner_type();
-    freeze_out_data.read_in_chemical_potentials(FOsurf_ptr, particle);
-    flag_PCE_ = freeze_out_data.get_flag_PCE();
-    messager.info(" -- Read in data finished!");
-    return(0);
-}
-
-
 void iSS::set_random_seed() {
     randomSeed_  = paraRdr_ptr->getVal("randomSeed");
     ran_gen_ptr_ = std::shared_ptr<RandomUtil::Random>(

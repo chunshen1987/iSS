@@ -54,7 +54,6 @@ class iSS {
 
     int shell();
     int read_in_FO_surface();
-    int read_in_FO_surface(std::vector<FO_surf> &surf_vec);
     int generate_samples();
 
     int get_number_of_sampled_events() {
