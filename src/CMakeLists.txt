@@ -18,6 +18,7 @@ set (SOURCES
     FSSW.cpp
     spin_polarization.cpp
     Histogram.cpp
+    Spectators.cpp
 )
 
 add_library(${lib_name} SHARED ${SOURCES})
