@@ -3,7 +3,7 @@
 *.swp
 .DS_Store
 results/
-test/
+tests/*.e
 iSS.e
 *.DAT
 build/*

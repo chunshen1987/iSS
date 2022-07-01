@@ -25,6 +25,7 @@
 class EmissionFunctionArray {
  private:
     int hydro_mode;   // switch for (2+1)-d or (3+1)-d hypersurface
+    bool boost_invariant_;
     int flag_PCE_;
     int flag_restrict_deltaf;
     double deltaf_max_ratio;

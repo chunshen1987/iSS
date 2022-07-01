@@ -71,13 +71,15 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     USE_BINARY_FORMAT        = paraRdr->getVal("use_binary_format");
     INCLUDE_DELTAF           = paraRdr->getVal("include_deltaf_shear");
     INCLUDE_BULK_DELTAF      = paraRdr->getVal("include_deltaf_bulk");
-    bulk_deltaf_kind         = paraRdr->getVal("bulk_deltaf_kind");
+    bulk_deltaf_kind_         = paraRdr->getVal("bulk_deltaf_kind");
     INCLUDE_DIFFUSION_DELTAF = paraRdr->getVal("include_deltaf_diffusion");
 
-    if (bulk_deltaf_kind == 21) {
-        deltaf_kind_ = 1;
+    if (bulk_deltaf_kind_ == 21) {
+        NEoS_deltaf_kind_ = 1;
+    } else if (bulk_deltaf_kind_ == 20) {
+        NEoS_deltaf_kind_ = 0;
     } else {
-        deltaf_kind_ = 0;
+        NEoS_deltaf_kind_ = -1;
     }
 
     local_charge_conservation = paraRdr->getVal("local_charge_conservation");
@@ -89,10 +91,24 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     flag_store_samples_in_memory = 1;
     Hadron_list = new vector< vector<iSS_Hadron>* >;
 
-    flag_perform_decays = paraRdr->getVal("perform_decays");
-    if (flag_perform_decays == 1) {
-        decayer_ptr = new particle_decay(ran_gen_ptr, afterburner_type_,
-                                         table_path_);
+    if (paraRdr->getVal("perform_decays") == 1) {
+        flag_perform_decays_ = true;
+        decayer_ptr_ = std::unique_ptr<particle_decay>(new particle_decay(
+                                ran_gen_ptr, afterburner_type_, table_path_));
+    } else {
+        flag_perform_decays_ = false;
+    }
+
+    int flag_include_spectators = paraRdr->getVal("include_spectators", 0);
+    if (flag_include_spectators != 0) {
+        flag_spectators_ = true;
+        spectators_ptr_ = std::unique_ptr<Spectators>(new Spectators(
+                                                flag_include_spectators));
+        std::ostringstream spectatorFilename;
+        spectatorFilename << path_ << "/spectators.dat";
+        spectators_ptr_->readInSpectatorsFromFile(spectatorFilename.str());
+    } else {
+        flag_spectators_ = false;
     }
 
     // deal with chosen_particle_xxx tables
@@ -119,7 +135,7 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
         messager_ << "not all chosen particles are "
                  << "in the pdg particle list!";
         messager_.flush("warning");
-        messager_ << "There are " << number_of_chosen_particles - current_idx 
+        messager_ << "There are " << number_of_chosen_particles - current_idx
                  << " particles can not be found in the pdg particle list!";
         messager_.flush("warning");
         messager_ << "Their monte carlo numbers are:";
@@ -144,8 +160,8 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
         }
     }
 
-    OSCAR_header_filename = table_path_ + "/OSCAR_header.txt";
-    OSCAR_output_filename = "OSCAR.DAT";
+    OSCAR_header_filename_ = table_path_ + "/OSCAR_header.txt";
+    OSCAR_output_filename_ = "OSCAR.DAT";
 
     dN_dxtdy_for_one_particle_species.resize(FO_length, 0.);
 
@@ -156,17 +172,19 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
 
     // arrays for bulk delta f coefficients
     if (INCLUDE_BULK_DELTAF == 1) {
-        if (bulk_deltaf_kind == 0) {
-            bulkdf_coeff = new Table (
+        if (bulk_deltaf_kind_ == 0) {
+            bulkdf_coeff_ = std::unique_ptr<Table> (new Table (
                 table_path_
-                + "/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat");
-        } else if (bulk_deltaf_kind == 11) {
+                + "/deltaf_tables/BulkDf_Coefficients_Hadrons_s95p-v0-PCE.dat"));
+        } else if (bulk_deltaf_kind_ == 11) {
             load_bulk_deltaf_14mom_table(table_path_ + "/deltaf_tables");
         }
     }
 
-    if (deltaf_kind_ == 1) {
+    if (NEoS_deltaf_kind_ == 1) {
         load_CE_deltaf_NEOSBQS_table(table_path_ + "/deltaf_tables");
+    } else if (NEoS_deltaf_kind_ == 0) {
+        load_22mom_deltaf_NEOSBQS_table(table_path_ + "/deltaf_tables");
     }
 
     // load table for diffusion delta f coeffient
@@ -186,9 +204,7 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
 //***************************************************************************
 FSSW::~FSSW() {
     if (INCLUDE_BULK_DELTAF == 1) {
-        if (bulk_deltaf_kind == 0) {
-            delete bulkdf_coeff;
-        } else if (bulk_deltaf_kind == 11) {
+        if (bulk_deltaf_kind_ == 11) {
             for (int i = 0; i < deltaf_bulk_coeff_14mom_table_length_T_; i++) {
                 delete[] deltaf_bulk_coeff_14mom_c0_tb_[i];
                 delete[] deltaf_bulk_coeff_14mom_c1_tb_[i];
@@ -198,17 +214,6 @@ FSSW::~FSSW() {
             delete deltaf_bulk_coeff_14mom_c1_tb_;
             delete deltaf_bulk_coeff_14mom_c2_tb_;
         }
-    }
-
-    if (deltaf_kind_ == 1) {
-        for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
-            delete[] deltaf_coeff_CE_NEOSBQS_chat_tb_[i];
-            delete[] deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i];
-            delete[] deltaf_coeff_CE_NEOSBQS_etahat_tb_[i];
-        }
-        delete deltaf_coeff_CE_NEOSBQS_chat_tb_;
-        delete deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
-        delete deltaf_coeff_CE_NEOSBQS_etahat_tb_;
     }
 
     if (INCLUDE_DIFFUSION_DELTAF == 1) {
@@ -236,10 +241,6 @@ FSSW::~FSSW() {
         (*Hadron_list)[i]->clear();
     }
     Hadron_list->clear();
-
-    if (flag_perform_decays == 1) {
-        delete decayer_ptr;
-    }
 }
 //***************************************************************************
 
@@ -341,10 +342,11 @@ bool FSSW::particles_are_the_same(int idx1, int idx2) {
 //***************************************************************************
 void FSSW::shell() {
     sample_using_dN_dxtdy_4all_particles_conventional();
-    if (flag_perform_decays == 1
-            && afterburner_type_ != AfterburnerType::SMASH) {
+    if (flag_perform_decays_ && afterburner_type_ != AfterburnerType::SMASH) {
         perform_resonance_feed_down(Hadron_list);
     }
+    if (flag_spectators_)
+        addSpectatorsToHadronList();
     if (USE_OSCAR_FORMAT) {
         combine_samples_to_OSCAR();
     } else if (USE_GZIP_FORMAT) {
@@ -364,15 +366,15 @@ void FSSW::combine_samples_to_OSCAR() {
     char line_buffer[500];
 
     // open file for output
-    remove(OSCAR_output_filename.c_str());
-    ofstream oscar(OSCAR_output_filename.c_str());
+    remove(OSCAR_output_filename_.c_str());
+    ofstream oscar(OSCAR_output_filename_.c_str());
 
     // write header first
-    ifstream header(OSCAR_header_filename.c_str());
+    ifstream header(OSCAR_header_filename_.c_str());
     if (!header.is_open()) {
         cout << endl 
             << "combine_samples_to_OSCAR error: OSCAR header file " 
-            << OSCAR_header_filename.c_str() << " not found." << endl;
+            << OSCAR_header_filename_.c_str() << " not found." << endl;
         exit(-1);
     }
     while (true) {
@@ -417,7 +419,7 @@ void FSSW::combine_samples_to_OSCAR() {
         }
 
         // big loop for generating OSCAR
-        if (AMOUNT_OF_OUTPUT > 0) print_progressbar(-1);
+        if (AMOUNT_OF_OUTPUT > 7) print_progressbar(-1);
         for (long sample_idx=1; sample_idx<=number_of_repeated_sampling; 
              sample_idx++) {
             // read-in number of particles for each species
@@ -428,8 +430,8 @@ void FSSW::combine_samples_to_OSCAR() {
                 total_number_of_particles += number_of_particles[m];
             }
             // sub-header for each event
-            oscar << setw(10) << sample_idx << "  " 
-                  << setw(10) << total_number_of_particles << "  " 
+            oscar << setw(10) << sample_idx << "  "
+                  << setw(10) << total_number_of_particles << "  "
                   << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
 
             // now copy each line from samples file to OSCAR file
@@ -438,14 +440,14 @@ void FSSW::combine_samples_to_OSCAR() {
                 int monval = (
                         particles[chosen_particles_sampling_table[m]].monval);
                 for (long ii = 1; ii <= number_of_particles[m]; ii++) {
-                    oscar << setw(10) << ipart << "  " 
+                    oscar << setw(10) << ipart << "  "
                           << setw(10) << monval << "  ";
                     samples[m]->getline(line_buffer, 500);
                     oscar << line_buffer << endl;
                     ipart ++;
                 }
             }
-            if (AMOUNT_OF_OUTPUT > 0) {
+            if (AMOUNT_OF_OUTPUT > 7) {
                 print_progressbar(static_cast<double>(
                             sample_idx/number_of_repeated_sampling));
             }
@@ -455,15 +457,15 @@ void FSSW::combine_samples_to_OSCAR() {
             int total_number_of_particles = (*Hadron_list)[iev]->size();
             if (total_number_of_particles > 0) {
                 // sub-header for each event
-                oscar << setw(10) << iev << "  " 
-                      << setw(10) << total_number_of_particles << "  " 
+                oscar << setw(10) << iev << "  "
+                      << setw(10) << total_number_of_particles << "  "
                       << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
                 for (int ipart = 0; ipart < total_number_of_particles;
                      ipart++) {
                     oscar << setw(10) << ipart + 1 << "  "
                           << setw(10) << (*(*Hadron_list)[iev])[ipart].pid
                           << "  ";
-                    sprintf(line_buffer, 
+                    sprintf(line_buffer,
                             "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e",
                             (*(*Hadron_list)[iev])[ipart].px,
                             (*(*Hadron_list)[iev])[ipart].py,
@@ -574,7 +576,7 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
     Stopwatch sw;
     sw.tic();
 
-    std::array<double, 3> bulkvisCoefficients = {0.0};
+    std::vector<double> bulkvisCoefficients;
 
     // now loop over all freeze-out cells and particles
     const double unit_factor = 1.0/pow(hbarC, 3);  // unit: convert to unitless
@@ -589,18 +591,22 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
 
         // bulk delta f contribution
         double bulkPi = 0.0;
-        if (deltaf_kind_ == 1) {
+        if (NEoS_deltaf_kind_ == 1) {
             getCENEOSBQSCoefficients(surf->Edec, surf->Bn,
                                      bulkvisCoefficients);
+        } else if (NEoS_deltaf_kind_ == 0) {
+            get22momNEOSBQSCoefficients(surf->Edec, surf->Bn,
+                                        bulkvisCoefficients);
         }
+
         if (INCLUDE_BULK_DELTAF == 1) {
-            if (bulk_deltaf_kind == 21) {
+            if (bulk_deltaf_kind_ == 21 || bulk_deltaf_kind_ == 20) {
                 bulkPi = surf->bulkPi;    // GeV/fm^3
-            } else if (bulk_deltaf_kind == 11) {
+            } else if (bulk_deltaf_kind_ == 11) {
                 bulkPi = surf->bulkPi;    // GeV/fm^3
                 getbulkvisCoefficients(temp, mu_B, bulkvisCoefficients);
             } else {
-                if (bulk_deltaf_kind == 0) {
+                if (bulk_deltaf_kind_ == 0) {
                     bulkPi = surf->bulkPi;        // unit in GeV/fm^3
                 } else {
                     bulkPi = surf->bulkPi/hbarC;  // unit in fm^-4
@@ -653,22 +659,33 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
 
         double deltaN_bulk = 0.0;
         if (INCLUDE_BULK_DELTAF == 1) {
-            if (bulk_deltaf_kind == 1) {
+            if (bulk_deltaf_kind_ == 1) {
                 deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u
                                *(- bulkPi*bulkvisCoefficients[0])
                                *(- bulkvisCoefficients[1]*results_ptr[1]
                                  + results_ptr[2]));
-            } else if (bulk_deltaf_kind == 11) {
+            } else if (bulk_deltaf_kind_ == 11) {
                 deltaN_bulk = (
                     unit_factor*prefactor*dsigma_dot_u*bulkPi
                     *(  results_ptr[1]*mass*mass*bulkvisCoefficients[0]
                       + results_ptr[2]*baryon*bulkvisCoefficients[1]
                       + results_ptr[3]*bulkvisCoefficients[2]));
-            } else if (bulk_deltaf_kind == 21) {
+            } else if (bulk_deltaf_kind_ == 21) {
+                // WSU Chapman-Enskog for NEoS BQS
                 deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u
                                *(- bulkPi*bulkvisCoefficients[0])
                                *(- bulkvisCoefficients[1]*results_ptr[1]
                                  + results_ptr[2]));
+            } else if (bulk_deltaf_kind_ == 20) {
+                // WSU 22-mom for NEoS BQS
+                deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u*bulkPi
+                    *(  results_ptr[1]*mass*mass*bulkvisCoefficients[2]
+                      + results_ptr[2]*(  baryon*bulkvisCoefficients[3]
+                                        + strange*bulkvisCoefficients[4]
+                                        + charge*bulkvisCoefficients[5])
+                      + results_ptr[3]*(  bulkvisCoefficients[1]
+                                        - bulkvisCoefficients[2]))
+                );
             }
         }
 
@@ -686,9 +703,11 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
     }
 
     sw.toc();
-    cout << endl
-         << " -- calculate_dN_dxtdy_for_one_particle_species finished in "
-         << sw.takeTime() << " seconds." << endl;
+    if (AMOUNT_OF_OUTPUT > 2) {
+        cout << endl
+             << " -- calculate_dN_dxtdy_for_one_particle_species finished in "
+             << sw.takeTime() << " seconds." << endl;
+    }
 }
 
 
@@ -742,16 +761,16 @@ void FSSW::calculate_dN_analytic(
 
         if (INCLUDE_BULK_DELTAF == 1) {
             double K_1 = get_special_function_K1(arg);
-            if (bulk_deltaf_kind == 1 || bulk_deltaf_kind == 21) {
-                // CE
+            if (bulk_deltaf_kind_ == 1 || bulk_deltaf_kind_ == 21) {
+                // Chapman-Enskog
                 deltaN_bulk_term1 += theta*fugacity*(mass*beta*K_1 + 3*K_2/n);
                 deltaN_bulk_term2 += theta*fugacity*K_1;
-            } else if (bulk_deltaf_kind == 11) {
-                // 14 moments
+            } else if (bulk_deltaf_kind_ == 11 || bulk_deltaf_kind_ == 20) {
+                // 14-moment/22-moment
                 double K_3 = get_special_function_K3(arg);
-                deltaN_bulk_term1 += theta*fugacity*(K_2)/n;  // C_T
-                deltaN_bulk_term2 += theta*fugacity*(mass*beta*K_1 + 3*K_2/n);  // C_B
-                deltaN_bulk_term3 += theta*fugacity*(mass*beta*K_2 + 3*K_3/n);  // C_E
+                deltaN_bulk_term1 += theta*fugacity*K_2;  // mass
+                deltaN_bulk_term2 += theta*fugacity*(mass*beta*K_1 + 3*K_2/n);  // E
+                deltaN_bulk_term3 += theta*fugacity*(mass*beta*K_2 + 3*K_3/n);  // E^2
             }
         }
 
@@ -792,11 +811,13 @@ void FSSW::calculate_dN_analytic(
 
     // contribution from bulk viscosity
     if (INCLUDE_BULK_DELTAF == 1) {
-        if (bulk_deltaf_kind == 1 || bulk_deltaf_kind == 21) {
+        if (bulk_deltaf_kind_ == 1 || bulk_deltaf_kind_ == 21) {
+            // Chapman-Enskog
             deltaN_bulk_term1 = mass*mass/beta*deltaN_bulk_term1;
             deltaN_bulk_term2 = mass*mass*mass/3.*deltaN_bulk_term2;
             deltaN_bulk_term3 = 0.0;
-        } else if (bulk_deltaf_kind == 11) {
+        } else if (bulk_deltaf_kind_ == 11 || bulk_deltaf_kind_ == 20) {
+            // 14-moment/22-moment
             deltaN_bulk_term1 = mass*mass/beta*deltaN_bulk_term1;
             deltaN_bulk_term2 = mass*mass/(beta*beta)*deltaN_bulk_term2;
             deltaN_bulk_term3 = mass*mass*mass/(beta*beta)*deltaN_bulk_term3;
@@ -854,7 +875,7 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
     sw_total.tic();
     messager_.info(" Function sample_using_dN_dxtdy_4all_particles started...");
 
-    std::array<double, 3> bulkvisCoefficients = {0.0};
+    std::vector<double> bulkvisCoefficients;
 
     // control variables
     int sampling_model    = paraRdr->getVal("dN_dy_sampling_model");
@@ -938,7 +959,7 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
         Stopwatch sw;
         sw.tic();
 
-        if (AMOUNT_OF_OUTPUT > 0) {
+        if (AMOUNT_OF_OUTPUT > 7) {
             print_progressbar(-1);
         }
 
@@ -954,17 +975,25 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 long FO_idx = rand1D.rand();
                 const FO_surf_LRF *surf = &FOsurf_ptr[FO_idx];
 
-                if (deltaf_kind_ == 1) {
+                if (NEoS_deltaf_kind_ == 1) {
                     getCENEOSBQSCoefficients(surf->Edec, surf->Bn,
                                              bulkvisCoefficients);
+                } else if (NEoS_deltaf_kind_ == 0) {
+                    get22momNEOSBQSCoefficients(surf->Edec, surf->Bn,
+                                                bulkvisCoefficients);
                 }
+
                 if (INCLUDE_BULK_DELTAF == 1) {
-                    if (bulk_deltaf_kind == 11) {
-                        getbulkvisCoefficients(surf->Tdec, surf->muB,
-                                               bulkvisCoefficients);
-                    } else if (bulk_deltaf_kind != 21) {
-                        getbulkvisCoefficients(surf->Tdec,
-                                               bulkvisCoefficients);
+                    if (NEoS_deltaf_kind_ == -1) {
+                        if (bulk_deltaf_kind_ == 11) {
+                            // OSU 14-moment
+                            getbulkvisCoefficients(surf->Tdec, surf->muB,
+                                                   bulkvisCoefficients);
+                        } else {
+                            // bulk delta f at mu_B = 0
+                            getbulkvisCoefficients(surf->Tdec,
+                                                   bulkvisCoefficients);
+                        }
                     }
                 }
 
@@ -1015,17 +1044,19 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 }
             }
 
-            if (AMOUNT_OF_OUTPUT>0) {
+            if (AMOUNT_OF_OUTPUT > 7) {
                 print_progressbar(
                         static_cast<double>(repeated_sampling_idx)
                                             /number_of_repeated_sampling);
             }
         }
-        if (AMOUNT_OF_OUTPUT > 0) print_progressbar(1);
+        if (AMOUNT_OF_OUTPUT > 7) print_progressbar(1);
 
         sw.toc();
-        cout << endl << "Sampling finished in " 
-             << sw.takeTime() << " seconds." << endl;
+        if (AMOUNT_OF_OUTPUT > 2) {
+            cout << endl << "Sampling finished in " 
+                 << sw.takeTime() << " seconds." << endl;
+        }
 
     }   // n; particle loop
 
@@ -1037,28 +1068,29 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
 
 
 void FSSW::getbulkvisCoefficients(
-            const double Tdec, std::array<double, 3> &bulkvisCoefficients) {
+            const double Tdec, std::vector<double> &bulkvisCoefficients) {
+    bulkvisCoefficients.resize(3, 0.);
    const double Tdec_fm = Tdec/hbarC;  // [1/fm]
    double Tdec_fm_power[11];    // cache the polynomial power of Tdec_fm
    Tdec_fm_power[1] = Tdec_fm;
    for (int ipower = 2; ipower < 11; ipower++) {
        Tdec_fm_power[ipower] = Tdec_fm_power[ipower-1]*Tdec_fm;
    }
-   if (bulk_deltaf_kind == 0) {
+   if (bulk_deltaf_kind_ == 0) {
        // 14 moment expansion
        // load from file
 
        //B0 [fm^3/GeV^3]
        bulkvisCoefficients[0] = (
-                       bulkdf_coeff->interp(1, 2, Tdec_fm, 5)/pow(hbarC, 3));
+                       bulkdf_coeff_->interp(1, 2, Tdec_fm, 5)/pow(hbarC, 3));
 
        // D0 [fm^3/GeV^2]
        bulkvisCoefficients[1] = (
-                       bulkdf_coeff->interp(1, 3, Tdec_fm, 5)/pow(hbarC, 2));
+                       bulkdf_coeff_->interp(1, 3, Tdec_fm, 5)/pow(hbarC, 2));
 
        // E0 [fm^3/GeV^3]
        bulkvisCoefficients[2] = (
-                       bulkdf_coeff->interp(1, 4, Tdec_fm, 5)/pow(hbarC, 3));
+                       bulkdf_coeff_->interp(1, 4, Tdec_fm, 5)/pow(hbarC, 3));
 
        // parameterization for mu = 0
        // B0[fm^3/GeV^3]
@@ -1070,7 +1102,7 @@ void FSSW::getbulkvisCoefficients(
        // E0 [fm^3/GeV^3]
        //bulkvisCoefficients[2] = (
        //            -exp(-14.45087586*Tdec_fm + 11.62716548)/pow(hbarC, 3));
-   } else if(bulk_deltaf_kind == 1) {  // relaxation type
+   } else if(bulk_deltaf_kind_ == 1) {  // relaxation type
        // parameterization from JF
        // A Polynomial fit to each coefficient -- X is the temperature in fm^-1
        // Both fits are reliable between T=100 -- 180 MeV, 
@@ -1098,7 +1130,7 @@ void FSSW::getbulkvisCoefficients(
                                  + 2593.45375240886*Tdec_fm_power[8] 
                                  - 853.908199724349*Tdec_fm_power[9]
                                  + 124.260460450113*Tdec_fm_power[10]);
-   } else if (bulk_deltaf_kind == 2) {
+   } else if (bulk_deltaf_kind_ == 2) {
        // A Polynomial fit to each coefficient -- X is the temperature in fm^-1
        // Both fits are reliable between T=100 -- 180 MeV
        // do not trust it beyond
@@ -1125,7 +1157,7 @@ void FSSW::getbulkvisCoefficients(
                                  + 2271692965.05568*Tdec_fm_power[8]
                                  - 687164038.128814*Tdec_fm_power[9]
                                  + 93308348.3137008*Tdec_fm_power[10]);
-   } else if (bulk_deltaf_kind == 3) {
+   } else if (bulk_deltaf_kind_ == 3) {
        bulkvisCoefficients[0] = (  160421664.93603
                                  - 2212807124.97991*Tdec_fm_power[1]
                                  + 13707913981.1425*Tdec_fm_power[2]
@@ -1148,7 +1180,7 @@ void FSSW::getbulkvisCoefficients(
                                  + 18353035766.9323*Tdec_fm_power[8]
                                  - 5504165325.05431*Tdec_fm_power[9]
                                  + 740468257.784873*Tdec_fm_power[10]);
-   } else if (bulk_deltaf_kind == 4) {
+   } else if (bulk_deltaf_kind_ == 4) {
        bulkvisCoefficients[0] = (  1167272041.90731 
                                  - 16378866444.6842*Tdec_fm_power[1]
                                  + 103037615761.617*Tdec_fm_power[2]
@@ -1279,49 +1311,105 @@ void FSSW::load_CE_deltaf_NEOSBQS_table(string filepath) {
     }
 
     // define table size
-    deltaf_coeff_CE_NEOSBQS_table_length_e_ = 145;
-    deltaf_coeff_CE_NEOSBQS_table_length_nB_ = 641;
+    deltaf_coeff_NEOSBQS_table_length_e_ = 145;
+    deltaf_coeff_NEOSBQS_table_length_nB_ = 641;
 
     string dummy;
     // read header
     std::getline(NEoS_table, dummy);
 
     // allocate 2D tables
-    deltaf_coeff_CE_NEOSBQS_chat_tb_ = (
-            new double* [deltaf_coeff_CE_NEOSBQS_table_length_e_]);
-    deltaf_coeff_CE_NEOSBQS_zetahat_tb_ = (
-            new double* [deltaf_coeff_CE_NEOSBQS_table_length_e_]);
-    deltaf_coeff_CE_NEOSBQS_etahat_tb_ = (
-            new double* [deltaf_coeff_CE_NEOSBQS_table_length_e_]);
-    for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
-        deltaf_coeff_CE_NEOSBQS_chat_tb_[i] = (
-                new double [deltaf_coeff_CE_NEOSBQS_table_length_nB_]);
-        deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i] = (
-                new double [deltaf_coeff_CE_NEOSBQS_table_length_nB_]);
-        deltaf_coeff_CE_NEOSBQS_etahat_tb_[i] = (
-                new double [deltaf_coeff_CE_NEOSBQS_table_length_nB_]);
+    for (int i = 0; i < deltaf_coeff_NEOSBQS_table_length_e_; i++) {
+        std::vector<double> temp(deltaf_coeff_NEOSBQS_table_length_nB_, 0);
+        deltaf_coeff_CE_NEOSBQS_chat_tb_.push_back(temp);
+        deltaf_coeff_CE_NEOSBQS_zetahat_tb_.push_back(temp);
+        deltaf_coeff_CE_NEOSBQS_etahat_tb_.push_back(temp);
     }
 
     // load 2D table
     double temp1, temp2;
-    for (int i = 0; i < deltaf_coeff_CE_NEOSBQS_table_length_e_; i++) {
-        for (int j = 0; j < deltaf_coeff_CE_NEOSBQS_table_length_nB_; j++) {
+    for (int i = 0; i < deltaf_coeff_NEOSBQS_table_length_e_; i++) {
+        for (int j = 0; j < deltaf_coeff_NEOSBQS_table_length_nB_; j++) {
             NEoS_table >> temp1 >> temp2
                        >> deltaf_coeff_CE_NEOSBQS_chat_tb_[i][j]
                        >> deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i][j]
                        >> deltaf_coeff_CE_NEOSBQS_etahat_tb_[i][j];
             if (j == 0) {
                 if (i == 0) {
-                    deltaf_coeff_CE_NEOSBQS_table_e0_ = temp1;
-                    deltaf_coeff_CE_NEOSBQS_table_nB0_ = temp2;
+                    deltaf_coeff_NEOSBQS_table_e0_ = temp1;
+                    deltaf_coeff_NEOSBQS_table_nB0_ = temp2;
                 } else if (i == 1) {
-                    deltaf_coeff_CE_NEOSBQS_table_de_ = (
-                            temp1 - deltaf_coeff_CE_NEOSBQS_table_e0_);
+                    deltaf_coeff_NEOSBQS_table_de_ = (
+                            temp1 - deltaf_coeff_NEOSBQS_table_e0_);
                 }
             } else if (j == 1) {
                 if (i == 0) {
-                    deltaf_coeff_CE_NEOSBQS_table_dnB_ = (
-                            temp2 - deltaf_coeff_CE_NEOSBQS_table_nB0_);
+                    deltaf_coeff_NEOSBQS_table_dnB_ = (
+                            temp2 - deltaf_coeff_NEOSBQS_table_nB0_);
+                }
+            }
+        }
+    }
+    NEoS_table.close();
+}
+
+
+void FSSW::load_22mom_deltaf_NEOSBQS_table(string filepath) {
+    std::string folder_name = "/urqmd";
+    //if (afterburner_type_ == AfterburnerType::SMASH) {
+    //    folder_name = "/smash_box";
+    //}
+    std::stringstream filename;
+    filename << filepath << folder_name << "/NEoSBQS_22mom_deltafCoeff.dat";
+    ifstream NEoS_table(filename.str().c_str());
+    if (!NEoS_table) {
+        messager_ << "Can not found file: " << filename.str();
+        messager_.flush("error");
+        exit(1);
+    }
+
+    // define table size
+    deltaf_coeff_NEOSBQS_table_length_e_ = 145;
+    deltaf_coeff_NEOSBQS_table_length_nB_ = 641;
+
+    string dummy;
+    // read header
+    std::getline(NEoS_table, dummy);
+
+    // allocate 2D tables
+    for (int i = 0; i < deltaf_coeff_NEOSBQS_table_length_e_; i++) {
+        std::vector<double> temp(deltaf_coeff_NEOSBQS_table_length_nB_, 0);
+        deltaf_coeff_14mom_NEOSBQS_shear_tb_.push_back(temp);
+        deltaf_coeff_14mom_NEOSBQS_Pi_uu_tb_.push_back(temp);
+        deltaf_coeff_14mom_NEOSBQS_Pi_tr_tb_.push_back(temp);
+        deltaf_coeff_14mom_NEOSBQS_Pi_Bu_tb_.push_back(temp);
+        deltaf_coeff_14mom_NEOSBQS_Pi_Su_tb_.push_back(temp);
+        deltaf_coeff_14mom_NEOSBQS_Pi_Qu_tb_.push_back(temp);
+    }
+
+    // load 2D table
+    double temp1, temp2;
+    for (int i = 0; i < deltaf_coeff_NEOSBQS_table_length_e_; i++) {
+        for (int j = 0; j < deltaf_coeff_NEOSBQS_table_length_nB_; j++) {
+            NEoS_table >> temp1 >> temp2
+                       >> deltaf_coeff_14mom_NEOSBQS_shear_tb_[i][j]
+                       >> deltaf_coeff_14mom_NEOSBQS_Pi_uu_tb_[i][j]
+                       >> deltaf_coeff_14mom_NEOSBQS_Pi_tr_tb_[i][j]
+                       >> deltaf_coeff_14mom_NEOSBQS_Pi_Bu_tb_[i][j]
+                       >> deltaf_coeff_14mom_NEOSBQS_Pi_Su_tb_[i][j]
+                       >> deltaf_coeff_14mom_NEOSBQS_Pi_Qu_tb_[i][j];
+            if (j == 0) {
+                if (i == 0) {
+                    deltaf_coeff_NEOSBQS_table_e0_ = temp1;
+                    deltaf_coeff_NEOSBQS_table_nB0_ = temp2;
+                } else if (i == 1) {
+                    deltaf_coeff_NEOSBQS_table_de_ = (
+                            temp1 - deltaf_coeff_NEOSBQS_table_e0_);
+                }
+            } else if (j == 1) {
+                if (i == 0) {
+                    deltaf_coeff_NEOSBQS_table_dnB_ = (
+                            temp2 - deltaf_coeff_NEOSBQS_table_nB0_);
                 }
             }
         }
@@ -1331,7 +1419,8 @@ void FSSW::load_CE_deltaf_NEOSBQS_table(string filepath) {
 
 
 void FSSW::getbulkvisCoefficients(const double Tdec, const double mu_B,
-                                  std::array<double, 3> &bulkvisCoefficients) {
+                                  std::vector<double> &bulkvisCoefficients) {
+    bulkvisCoefficients.resize(3, 0.);
     int idx_T = static_cast<int>((Tdec - deltaf_bulk_coeff_14mom_table_T0_)
                                  /deltaf_bulk_coeff_14mom_table_dT_);
     int idx_mu = static_cast<int>((mu_B - deltaf_bulk_coeff_14mom_table_mu0_)
@@ -1384,53 +1473,82 @@ void FSSW::getbulkvisCoefficients(const double Tdec, const double mu_B,
 
 
 void FSSW::getCENEOSBQSCoefficients(const double Edec, const double nB,
-                                    std::array<double, 3> &visCoefficients) {
-    int idx_e = static_cast<int>((Edec - deltaf_coeff_CE_NEOSBQS_table_e0_)
-                                 /deltaf_coeff_CE_NEOSBQS_table_de_);
-    int idx_nB = static_cast<int>((nB - deltaf_coeff_CE_NEOSBQS_table_nB0_)
-                                  /deltaf_coeff_CE_NEOSBQS_table_dnB_);
-    double x_fraction = ((Edec - deltaf_coeff_CE_NEOSBQS_table_e0_)
-                         /deltaf_coeff_CE_NEOSBQS_table_de_ - idx_e);
-    double y_fraction = ((nB - deltaf_coeff_CE_NEOSBQS_table_nB0_)
-                         /deltaf_coeff_CE_NEOSBQS_table_dnB_ - idx_nB);
+                                    std::vector<double> &visCoefficients) {
+    visCoefficients.resize(3, 0.);
+    int idx_e = static_cast<int>((Edec - deltaf_coeff_NEOSBQS_table_e0_)
+                                 /deltaf_coeff_NEOSBQS_table_de_);
+    int idx_nB = static_cast<int>((nB - deltaf_coeff_NEOSBQS_table_nB0_)
+                                  /deltaf_coeff_NEOSBQS_table_dnB_);
+    double x_fraction = ((Edec - deltaf_coeff_NEOSBQS_table_e0_)
+                         /deltaf_coeff_NEOSBQS_table_de_ - idx_e);
+    double y_fraction = ((nB - deltaf_coeff_NEOSBQS_table_nB0_)
+                         /deltaf_coeff_NEOSBQS_table_dnB_ - idx_nB);
 
     // avoid overflow and underflow
     int idx_e1 = std::max(
-        0, std::min(deltaf_coeff_CE_NEOSBQS_table_length_e_ - 1, idx_e));
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 1, idx_e));
     int idx_nB1 = std::max(
-        0, std::min(deltaf_coeff_CE_NEOSBQS_table_length_nB_ - 1, idx_nB));
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB));
     int idx_e2 = std::max(
-        0, std::min(deltaf_coeff_CE_NEOSBQS_table_length_e_ - 1, idx_e + 1));
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 1, idx_e + 1));
     int idx_nB2 = std::max(
-        0, std::min(deltaf_coeff_CE_NEOSBQS_table_length_nB_ - 1, idx_nB + 1));
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB + 1));
 
-    double f1 = deltaf_coeff_CE_NEOSBQS_chat_tb_[idx_e1][idx_nB1];
-    double f2 = deltaf_coeff_CE_NEOSBQS_chat_tb_[idx_e1][idx_nB2];
-    double f3 = deltaf_coeff_CE_NEOSBQS_chat_tb_[idx_e2][idx_nB2];
-    double f4 = deltaf_coeff_CE_NEOSBQS_chat_tb_[idx_e2][idx_nB1];
-    double chat = (  f1*(1. - x_fraction)*(1. - y_fraction)
-                   + f2*(1. - x_fraction)*y_fraction
-                   + f3*x_fraction*y_fraction
-                   + f4*x_fraction*(1. - y_fraction));
-    f1 = deltaf_coeff_CE_NEOSBQS_zetahat_tb_[idx_e1][idx_nB1];
-    f2 = deltaf_coeff_CE_NEOSBQS_zetahat_tb_[idx_e1][idx_nB2];
-    f3 = deltaf_coeff_CE_NEOSBQS_zetahat_tb_[idx_e2][idx_nB2];
-    f4 = deltaf_coeff_CE_NEOSBQS_zetahat_tb_[idx_e2][idx_nB1];
-    double zetahat = (  f1*(1. - x_fraction)*(1. - y_fraction)
-                      + f2*(1. - x_fraction)*y_fraction
-                      + f3*x_fraction*y_fraction
-                      + f4*x_fraction*(1. - y_fraction));
-    f1 = deltaf_coeff_CE_NEOSBQS_etahat_tb_[idx_e1][idx_nB1];
-    f2 = deltaf_coeff_CE_NEOSBQS_etahat_tb_[idx_e1][idx_nB2];
-    f3 = deltaf_coeff_CE_NEOSBQS_etahat_tb_[idx_e2][idx_nB2];
-    f4 = deltaf_coeff_CE_NEOSBQS_etahat_tb_[idx_e2][idx_nB1];
-    double etahat = (  f1*(1. - x_fraction)*(1. - y_fraction)
-                      + f2*(1. - x_fraction)*y_fraction
-                      + f3*x_fraction*y_fraction
-                      + f4*x_fraction*(1. - y_fraction));
+    double chat = bilinearInterp(deltaf_coeff_CE_NEOSBQS_chat_tb_,
+                                 idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                 x_fraction, y_fraction);
+    double zetahat = bilinearInterp(deltaf_coeff_CE_NEOSBQS_zetahat_tb_,
+                                    idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                    x_fraction, y_fraction);
+    double etahat = bilinearInterp(deltaf_coeff_CE_NEOSBQS_etahat_tb_,
+                                   idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                   x_fraction, y_fraction);
     visCoefficients[0] = 1./zetahat;
     visCoefficients[1] = 1./3. - chat;
     visCoefficients[2] = etahat;
+}
+
+
+void FSSW::get22momNEOSBQSCoefficients(const double Edec, const double nB,
+                                       std::vector<double> &visCoefficients) {
+    visCoefficients.resize(6, 0.);
+    int idx_e = static_cast<int>((Edec - deltaf_coeff_NEOSBQS_table_e0_)
+                                 /deltaf_coeff_NEOSBQS_table_de_);
+    int idx_nB = static_cast<int>((nB - deltaf_coeff_NEOSBQS_table_nB0_)
+                                  /deltaf_coeff_NEOSBQS_table_dnB_);
+    double x_fraction = ((Edec - deltaf_coeff_NEOSBQS_table_e0_)
+                         /deltaf_coeff_NEOSBQS_table_de_ - idx_e);
+    double y_fraction = ((nB - deltaf_coeff_NEOSBQS_table_nB0_)
+                         /deltaf_coeff_NEOSBQS_table_dnB_ - idx_nB);
+
+    // avoid overflow and underflow
+    int idx_e1 = std::max(
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 1, idx_e));
+    int idx_nB1 = std::max(
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB));
+    int idx_e2 = std::max(
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 1, idx_e + 1));
+    int idx_nB2 = std::max(
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB + 1));
+
+    visCoefficients[0] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_shear_tb_,
+                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                        x_fraction, y_fraction);
+    visCoefficients[1] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_uu_tb_,
+                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                        x_fraction, y_fraction);
+    visCoefficients[2] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_tr_tb_,
+                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                        x_fraction, y_fraction);
+    visCoefficients[3] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_Bu_tb_,
+                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                        x_fraction, y_fraction);
+    visCoefficients[4] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_Su_tb_,
+                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                        x_fraction, y_fraction);
+    visCoefficients[5] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_Qu_tb_,
+                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
+                                        x_fraction, y_fraction);
 }
 
 
@@ -1651,10 +1769,10 @@ void FSSW::perform_resonance_feed_down(
         // perform resonance decays
         for (unsigned int ipart = 0; ipart < temp_list.size(); ipart++) {
             vector<iSS_Hadron> *daughter_list = new vector<iSS_Hadron>;
-            decayer_ptr->perform_decays(&temp_list[ipart], daughter_list);
+            decayer_ptr_->perform_decays(&temp_list[ipart], daughter_list);
             for (unsigned int idaughter = 0; idaughter < daughter_list->size();
                     idaughter++) {
-                if (decayer_ptr->check_particle_stable(
+                if (decayer_ptr_->check_particle_stable(
                                         &(*daughter_list)[idaughter]) == 1) {
                     (*input_particle_list)[ievent]->push_back(
                                             (*daughter_list)[idaughter]);
@@ -1670,43 +1788,66 @@ void FSSW::perform_resonance_feed_down(
 }
 
 
+void FSSW::addSpectatorsToHadronList() {
+    cout << "Add spectators to the hadron list... " << endl;
+    // loop over events
+    unsigned int nev = Hadron_list->size();
+    for (unsigned int ievent = 0; ievent < nev; ievent++) {
+        auto spectatorList = spectators_ptr_->getSpectatorList();
+        for (auto ispec: spectatorList) {
+            (*Hadron_list)[ievent]->push_back(ispec);
+        }
+    }
+}
+
+
 double FSSW::get_deltaf_bulk(
         const double mass, const double pdotu, const double bulkPi,
         const double Tdec, const int sign, const int baryon,
-        const double f0, const std::array<double, 3> bulkvisCoefficients) {
+        const int strange, const int charge,
+        const double f0, const std::vector<double> bulkvisCoefficients) {
     if (INCLUDE_BULK_DELTAF== 0) return(0.0);
     double delta_f_bulk = 0.0;
-    if (bulk_deltaf_kind == 0) {
+    if (bulk_deltaf_kind_ == 0) {
         delta_f_bulk = (-(1. - sign*f0)*bulkPi
                         *(  bulkvisCoefficients[0]*mass*mass
                           + bulkvisCoefficients[1]*pdotu
                           + bulkvisCoefficients[2]*pdotu*pdotu));
-    } else if (bulk_deltaf_kind == 1) {
+    } else if (bulk_deltaf_kind_ == 1) {
         double E_over_T = pdotu/Tdec;
         double mass_over_T = mass/Tdec;
         delta_f_bulk = (- 1.0*(1. - sign*f0)*bulkvisCoefficients[0]
                         *(mass_over_T*mass_over_T/(3.*E_over_T)
                           - bulkvisCoefficients[1]*E_over_T)*bulkPi);
-    } else if (bulk_deltaf_kind == 2) {
+    } else if (bulk_deltaf_kind_ == 2) {
         double E_over_T = pdotu/Tdec;
         delta_f_bulk = (- 1.*(1. - sign*f0)*bulkPi
                 *(- bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T));
-    } else if (bulk_deltaf_kind == 3) {
+    } else if (bulk_deltaf_kind_ == 3) {
         double E_over_T = pdotu/Tdec;
         delta_f_bulk = (- 1.*(1. - sign*f0)*bulkPi/sqrt(E_over_T)
                 *(- bulkvisCoefficients[0] + bulkvisCoefficients[1]*E_over_T));
-    } else if (bulk_deltaf_kind == 4) {
+    } else if (bulk_deltaf_kind_ == 4) {
         double E_over_T = pdotu/Tdec;
         delta_f_bulk = (- 1.*(1. - sign*f0)*bulkPi
                 *(bulkvisCoefficients[0] - bulkvisCoefficients[1]/E_over_T));
-    } else if (bulk_deltaf_kind == 11) {
-        // OSU 14 moments
+    } else if (bulk_deltaf_kind_ == 11) {
+        // OSU 14-moment
         delta_f_bulk = ((1. - sign*f0)*bulkPi*(
                           bulkvisCoefficients[0]*mass*mass
                         + bulkvisCoefficients[1]*baryon*pdotu
                         + bulkvisCoefficients[2]*pdotu*pdotu));
-    } else if (bulk_deltaf_kind == 21) {
-        // CE: NEoS BQS
+    } else if (bulk_deltaf_kind_ == 20) {
+        // WSU 22-moment NEoS BQS
+        delta_f_bulk = ((1. - sign*f0)*bulkPi*(
+                          mass*mass*bulkvisCoefficients[2]
+                        + pdotu*(  baryon*bulkvisCoefficients[3]
+                                 + strange*bulkvisCoefficients[4]
+                                 + charge*bulkvisCoefficients[5])
+                        + pdotu*pdotu*(  bulkvisCoefficients[1]
+                                       - bulkvisCoefficients[2])));
+    } else if (bulk_deltaf_kind_ == 21) {
+        // WSU Chapman-Enskog NEoS BQS
         double E_over_T = pdotu/Tdec;
         double mass_over_T = mass/Tdec;
         delta_f_bulk = (- 1.0*(1. - sign*f0)*bulkvisCoefficients[0]
@@ -1721,7 +1862,7 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         const double mass, const int sign,
         const int baryon, const int strange, const int charge,
         const FO_surf_LRF *surf,
-        const std::array<double, 3> bulkvisCoefficients,
+        const std::vector<double> bulkvisCoefficients,
         const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s
         ) {
@@ -1769,10 +1910,12 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
                 + 2.*px*pz*surf->piLRF_xz
                 + py*py*surf->piLRF_yy + 2.*py*pz*surf->piLRF_yz
                 + pz*pz*(- surf->piLRF_xx - surf->piLRF_yy));
-            if (deltaf_kind_ == 1) {
+            if (NEoS_deltaf_kind_ == 1) {
                 delta_f_shear = (
                     (1. - sign*f0)*Wfactor/(2.*bulkvisCoefficients[2])
                     /(p0*Tdec));
+            } else if (NEoS_deltaf_kind_ == 0) {
+                delta_f_shear = (1. - sign*f0)*Wfactor*bulkvisCoefficients[0];
             } else {
                 delta_f_shear = (1. - sign*f0)*Wfactor*deltaf_prefactor;
             }
@@ -1782,13 +1925,15 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         double delta_f_bulk = 0.;
         if (INCLUDE_BULK_DELTAF == 1) {
             double bulkPi = 0.;
-            if (bulk_deltaf_kind == 11 || bulk_deltaf_kind == 21) {
+            if (bulk_deltaf_kind_ == 11 || bulk_deltaf_kind_ == 21
+                || bulk_deltaf_kind_ == 20) {
                 bulkPi = surf->bulkPi;         // GeV/fm^3
-            } else if (bulk_deltaf_kind == 1) {
+            } else if (bulk_deltaf_kind_ == 1) {
                 bulkPi = surf->bulkPi/hbarC;   // 1/fm^4
             }
             delta_f_bulk = get_deltaf_bulk(mass, p0, bulkPi, Tdec, sign,
-                                           baryon, f0, bulkvisCoefficients);
+                                           baryon, strange, charge,
+                                           f0, bulkvisCoefficients);
         }
 
         // delta f for diffusion
@@ -1870,4 +2015,19 @@ void FSSW::boost_vector_back_to_lab_frame(
     p_lab[0] = p_LRF[0]*umu[0] + p_dot_u;
     for (int i = 1; i < 4; i++)
         p_lab[i] = p_LRF[i] + (p_dot_u/(umu[0] + 1) + p_LRF[0])*umu[i];
+}
+
+
+double FSSW::bilinearInterp(std::vector<std::vector<double>>&mat,
+                            int idx_e1, int idx_e2, int idx_nB1, int idx_nB2,
+                            double x_fraction, double y_fraction) {
+    double f1 = mat[idx_e1][idx_nB1];
+    double f2 = mat[idx_e1][idx_nB2];
+    double f3 = mat[idx_e2][idx_nB2];
+    double f4 = mat[idx_e2][idx_nB1];
+    double f = (  f1*(1. - x_fraction)*(1. - y_fraction)
+                + f2*(1. - x_fraction)*y_fraction
+                + f3*x_fraction*y_fraction
+                + f4*x_fraction*(1. - y_fraction));
+    return(f);
 }

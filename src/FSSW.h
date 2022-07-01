@@ -16,6 +16,7 @@
 #include "TableFunction.h"
 #include "ParameterReader.h"
 #include "particle_decay.h"
+#include "Spectators.h"
 #include "data_struct.h"
 #include "Random.h"
 #include "pretty_ostream.h"
@@ -43,8 +44,8 @@ class FSSW {
     int USE_GZIP_FORMAT;
     int USE_BINARY_FORMAT;
     int INCLUDE_DELTAF, INCLUDE_BULK_DELTAF, INCLUDE_DIFFUSION_DELTAF;
-    int deltaf_kind_;        // 0: 14-mom, 1: CE
-    int bulk_deltaf_kind;
+    int NEoS_deltaf_kind_;        // 0: 14-mom, 1: CE
+    int bulk_deltaf_kind_;
 
     // dN/(dxt dy) for one particle species
     std::vector<double> dN_dxtdy_for_one_particle_species;
@@ -71,7 +72,7 @@ class FSSW {
     bool particles_are_the_same(int, int);
 
     //array for bulk delta f coefficients
-    Table *bulkdf_coeff;
+    std::unique_ptr<Table> bulkdf_coeff_;
 
     // table parameter for diffusion deltaf coefficient
     int deltaf_qmu_coeff_table_length_T;
@@ -93,15 +94,21 @@ class FSSW {
 
 
     // table parameter for bulk deltaf coefficient CE for NEOS BQS
-    int deltaf_coeff_CE_NEOSBQS_table_length_e_;
-    int deltaf_coeff_CE_NEOSBQS_table_length_nB_;
-    double deltaf_coeff_CE_NEOSBQS_table_e0_;
-    double deltaf_coeff_CE_NEOSBQS_table_nB0_;
-    double deltaf_coeff_CE_NEOSBQS_table_de_;
-    double deltaf_coeff_CE_NEOSBQS_table_dnB_;
-    double **deltaf_coeff_CE_NEOSBQS_chat_tb_;
-    double **deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
-    double **deltaf_coeff_CE_NEOSBQS_etahat_tb_;
+    int deltaf_coeff_NEOSBQS_table_length_e_;
+    int deltaf_coeff_NEOSBQS_table_length_nB_;
+    double deltaf_coeff_NEOSBQS_table_e0_;
+    double deltaf_coeff_NEOSBQS_table_nB0_;
+    double deltaf_coeff_NEOSBQS_table_de_;
+    double deltaf_coeff_NEOSBQS_table_dnB_;
+    std::vector<std::vector<double>> deltaf_coeff_CE_NEOSBQS_chat_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_CE_NEOSBQS_zetahat_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_CE_NEOSBQS_etahat_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_14mom_NEOSBQS_shear_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_14mom_NEOSBQS_Pi_uu_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_14mom_NEOSBQS_Pi_tr_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_14mom_NEOSBQS_Pi_Bu_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_14mom_NEOSBQS_Pi_Su_tb_;
+    std::vector<std::vector<double>> deltaf_coeff_14mom_NEOSBQS_Pi_Qu_tb_;
 
 
     // arrays to speed up computing particle yield
@@ -115,8 +122,16 @@ class FSSW {
     int flag_store_samples_in_memory;
 
     //! particle decay
-    int flag_perform_decays;
-    particle_decay *decayer_ptr;
+    bool flag_perform_decays_;
+    std::unique_ptr<particle_decay> decayer_ptr_;
+
+    //! spectators
+    bool flag_spectators_;
+    std::unique_ptr<Spectators> spectators_ptr_;
+
+    std::vector< std::vector<iSS_Hadron>* >* Hadron_list;
+
+    std::string OSCAR_header_filename_, OSCAR_output_filename_;
 
  public:
     FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
@@ -127,7 +142,6 @@ class FSSW {
            AfterburnerType afterburner_type);
     ~FSSW();
 
-    std::vector< std::vector<iSS_Hadron>* >* Hadron_list;
 
     void initialize_special_function_arrays();
     double get_special_function_K1(double arg);
@@ -138,7 +152,6 @@ class FSSW {
     void shell();  // it all starts here...
 
     void combine_samples_to_OSCAR();
-    std::string OSCAR_header_filename, OSCAR_output_filename;
     void combine_samples_to_gzip_file();
     void combine_samples_to_binary_file();
 
@@ -152,14 +165,17 @@ class FSSW {
     void sample_using_dN_dxtdy_4all_particles_conventional();
 
     void getbulkvisCoefficients(const double Tdec,
-                                std::array<double, 3> &bulkvisCoefficients);
+                                std::vector<double> &bulkvisCoefficients);
     void getbulkvisCoefficients(const double Tdec, const double mu_B,
-                                std::array<double, 3> &bulkvisCoefficients);
+                                std::vector<double> &bulkvisCoefficients);
     void getCENEOSBQSCoefficients(const double Edec, const double nB,
-                                  std::array<double, 3> &visCoefficients);
+                                  std::vector<double> &visCoefficients);
+    void get22momNEOSBQSCoefficients(const double Edec, const double nB,
+                                     std::vector<double> &visCoefficients);
 
     void load_bulk_deltaf_14mom_table(string filepath);
     void load_CE_deltaf_NEOSBQS_table(string filepath);
+    void load_22mom_deltaf_NEOSBQS_table(string filepath);
     void load_deltaf_qmu_coeff_table(std::string filename);
     double get_deltaf_qmu_coeff(double T, double muB);
 
@@ -177,18 +193,21 @@ class FSSW {
         return(Hadron_list->at(iev));
     }
 
+    void addSpectatorsToHadronList();
+
     void perform_resonance_feed_down(
                 std::vector< std::vector<iSS_Hadron>* >* input_particle_list);
     int compute_number_of_sampling_needed(int number_of_particles_needed);
     double get_deltaf_bulk(
         const double mass, const double pdotu, const double bulkPi,
         const double Tdec, const int sign, const int baryon,
-        const double f0, const std::array<double, 3> bulkvisCoefficients);
+        const int strange, const int charge,
+        const double f0, const std::vector<double> bulkvisCoefficients);
     int sample_momemtum_from_a_fluid_cell(
         const double mass, const int sign,
         const int baryon, const int strange, const int charge,
         const FO_surf_LRF *surf,
-        const std::array<double, 3> bulkvisCoefficients,
+        const std::vector<double> visCoefficients,
         const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s);
     void add_one_sampled_particle(
@@ -199,6 +218,9 @@ class FSSW {
     void boost_vector_back_to_lab_frame(iSS_data::Vec4 &p_LRF,
                                         iSS_data::Vec4 &p_lab,
                                         iSS_data::Vec4 &umu) const;
+    double bilinearInterp(std::vector<std::vector<double>>&mat,
+                          int idx_e1, int idx_e2, int idx_nB1, int idx_nB2,
+                          double x_fraction, double y_fraction);
 };
 
 #endif  // SRC_FSSW_H_

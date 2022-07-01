@@ -10,15 +10,14 @@
 // Version info written in the main function.
 //=====================================================================
 
-#include <stdlib.h>
 #include <iostream>
 #include <string>
 
-#include "data_struct.h"
 #include "iSS.h"
 #include "arsenal.h"
 
-using namespace std;
+using std::cout;
+using std::endl;
 
 int main(int argc, char** argv) {
     cout << endl

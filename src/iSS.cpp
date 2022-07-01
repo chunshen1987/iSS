@@ -20,7 +20,6 @@ iSS::iSS(std::string path, std::string table_path,
     flag_PCE_ = 0;
     paraRdr_ptr = new ParameterReader;
     paraRdr_ptr->readFromFile(inputfile);
-
 }
 
 

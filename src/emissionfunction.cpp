@@ -80,6 +80,11 @@ EmissionFunctionArray::EmissionFunctionArray(
     paraRdr = paraRdr_in;
 
     hydro_mode = paraRdr->getVal("hydro_mode");
+    if (hydro_mode == 2) {
+        boost_invariant_ = false;
+    } else {
+        boost_invariant_ = true;
+    }
 
     USE_OSCAR_FORMAT         = paraRdr->getVal("use_OSCAR_format");
     USE_GZIP_FORMAT          = paraRdr->getVal("use_gzip_format");
@@ -3256,7 +3261,7 @@ int EmissionFunctionArray::compute_number_of_sampling_needed(
     //      << ", dN/dy = " << dNdy_thermal_pion << endl;
     int nev_needed = static_cast<int>(number_of_particles_needed
                                       /(6.*dNdy_thermal_pion));
-    if (hydro_mode == 2) {
+    if (!boost_invariant_) {
         nev_needed *= 10;
     }
     nev_needed = std::max(1, std::min(10000, nev_needed));
@@ -3392,7 +3397,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         const double y_LB = paraRdr->getVal("y_LB");
         const double y_RB = paraRdr->getVal("y_RB");
         double dN;
-        if (hydro_mode != 2) {
+        if (boost_invariant_) {
             dN = (y_RB - y_LB)*dN_dy;
         } else {
             // for (3+1)-d case, dN_dy is total N (summing over all etas)
@@ -3483,7 +3488,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
                 //number_of_success++; // to track success rate
 
                 double eta_s = surf->eta;
-                if (hydro_mode != 2) {
+                if (boost_invariant_) {
                     double rap = (y_LB + (y_RB - y_LB)
                                          *ran_gen_ptr->rand_uniform());
                     eta_s = rap - y_minus_eta_s;

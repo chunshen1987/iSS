@@ -278,7 +278,7 @@ void read_FOdata::read_in_chemical_potentials(
             N_stableparticle = 0;
         } else if (iEOS_MUSIC_ == 91) {       // hotQCD + HRG(SMASH)
             N_stableparticle = 0;
-        } else if (iEOS_MUSIC_ >= 10 && iEOS_MUSIC_ <=14) {   // NEoS
+        } else if (iEOS_MUSIC_ >= 10 && iEOS_MUSIC_ <=15) {   // NEoS
             N_stableparticle = 0;
         } else if (iEOS_MUSIC_ == 17) {       // BEST
             N_stableparticle = 0;
@@ -287,8 +287,7 @@ void read_FOdata::read_in_chemical_potentials(
             messager.flush("error");
             exit(-1);
         }
-    }
-    if (mode == 10) {     // hydro_analysis output
+    } else if (mode == 10) {     // hydro_analysis output
         std::ifstream particletable(table_path_ + "/EOS_particletable.dat");
         particletable >> N_stableparticle;
         particletable.close();
@@ -307,11 +306,12 @@ void read_FOdata::read_in_chemical_potentials(
         for (int i = 0; i < N_stableparticle; i++)
             particle_mu[i] = new double[FO_length];
 
-        if (mode == 0)
+        if (mode == 0) {
             read_decdat_mu(FO_length, N_stableparticle, particle_mu);
-        else if (mode == 1 || mode == 2)
+        } else if (mode == 1 || mode == 2) {
             read_chemical_potentials_music(FO_length, surf_ptr,
                                            N_stableparticle, particle_mu);
+        }
 
         calculate_particle_mu_PCE(Nparticle, surf_ptr, FO_length,
                                   particle_ptr, particle_mu);
