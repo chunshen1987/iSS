@@ -85,6 +85,7 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     local_charge_conservation = paraRdr->getVal("local_charge_conservation");
     number_of_repeated_sampling = (
             paraRdr->getVal("number_of_repeated_sampling"));
+    maximumSamplingEvents_ = paraRdr->getVal("maximum_sampling_events");
 
     flag_output_samples_into_files = (
                             paraRdr->getVal("output_samples_into_files"));
@@ -860,7 +861,7 @@ int FSSW::compute_number_of_sampling_needed(
     if (hydro_mode == 2) {
         nev_needed *= 10;
     }
-    nev_needed = std::max(1, std::min(10000, nev_needed));
+    nev_needed = std::max(1, std::min(maximumSamplingEvents_, nev_needed));
     return(nev_needed);
 }
 
