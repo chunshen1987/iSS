@@ -4,7 +4,7 @@
 
 namespace RandomUtil {
 
-Random::Random(int seed_in, double min, double max) :
+Random::Random(long seed_in, double min, double max) :
     rand_uniform_dist(min, max) {
     seed = seed_in;
     if (seed == -1) {

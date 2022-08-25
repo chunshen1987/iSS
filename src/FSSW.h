@@ -37,6 +37,7 @@ class FSSW {
     std::shared_ptr<MomentumSamplerShell> momentum_sampler_ptr_;
 
     int number_of_repeated_sampling;
+    int maximumSamplingEvents_;
     int local_charge_conservation;
 
     ParameterReader *paraRdr; // used to pass-in parameters

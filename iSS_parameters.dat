@@ -144,6 +144,7 @@ sample_upto_desired_particle_number = 0  # flag to run sampling until desired
 number_of_particles_needed = 100000      # number of hadrons to sample
 number_of_repeated_sampling = 10       # How many times should the sampling be
                                        # repeated.
+maximum_sampling_events = 10000
 
 sample_pT_up_to = -1                   # Up to this value will pT be sampled;
                                        # if<0 then use the largest value in
