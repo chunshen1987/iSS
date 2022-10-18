@@ -1964,10 +1964,12 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
 
             // assigned to the return variables
             pT = sqrt(pLab[1]*pLab[1] + pLab[2]*pLab[2]);
-            phi = atan2(pLab[2], pLab[1]);
-            double y = 0.5*log((pLab[0] + pLab[3])/(pLab[0] - pLab[3]));
-            y_minus_eta_s = y - surf->eta;
-            return(1);
+            if (pT < 5.) {
+                phi = atan2(pLab[2], pLab[1]);
+                double y = 0.5*log((pLab[0] + pLab[3])/(pLab[0] - pLab[3]));
+                y_minus_eta_s = y - surf->eta;
+                return(1);
+            }
         }
         tries++;
     }
