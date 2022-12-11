@@ -16,8 +16,8 @@ include_deltaf_shear = 1      # include delta f contribution from shear
 include_deltaf_bulk = 1       # include delta f contribution from bulk
 include_deltaf_diffusion = 0  # include delta f contribution from diffusion
 
-bulk_deltaf_kind = 1     # 0 : 14-momentum approximation
-                          # 1 : relaxation time approximation
+bulk_deltaf_kind = 20      # 0 : 14-momentum approximation
+                           # 1 : relaxation time approximation
 
 restrict_deltaf = 1      # flag to apply restriction on the size of delta f
 deltaf_max_ratio = 1.0   # the maximum allowed size of delta f w.r.t f0
@@ -30,8 +30,10 @@ store_samples_in_memory = 1  # flag to store particle samples in memory
 use_OSCAR_format = 0         # output results in OSCAR format
 use_gzip_format = 0          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
-use_binary_format = 0        # output results in binary format
+use_binary_format = 1        # output results in binary format
 perform_decays = 0           # flag to perform resonance decay
+perform_checks = 1           # perform tests for particle samples
+include_spectators = 0
 
 local_charge_conservation = 0  # flag to impose local charge conservation
 
@@ -137,6 +139,7 @@ sample_upto_desired_particle_number = 0  # flag to run sampling until desired
 number_of_particles_needed = 100000      # number of hadrons to sample
 number_of_repeated_sampling = 2000     # How many times should the sampling be 
                                        # repeated.
+maximum_sampling_events = 10000
 
 sample_pT_up_to = -1                   # Up to this value will pT be sampled; 
                                        # if<0 then use the largest value in 

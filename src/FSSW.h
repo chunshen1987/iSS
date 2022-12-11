@@ -196,6 +196,8 @@ class FSSW {
 
     void addSpectatorsToHadronList();
 
+    void computeAvgTotalEnergyMomentum();
+
     void perform_resonance_feed_down(
                 std::vector< std::vector<iSS_Hadron>* >* input_particle_list);
     int compute_number_of_sampling_needed(int number_of_particles_needed);

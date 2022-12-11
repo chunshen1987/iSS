@@ -31,6 +31,8 @@ class read_FOdata {
     int n_eta_skip;
     int iEOS_MUSIC_;
 
+    std::vector<std::vector<double>> HRGEOS_;
+
     AfterburnerType afterburner_type_;
 
     pretty_ostream messager;
@@ -47,6 +49,7 @@ class read_FOdata {
     AfterburnerType get_afterburner_type() const {return(afterburner_type_);}
     int get_number_of_lines_of_binary_surface_file(string filename);
     int get_flag_PCE() {return(flag_PCE_);}
+    void read_in_HRG_EOS();
     void read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr,
                                  std::string surface_filename);
     void read_in_chemical_potentials(std::vector<FO_surf> &surf_ptr,

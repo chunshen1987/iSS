@@ -1,4 +1,4 @@
-hydro_mode = 1           # mode for reading in freeze out information
+hydro_mode = 2           # mode for reading in freeze out information
                          # 0: reads outputs from VISH2+1
                          # 1: reads outputs from MUSIC assuming
                          #    boost-invariant
@@ -13,7 +13,7 @@ turn_on_rhob = 0         # read in net baryon chemical potential
 turn_on_diff = 0         # read in baryon diffusion current
 
 include_deltaf_shear = 1      # include delta f contribution from shear
-include_deltaf_bulk = 1       # include delta f contribution from bulk
+include_deltaf_bulk = 0       # include delta f contribution from bulk
 include_deltaf_diffusion = 0  # include delta f contribution from diffusion
 
 bulk_deltaf_kind = 1     # 0 : 14-moment approximation (s95p-v0-PCE)
@@ -36,7 +36,7 @@ use_gzip_format = 0          # output results in gzip format (only works with
 use_binary_format = 1        # output results in binary format
 perform_decays = 0           # flag to perform resonance decay
 perform_checks = 0           # perform tests for particle samples
-include_spectators = 1       # include spectators (filename: spectators.dat)
+include_spectators = 0       # include spectators (filename: spectators.dat)
 
 local_charge_conservation = 0  # flag to impose local charge conservation
 
