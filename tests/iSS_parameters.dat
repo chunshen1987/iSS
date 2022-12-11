@@ -40,6 +40,7 @@ local_charge_conservation = 0  # flag to impose local charge conservation
 calculate_vn = 0         # 1/0: whether to calculate the 
                          # dN/(pt dpt dphi dy) and v_n flows 
                          # (they not required for MC-sampling)
+calculate_polarization = 0
 
 MC_sampling = 4          # 0/1/2/3: whether to perform Monte-Carlo sampling
                          # (not required for spectra calculation). 
