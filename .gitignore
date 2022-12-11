@@ -10,3 +10,4 @@ lib/*
 particle_samples*.gz
 particle_samples*.bin
 particle_samples*.dat
+check*
