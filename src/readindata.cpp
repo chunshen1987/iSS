@@ -86,6 +86,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
                     include_vorticity_ = true;
                 else
                     include_vorticity_ = false;
+            }
             if (temp_name == "EOS_to_use") {
                 ss >> iEOS_MUSIC_;
             }
