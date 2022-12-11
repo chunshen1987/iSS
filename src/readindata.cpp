@@ -41,6 +41,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
         quantum_statistics_ = false;
     }
 
+    iEOS_MUSIC_ = 0;
     if (mode == 1 || mode == 2) {
         // determine read in format in surface.dat from MUSIC simulation
         messager.info("read in hyper-surface from MUSIC simulations ...");
@@ -85,6 +86,8 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
                     include_vorticity_ = true;
                 else
                     include_vorticity_ = false;
+            if (temp_name == "EOS_to_use") {
+                ss >> iEOS_MUSIC_;
             }
         }
         configuration.close();
@@ -111,7 +114,6 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
         fluid_cell_size += 38;
 
     n_eta_skip = 0;
-    iEOS_MUSIC_ = 0;
     int afterburner_id = paraRdr->getVal("afterburner_type");
     if (afterburner_id == 1) {
         afterburner_type_ = AfterburnerType::UrQMD;
@@ -120,6 +122,13 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
     } else {
         afterburner_type_ = AfterburnerType::PDG_Decay;
     }
+    if (iEOS_MUSIC_ == 9) {
+        afterburner_type_ = AfterburnerType::UrQMD;
+    }
+    if (iEOS_MUSIC_ == 91) {
+        afterburner_type_ = AfterburnerType::SMASH;
+    }
+    read_in_HRG_EOS();
 }
 
 
@@ -824,7 +833,29 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
     double pi_init[4][4];
     double pi_reg[4][4];
     double u_flow[4];
+
+    bool regulateTemperature = false;
+    if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91) {
+        regulateTemperature = true;
+        cout << "Regulate local temperature with pure HRG EoS." << endl;
+    }
+
+    double HRGEOS_de = HRGEOS_[1][0] - HRGEOS_[0][0];
+    double HRGEOS_e0 = HRGEOS_[0][0];
     for (auto &surf_i: surf_ptr) {
+        if (regulateTemperature) {
+            int idx = static_cast<int>((surf_i.Edec - HRGEOS_e0)/HRGEOS_de);
+            if (idx >= 0 && idx < static_cast<int>(HRGEOS_.size()) - 1) {
+                double frac = (surf_i.Edec - HRGEOS_[idx][0])/HRGEOS_de;
+                surf_i.Tdec = (  HRGEOS_[idx][3]*(1 - frac)
+                               + HRGEOS_[idx+1][3]*frac);    // regulate T
+                // make sure P + Pi unchanged
+                double Preg = (  HRGEOS_[idx][1]*(1 - frac)
+                               + HRGEOS_[idx+1][1]*frac);
+                surf_i.bulkPi = surf_i.bulkPi + surf_i.Pdec - Preg;
+                surf_i.Pdec = Preg;
+            }
+        }
         surf_i.u0 = sqrt(1. + surf_i.u1*surf_i.u1
                             + surf_i.u2*surf_i.u2
                             + surf_i.u3*surf_i.u3);
@@ -971,6 +1002,42 @@ void read_FOdata::read_chemical_potentials_music(
     }
 
     cout << "done" << endl;
+}
+
+
+void read_FOdata::read_in_HRG_EOS() {
+    cout << " -- Read in pure HRG EoS table...";
+    std::string eos_filename = (particle_table_path_
+                                + "/EOS_tables/HRGEOS_PST-");
+    if (afterburner_type_ == AfterburnerType::SMASH) {
+        eos_filename += "SMASH.dat";
+    } else if (afterburner_type_ == AfterburnerType::UrQMD) {
+        eos_filename += "urqmd_v3.3+.dat";
+    } else {
+        eos_filename = "s95pv1.dat";
+    }
+    std::ifstream eosFile(eos_filename.c_str());
+    if (!eosFile.good()) {
+        cout << "[Error] Can not found EOS file: " << eos_filename << endl;
+        exit(1);
+    }
+    std::string strLine;
+    std::getline(eosFile, strLine);  // ignore the header
+
+    std::getline(eosFile, strLine);
+    while (!eosFile.eof()) {
+        std::stringstream ss(strLine);
+        std::vector<double> item;
+        for (int i = 0; i < 5; i++) {
+            double temp;
+            ss >> temp;
+            item.push_back(temp);
+        }
+        HRGEOS_.push_back(item);
+        std::getline(eosFile, strLine);
+    }
+    eosFile.close();
+    cout << "done." << endl;
 }
 
 

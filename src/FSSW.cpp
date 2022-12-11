@@ -348,6 +348,9 @@ void FSSW::shell() {
     }
     if (flag_spectators_)
         addSpectatorsToHadronList();
+
+    computeAvgTotalEnergyMomentum();
+
     if (USE_OSCAR_FORMAT) {
         combine_samples_to_OSCAR();
     } else if (USE_GZIP_FORMAT) {
@@ -2033,4 +2036,36 @@ double FSSW::bilinearInterp(std::vector<std::vector<double>>&mat,
                 + f3*x_fraction*y_fraction
                 + f4*x_fraction*(1. - y_fraction));
     return(f);
+}
+
+
+void FSSW::computeAvgTotalEnergyMomentum() {
+    std::vector<std::vector<double>> PmuList;
+    for (auto const &ev_i: (*Hadron_list)) {
+        std::vector<double> totalPmu(4, 0.);
+        for (auto &part_i: (*ev_i)) {
+            totalPmu[0] += part_i.E;
+            totalPmu[1] += part_i.px;
+            totalPmu[2] += part_i.py;
+            totalPmu[3] += part_i.pz;
+        }
+        PmuList.push_back(totalPmu);
+    }
+    int nev = 0;
+    std::vector<double> Pmu_avg(4, 0);
+    std::vector<double> Pmu_err(4, 0);
+    for (auto const &Pmu_i : PmuList) {
+        for (int j = 0; j < 4; j++) {
+            Pmu_avg[j] += Pmu_i[j];
+            Pmu_err[j] += Pmu_i[j]*Pmu_i[j];
+        }
+        nev++;
+    }
+    for (int i = 0; i < 4; i++) {
+        Pmu_avg[i] = Pmu_avg[i]/nev;
+        Pmu_err[i] = sqrt((Pmu_err[i]/nev - Pmu_avg[i]*Pmu_avg[i])/nev);
+        cout << "<P[" << i << "]> = " << Pmu_avg[i] << " +/- "
+             << Pmu_err[i] << " GeV." << endl;
+    }
+
 }

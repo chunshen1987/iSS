@@ -1,5 +1,6 @@
 
 #include <memory>
+#include <iomanip>
 
 #include "Table.h"
 #include "arsenal.h"
@@ -331,17 +332,79 @@ void iSS::construct_Tmunu() {
             T[i][j] /= (nev*volume);
         }
     }
-    messager << "check: e = " << T[0][0] << " GeV/fm^3, diff = "
-             << T[0][0] - FOsurf_LRF_array_[0].Edec;
+
+    double de = T[0][0] - FOsurf_LRF_array_[0].Edec;
+    std::ofstream output("checkReconstructedTmunu.dat");
+    output << std::scientific << std::setprecision(8)
+           << T[0][0] << "  " << de << std::endl;
+    messager << "check: e = " << T[0][0] << " GeV/fm^3, diff = " << de
+             << " GeV/fm^3";
     messager.flush("info");
+
     double trace = T[1][1] + T[2][2] + T[3][3];
+    double DpPi = (trace/3. - FOsurf_LRF_array_[0].Pdec
+                   - FOsurf_LRF_array_[0].bulkPi);
+    output << std::scientific << std::setprecision(8)
+           << trace/3. << "  " << DpPi << std::endl;
+    messager << "check: P + Pi = " << trace/3. << " GeV/fm^3, diff = "
+             << DpPi << " GeV/fm^3";
+    messager.flush("info");
+
     double Pi = trace/3. - FOsurf_LRF_array_[0].Pdec;
+    double DPi = Pi - FOsurf_LRF_array_[0].bulkPi;
+    output << std::scientific << std::setprecision(8)
+           << Pi << "  " << DPi << std::endl;
+    messager << "check: Pi = " << Pi << " GeV/fm^3, diff = "
+             <<  DPi << " GeV/fm^3";
+    messager.flush("info");
+
+    double pixx = T[1][1] - Pi - FOsurf_LRF_array_[0].Pdec;
+    double Dpixx = pixx - FOsurf_LRF_array_[0].piLRF_xx;
+    output << std::scientific << std::setprecision(8)
+           << pixx << "  " << Dpixx << std::endl;
+    messager << "check: pi_xx = " << pixx << " GeV/fm^3, diff = "
+             << Dpixx << " GeV/fm^3";
+    messager.flush("info");
+
+    double pixy = T[1][2];
+    double Dpixy = pixy - FOsurf_LRF_array_[0].piLRF_xy;
+    output << std::scientific << std::setprecision(8)
+           << pixy << "  " << Dpixy << std::endl;
+    messager << "check: pi_xy = " << pixy << " GeV/fm^3, diff = "
+             << Dpixy << " GeV/fm^3";
+    messager.flush("info");
+
+    double pixz = T[1][3];
+    double Dpixz = pixz - FOsurf_LRF_array_[0].piLRF_xz;
+    output << std::scientific << std::setprecision(8)
+           << pixz << "  " << Dpixz << std::endl;
+    messager << "check: pi_xz = " << pixz << " GeV/fm^3, diff = "
+             << Dpixz << " GeV/fm^3";
+    messager.flush("info");
+
+    double piyy = T[2][2] - Pi - FOsurf_LRF_array_[0].Pdec;
+    double Dpiyy = piyy - FOsurf_LRF_array_[0].piLRF_yy;
+    output << std::scientific << std::setprecision(8)
+           << piyy << "  " << Dpiyy << std::endl;
+    messager << "check: pi_yy = " << piyy << " GeV/fm^3, diff = "
+             << Dpiyy << " GeV/fm^3";
+    messager.flush("info");
+
+    double piyz = T[2][3];
+    double Dpiyz = piyz - FOsurf_LRF_array_[0].piLRF_yz;
+    output << std::scientific << std::setprecision(8)
+           << piyz << "  " << Dpiyz << std::endl;
+    messager << "check: pi_yz = " << piyz << " GeV/fm^3, diff = "
+             << Dpiyz << " GeV/fm^3";
+    messager.flush("info");
+
     double pizz = T[3][3] - Pi - FOsurf_LRF_array_[0].Pdec;
+    double Dpizz = pizz + (  FOsurf_LRF_array_[0].piLRF_xx
+                           + FOsurf_LRF_array_[0].piLRF_yy);
+    output << std::scientific << std::setprecision(8)
+           << pizz << "  " << Dpizz << std::endl;
     messager << "check: pi_zz = " << pizz << " GeV/fm^3, diff = "
-              << pizz + (  FOsurf_LRF_array_[0].piLRF_xx
-                         + FOsurf_LRF_array_[0].piLRF_yy);
+             << Dpizz << " GeV/fm^3";
     messager.flush("info");
-    messager << "check: Bulk Pi = " << Pi << " GeV/fm^3, diff = "
-             << Pi - FOsurf_LRF_array_[0].bulkPi;
-    messager.flush("info");
+    output.close();
 }
