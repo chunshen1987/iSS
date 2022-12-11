@@ -1,6 +1,7 @@
-hydro_mode = 1           # mode for reading in freeze out information
+hydro_mode = 2           # mode for reading in freeze out information
                          # 0: reads outputs from VISH2+1
-                         # 1: reads outputs from MUSIC assuming boost-invariant
+                         # 1: reads outputs from MUSIC assuming
+                         #    boost-invariant
                          # 2: reads outputs from MUSIC full (3+1)-d
 
 afterburner_type = 1     # 0: PDG_Decay
@@ -35,7 +36,7 @@ use_gzip_format = 0          # output results in gzip format (only works with
 use_binary_format = 1        # output results in binary format
 perform_decays = 0           # flag to perform resonance decay
 perform_checks = 0           # perform tests for particle samples
-include_spectators = 1       # include spectators (filename: spectators.dat)
+include_spectators = 0       # include spectators (filename: spectators.dat)
 
 local_charge_conservation = 0  # flag to impose local charge conservation
 

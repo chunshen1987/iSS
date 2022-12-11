@@ -7,7 +7,7 @@ STATUS=$?
 
 if [ $STATUS == 0 ]; then
     echo "All tests passed! :)"
-    rm -fr ./*.dat
+    rm -fr ./check*.dat
 else
     echo "Tests FAILED :("
     exit 1
