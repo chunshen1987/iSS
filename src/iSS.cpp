@@ -295,7 +295,8 @@ void iSS::transform_to_local_rest_frame(
 
 void iSS::construct_Tmunu_from_particle_samples() {
     messager.info("Constructing the fluid cell T^{mu nu} from samples ...");
-    double volume = FOsurf_LRF_array_[0].da_mu_LRF[0];
+    double volume = (FOsurf_LRF_array_[0].da_mu_LRF[0]
+                     /FOsurf_LRF_array_[0].u_tz[0]);
     double T[4][4];
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
