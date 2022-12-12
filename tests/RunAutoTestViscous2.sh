@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-./iSS.e tests/iSS_parameters.dat tests testIdealOneFluidCell.dat
+./iSS.e tests/iSS_parameters.dat tests testViscousOneFluidCell2.dat
 
 python3 tests/TestOutputFiles.py
 STATUS=$?

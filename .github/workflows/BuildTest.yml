@@ -28,10 +28,16 @@ jobs:
           cmake ..
           make -j2
           make install
-      - name: Sampling Test Ideal
+      - name: Sampling Test static ideal
         run: |
           pip3 install numpy
-          $GITHUB_WORKSPACE/tests/RunAutoTestIdeal.sh
-      - name: Sampling Test Bulk viscosity
+          $GITHUB_WORKSPACE/tests/RunAutoTestIdeal1.sh
+      - name: Sampling Test flow ideal
+        run: |
+          $GITHUB_WORKSPACE/tests/RunAutoTestIdeal2.sh
+      - name: Sampling Test static with bulk viscosity
         run: |
           $GITHUB_WORKSPACE/tests/RunAutoTestViscous1.sh
+      - name: Sampling Test static with shear viscosity
+        run: |
+          $GITHUB_WORKSPACE/tests/RunAutoTestViscous2.sh

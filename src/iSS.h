@@ -23,6 +23,7 @@ class iSS {
 
     std::vector<FO_surf> FOsurf_array_;
     std::vector<FO_surf_LRF> FOsurf_LRF_array_;
+    std::vector<float> FOsurf_Tmunu_;
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr_;
 
     int Nparticle;
@@ -53,7 +54,7 @@ class iSS {
     void set_random_seed(int randomSeed_in);
 
     void perform_checks();
-    void construct_Tmunu();
+    void construct_Tmunu_from_particle_samples();
 
     int shell();
     int read_in_FO_surface();
@@ -99,6 +100,7 @@ class iSS {
     void transform_to_local_rest_frame(
                 std::vector<FO_surf> &FOsurf_ptr,
                 std::vector<FO_surf_LRF> &FOsurf_LRF_ptr);
+    void computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr);
 };
 
 
