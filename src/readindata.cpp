@@ -104,7 +104,8 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
             messager.info("the hyper-surface includes vorticity arrays.");
     }
 
-    if (paraRdr->getVal("calculate_polarization") == 1 && !include_vorticity_) {
+    if (paraRdr->getVal("calculate_polarization", 0) == 1
+            && !include_vorticity_) {
         messager.error("The surface does not contains vorticity arrays!");
         messager.error("Can not compute the spin polarization!");
         paraRdr->setVal("calculate_polarization", 0);

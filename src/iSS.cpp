@@ -46,7 +46,7 @@ int iSS::shell() {
         exit(-1);
     }
 
-    if (paraRdr_ptr->getVal("calculate_polarization") == 1) {
+    if (paraRdr_ptr->getVal("calculate_polarization", 0) == 1) {
         compute_spin_polarization();
     }
 
@@ -112,7 +112,7 @@ int iSS::read_in_FO_surface() {
     computeFOSurfTmunu(FOsurf_temp);
     if (paraRdr_ptr->getVal("MC_sampling") == 4) {
         transform_to_local_rest_frame(FOsurf_temp, FOsurf_LRF_array_);
-        if (paraRdr_ptr->getVal("calculate_polarization") == 1)
+        if (paraRdr_ptr->getVal("calculate_polarization", 0) == 1)
             FOsurf_array_ = FOsurf_temp;
     } else {
         FOsurf_array_ = FOsurf_temp;
