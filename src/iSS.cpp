@@ -33,6 +33,7 @@ iSS::~iSS() {
 void iSS::clear() {
     FOsurf_array_.clear();
     FOsurf_LRF_array_.clear();
+    FOsurf_Tmunu_.clear();
     particle.clear();
 }
 
@@ -57,7 +58,7 @@ int iSS::shell() {
 
 void iSS::perform_checks() {
     messager.info("Performing checks for the samples ...");
-    construct_Tmunu();
+    construct_Tmunu_from_particle_samples();
     Histogram hist_pion(0., 5., 100);
     Histogram hist_proton(0., 5., 100);
     int nev = get_number_of_sampled_events();
@@ -100,6 +101,7 @@ int iSS::read_in_FO_surface() {
     freeze_out_data.read_in_chemical_potentials(FOsurf_temp, particle);
     flag_PCE_ = freeze_out_data.get_flag_PCE();
 
+    computeFOSurfTmunu(FOsurf_temp);
     if (paraRdr_ptr->getVal("MC_sampling") == 4) {
         transform_to_local_rest_frame(FOsurf_temp, FOsurf_LRF_array_);
     } else {
@@ -291,7 +293,7 @@ void iSS::transform_to_local_rest_frame(
 }
 
 
-void iSS::construct_Tmunu() {
+void iSS::construct_Tmunu_from_particle_samples() {
     messager.info("Constructing the fluid cell T^{mu nu} from samples ...");
     double volume = FOsurf_LRF_array_[0].da_mu_LRF[0];
     double T[4][4];
@@ -315,78 +317,90 @@ void iSS::construct_Tmunu() {
         }
     }
 
-    double de = T[0][0] - FOsurf_LRF_array_[0].Edec;
     std::ofstream output("checkReconstructedTmunu.dat");
-    output << std::scientific << std::setprecision(8)
-           << T[0][0] << "  " << de << std::endl;
-    messager << "check: e = " << T[0][0] << " GeV/fm^3, diff = " << de
-             << " GeV/fm^3";
-    messager.flush("info");
+    output << "# Tmunu_FOcell[GeV/fm^3]  Tmunu_Particles[GeV/fm^3]  diff"
+           << std::endl;
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            output << std::scientific << std::setprecision(8)
+                   << FOsurf_Tmunu_[4*i+j] << "  "
+                   << T[i][j] << "  "
+                   << FOsurf_Tmunu_[4*i+j] - T[i][j]
+                   << std::endl;
+            messager << "check: T[" << i << "][" << j << "] = "
+                     << FOsurf_Tmunu_[4*i+j] << " GeV/fm^3,  "
+                     << T[i][j] << " GeV/fm^3, diff = "
+                     << FOsurf_Tmunu_[4*i+j] - T[i][j]
+                     << " GeV/fm^3";
+            messager.flush("info");
+        }
+    }
 
-    double trace = T[1][1] + T[2][2] + T[3][3];
-    double DpPi = (trace/3. - FOsurf_LRF_array_[0].Pdec
-                   - FOsurf_LRF_array_[0].bulkPi);
-    output << std::scientific << std::setprecision(8)
-           << trace/3. << "  " << DpPi << std::endl;
-    messager << "check: P + Pi = " << trace/3. << " GeV/fm^3, diff = "
-             << DpPi << " GeV/fm^3";
-    messager.flush("info");
-
-    double Pi = trace/3. - FOsurf_LRF_array_[0].Pdec;
-    double DPi = Pi - FOsurf_LRF_array_[0].bulkPi;
-    output << std::scientific << std::setprecision(8)
-           << Pi << "  " << DPi << std::endl;
-    messager << "check: Pi = " << Pi << " GeV/fm^3, diff = "
-             <<  DPi << " GeV/fm^3";
-    messager.flush("info");
-
-    double pixx = T[1][1] - Pi - FOsurf_LRF_array_[0].Pdec;
-    double Dpixx = pixx - FOsurf_LRF_array_[0].piLRF_xx;
-    output << std::scientific << std::setprecision(8)
-           << pixx << "  " << Dpixx << std::endl;
-    messager << "check: pi_xx = " << pixx << " GeV/fm^3, diff = "
-             << Dpixx << " GeV/fm^3";
-    messager.flush("info");
-
-    double pixy = T[1][2];
-    double Dpixy = pixy - FOsurf_LRF_array_[0].piLRF_xy;
-    output << std::scientific << std::setprecision(8)
-           << pixy << "  " << Dpixy << std::endl;
-    messager << "check: pi_xy = " << pixy << " GeV/fm^3, diff = "
-             << Dpixy << " GeV/fm^3";
-    messager.flush("info");
-
-    double pixz = T[1][3];
-    double Dpixz = pixz - FOsurf_LRF_array_[0].piLRF_xz;
-    output << std::scientific << std::setprecision(8)
-           << pixz << "  " << Dpixz << std::endl;
-    messager << "check: pi_xz = " << pixz << " GeV/fm^3, diff = "
-             << Dpixz << " GeV/fm^3";
-    messager.flush("info");
-
-    double piyy = T[2][2] - Pi - FOsurf_LRF_array_[0].Pdec;
-    double Dpiyy = piyy - FOsurf_LRF_array_[0].piLRF_yy;
-    output << std::scientific << std::setprecision(8)
-           << piyy << "  " << Dpiyy << std::endl;
-    messager << "check: pi_yy = " << piyy << " GeV/fm^3, diff = "
-             << Dpiyy << " GeV/fm^3";
-    messager.flush("info");
-
-    double piyz = T[2][3];
-    double Dpiyz = piyz - FOsurf_LRF_array_[0].piLRF_yz;
-    output << std::scientific << std::setprecision(8)
-           << piyz << "  " << Dpiyz << std::endl;
-    messager << "check: pi_yz = " << piyz << " GeV/fm^3, diff = "
-             << Dpiyz << " GeV/fm^3";
-    messager.flush("info");
-
-    double pizz = T[3][3] - Pi - FOsurf_LRF_array_[0].Pdec;
-    double Dpizz = pizz + (  FOsurf_LRF_array_[0].piLRF_xx
-                           + FOsurf_LRF_array_[0].piLRF_yy);
-    output << std::scientific << std::setprecision(8)
-           << pizz << "  " << Dpizz << std::endl;
-    messager << "check: pi_zz = " << pizz << " GeV/fm^3, diff = "
-             << Dpizz << " GeV/fm^3";
-    messager.flush("info");
     output.close();
+}
+
+
+void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
+    FOsurf_Tmunu_.clear();
+    FOsurf_Tmunu_.resize(16, 0.);
+    float gmunu[4][4];              // define the metric
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 4; j++)
+            gmunu[i][j] = 0.;
+    gmunu[0][0] = 1.;
+    for (int i = 1; i < 4; i++)
+        gmunu[i][i] = -1.;
+
+    float u[4];
+    float pi_tz[4][4];
+    float Tmunu[4][4];
+    for (auto &surf_i: FOsurf_ptr) {
+        float cosh_eta = cosh(surf_i.eta);
+        float sinh_eta = sinh(surf_i.eta);
+        u[0] = surf_i.u0*cosh_eta + surf_i.u3*sinh_eta;
+        u[1] = surf_i.u1;
+        u[2] = surf_i.u2;
+        u[3] = surf_i.u3*cosh_eta + surf_i.u0*sinh_eta;
+        pi_tz[0][0] = (  surf_i.pi00*cosh_eta*cosh_eta
+                       + 2.*surf_i.pi03*cosh_eta*sinh_eta
+                       + surf_i.pi33*sinh_eta*sinh_eta);
+        pi_tz[0][1] = surf_i.pi01*cosh_eta + surf_i.pi13*sinh_eta;
+        pi_tz[0][2] = surf_i.pi02*cosh_eta + surf_i.pi23*sinh_eta;
+        pi_tz[0][3] = (  surf_i.pi00*cosh_eta*sinh_eta
+                       + surf_i.pi03*(cosh_eta*cosh_eta + sinh_eta*sinh_eta)
+                       + surf_i.pi33*sinh_eta*cosh_eta);
+        pi_tz[1][0] = pi_tz[0][1];
+        pi_tz[1][1] = surf_i.pi11;
+        pi_tz[1][2] = surf_i.pi12;
+        pi_tz[1][3] = surf_i.pi01*sinh_eta + surf_i.pi13*cosh_eta;
+        pi_tz[2][0] = pi_tz[0][2];
+        pi_tz[2][1] = surf_i.pi12;
+        pi_tz[2][2] = surf_i.pi22;
+        pi_tz[2][3] = surf_i.pi02*sinh_eta + surf_i.pi23*cosh_eta;
+        pi_tz[3][0] = pi_tz[0][3];
+        pi_tz[3][1] = pi_tz[1][3];
+        pi_tz[3][2] = pi_tz[2][3];
+        pi_tz[3][3] = (  surf_i.pi00*sinh_eta*sinh_eta
+                       + 2.*surf_i.pi03*sinh_eta*cosh_eta
+                       + surf_i.pi33*cosh_eta*cosh_eta);
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                Tmunu[i][j] = (
+                    surf_i.Edec*u[i]*u[j]
+                    - (surf_i.Pdec + surf_i.bulkPi)*(gmunu[i][j] - u[i]*u[j])
+                    + pi_tz[i][j]);
+                FOsurf_Tmunu_[4*i+j] += Tmunu[i][j];
+            }
+        }
+    }
+    messager << "The total energy-momentum tensor from the surface:";
+    messager.flush("info");
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            messager << "T[" << i << "][" << j << "] = "
+                     << std::scientific << std::setprecision(6)
+                     << FOsurf_Tmunu_[4*i+j] << " GeV/fm^3.";
+            messager.flush("info");
+        }
+    }
 }

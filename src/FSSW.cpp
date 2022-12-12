@@ -2061,11 +2061,13 @@ void FSSW::computeAvgTotalEnergyMomentum() {
         }
         nev++;
     }
+    messager_.info("Averaged total energy and momentum:");
     for (int i = 0; i < 4; i++) {
         Pmu_avg[i] = Pmu_avg[i]/nev;
         Pmu_err[i] = sqrt((Pmu_err[i]/nev - Pmu_avg[i]*Pmu_avg[i])/nev);
-        cout << "<P[" << i << "]> = " << Pmu_avg[i] << " +/- "
-             << Pmu_err[i] << " GeV." << endl;
+        messager_ << "<P[" << i << "]> = " << Pmu_avg[i] << " +/- "
+                  << Pmu_err[i] << " GeV.";
+        messager_.flush("info");
     }
 
 }
