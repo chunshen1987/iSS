@@ -905,7 +905,7 @@ void read_FOdata::read_in_HRG_EOS() {
     std::string eos_filename = (particle_table_path_
                                 + "/EOS_tables/");
     if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91) {
-        eos_filename += "HRGNEOS_PST-";
+        eos_filename += "HRGEOS_PST-";
     } else if (iEOS_MUSIC_ == 12) {
         eos_filename += "HRGNEOS_B-";
     }
