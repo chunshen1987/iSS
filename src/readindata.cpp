@@ -439,7 +439,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             surf_elem.Tdec = array[13]*hbarC;
             surf_elem.muB  = array[14]*hbarC;
             surf_elem.muS  = array[15]*hbarC;
-            surf_elem.muC  = array[16]*hbarC;
+            surf_elem.muQ  = array[16]*hbarC;
             surf_elem.Pdec = array[17]*surf_elem.Tdec - surf_elem.Edec;
 
             surf_elem.pi00 = array[18]*hbarC;  // GeV/fm^3
@@ -489,7 +489,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             ss >> dummy; surf_elem.Tdec = dummy*hbarC;
             ss >> dummy; surf_elem.muB = dummy*hbarC;
             ss >> dummy; surf_elem.muS = dummy*hbarC;
-            ss >> dummy; surf_elem.muC = dummy*hbarC;
+            ss >> dummy; surf_elem.muQ = dummy*hbarC;
             ss >> dummy;              // (e+P)/T
             surf_elem.Pdec = dummy*surf_elem.Tdec - surf_elem.Edec;
 
@@ -666,7 +666,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
             surf_elem.Tdec = array[13]*hbarC;
             surf_elem.muB  = array[14]*hbarC;
             surf_elem.muS  = array[15]*hbarC;
-            surf_elem.muC  = array[16]*hbarC;
+            surf_elem.muQ  = array[16]*hbarC;
             surf_elem.Pdec = array[17]*surf_elem.Tdec - surf_elem.Edec;
 
             surf_elem.pi00 = array[18]*hbarC;  // GeV/fm^3
@@ -711,7 +711,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
             surfdat >> dummy; surf_elem.Tdec = dummy*hbarC;
             surfdat >> dummy; surf_elem.muB = dummy*hbarC;
             surfdat >> dummy; surf_elem.muS = dummy*hbarC;
-            surfdat >> dummy; surf_elem.muC = dummy*hbarC;
+            surfdat >> dummy; surf_elem.muQ = dummy*hbarC;
             surfdat >> dummy;                    //(e+p)/T
             surf_elem.Pdec = dummy*surf_elem.Tdec - surf_elem.Edec;
 
@@ -776,20 +776,17 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
         cout << "Regulate local temperature with pure HRG EoS." << endl;
     }
 
-    double HRGEOS_de = HRGEOS_[1][0] - HRGEOS_[0][0];
-    double HRGEOS_e0 = HRGEOS_[0][0];
     for (auto &surf_i: surf_ptr) {
         if (regulateTemperature) {
-            int idx = static_cast<int>((surf_i.Edec - HRGEOS_e0)/HRGEOS_de);
-            if (idx >= 0 && idx < static_cast<int>(HRGEOS_.size()) - 1) {
-                double frac = (surf_i.Edec - HRGEOS_[idx][0])/HRGEOS_de;
-                surf_i.Tdec = (  HRGEOS_[idx][3]*(1 - frac)
-                               + HRGEOS_[idx+1][3]*frac);    // regulate T
-                // make sure P + Pi unchanged
-                double Preg = (  HRGEOS_[idx][1]*(1 - frac)
-                               + HRGEOS_[idx+1][1]*frac);
-                surf_i.bulkPi = surf_i.bulkPi + surf_i.Pdec - Preg;
-                surf_i.Pdec = Preg;
+            std::vector<double> eosVar;    // {P, T, muB, muS, muQ}
+            int status = getValuesFromHRGEOS(surf_i.Edec, surf_i.Bn, eosVar);
+            if (status == 0) {      // success
+                surf_i.Tdec = eosVar[1];
+                surf_i.muB  = eosVar[2];
+                surf_i.muS  = eosVar[3];
+                surf_i.muQ  = eosVar[4];
+                surf_i.bulkPi = surf_i.bulkPi + surf_i.Pdec - eosVar[0];
+                surf_i.Pdec = eosVar[0];
             }
         }
         surf_i.u0 = sqrt(1. + surf_i.u1*surf_i.u1
@@ -906,7 +903,13 @@ void read_FOdata::read_chemical_potentials_music(
 void read_FOdata::read_in_HRG_EOS() {
     cout << " -- Read in pure HRG EoS table...";
     std::string eos_filename = (particle_table_path_
-                                + "/EOS_tables/HRGEOS_PST-");
+                                + "/EOS_tables/");
+    if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91) {
+        eos_filename += "HRGNEOS_PST-";
+    } else if (iEOS_MUSIC_ == 12) {
+        eos_filename += "HRGNEOS_B-";
+    }
+
     if (afterburner_type_ == AfterburnerType::SMASH) {
         eos_filename += "SMASH.dat";
     } else if (afterburner_type_ == AfterburnerType::UrQMD) {
@@ -914,6 +917,7 @@ void read_FOdata::read_in_HRG_EOS() {
     } else {
         eos_filename = "s95pv1.dat";
     }
+
     std::ifstream eosFile(eos_filename.c_str());
     if (!eosFile.good()) {
         cout << "[Error] Can not found EOS file: " << eos_filename << endl;
@@ -925,11 +929,19 @@ void read_FOdata::read_in_HRG_EOS() {
     std::getline(eosFile, strLine);
     while (!eosFile.eof()) {
         std::stringstream ss(strLine);
-        std::vector<double> item;
-        for (int i = 0; i < 5; i++) {
-            double temp;
-            ss >> temp;
-            item.push_back(temp);
+        std::vector<double> item(7, 0);     // {ed, nB, P, T, muB, muS, muQ}
+        if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91) {
+            double temp, ed_loc, P_loc, T_loc;
+            ss >> ed_loc >> P_loc >> temp >> T_loc;
+            item[0] = ed_loc;
+            item[2] = P_loc;
+            item[3] = T_loc;
+        } else if (iEOS_MUSIC_ == 12) {
+            for (int i = 0; i < 5; i++) {
+                double temp;
+                ss >> temp;
+                item.push_back(temp);
+            }
         }
         HRGEOS_.push_back(item);
         std::getline(eosFile, strLine);
@@ -1214,4 +1226,58 @@ void read_FOdata::regulate_Wmunu(double u[4], double Wmunu[4][4],
                 - 1./3.*(gmunu[i][j] + u[i]*u[j])*(tr_pi + u_dot_pi_dot_u));
         }
     }
+}
+
+
+int read_FOdata::getValuesFromHRGEOS(double ed, double nB,
+                                     std::vector<double> &eosVar) {
+    eosVar.resize(5, 0);        // {P, T, muB, muS, muQ}
+    int nBlen = 1;
+    if (iEOS_MUSIC_ == 12)
+        nBlen = 200;
+    double HRGEOS_de = HRGEOS_[nBlen][0] - HRGEOS_[0][0];
+    double HRGEOS_e0 = HRGEOS_[0][0];
+    int e_idx = static_cast<int>((ed - HRGEOS_e0)/HRGEOS_de);
+    if (e_idx < 0 || e_idx >= static_cast<int>(HRGEOS_.size()/nBlen) - 2) {
+        messager << "ed is out of range: ed = " << ed << " GeV/fm^3. ";
+        messager << "Can not regulate this fluid cell!";
+        messager.flush("warning");
+        return(-1);
+    }
+    int e_idx1 = e_idx*nBlen;
+    int e_idx2 = (e_idx + 1)*nBlen;
+    double e_frac = (ed - HRGEOS_[e_idx1][0])/HRGEOS_de;
+
+    double nB_frac1 = 0;
+    double nB_frac2 = 0;
+    if (nBlen > 1) {
+        double dnB1 = HRGEOS_[e_idx1][1];
+        double dnB2 = HRGEOS_[e_idx2][1];
+        int nB_idx1 = std::min(nBlen - 1, static_cast<int>(nB/dnB1));
+        int nB_idx2 = std::min(nBlen - 1, static_cast<int>(nB/dnB2));
+        nB_frac1 = std::min(1., (nB - HRGEOS_[e_idx1+nB_idx1][1])/dnB1);
+        nB_frac2 = std::min(1., (nB - HRGEOS_[e_idx2+nB_idx2][1])/dnB2);
+    }
+
+    double Pdec1 = (  HRGEOS_[e_idx1  ][2]*(1. - nB_frac1)
+                    + HRGEOS_[e_idx1+1][2]*nB_frac1);
+    double Pdec2 = (  HRGEOS_[e_idx2  ][2]*(1. - nB_frac2)
+                    + HRGEOS_[e_idx2+1][2]*nB_frac2);
+    double Tdec1 = (  HRGEOS_[e_idx1  ][3]*(1. - nB_frac1)
+                    + HRGEOS_[e_idx1+1][3]*nB_frac1);
+    double Tdec2 = (  HRGEOS_[e_idx2  ][3]*(1. - nB_frac2)
+                    + HRGEOS_[e_idx2+1][3]*nB_frac2);
+
+    eosVar[0] = Pdec1*(1 - e_frac) + Pdec2*e_frac;    // interpolate P
+    eosVar[1] = Tdec1*(1 - e_frac) + Tdec2*e_frac;    // interpolate T
+    if (nBlen > 1) {
+        for (int muCol = 4; muCol < 7; muCol++) {
+            double mu1 = (  HRGEOS_[e_idx1  ][muCol]*(1. - nB_frac1)
+                          + HRGEOS_[e_idx1+1][muCol]*nB_frac1);
+            double mu2 = (  HRGEOS_[e_idx2  ][muCol]*(1. - nB_frac2)
+                          + HRGEOS_[e_idx2+1][muCol]*nB_frac2);
+            eosVar[muCol-2] = mu1*(1 - e_frac) + mu2*e_frac;
+        }
+    }
+    return(0);
 }

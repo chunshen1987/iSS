@@ -183,7 +183,7 @@ void iSS::transform_to_local_rest_frame(
         surf_LRF_i.Bn = surf_i.Bn;
         surf_LRF_i.muB = surf_i.muB;
         surf_LRF_i.muS = surf_i.muS;
-        surf_LRF_i.muQ = surf_i.muC;
+        surf_LRF_i.muQ = surf_i.muQ;
         surf_LRF_i.bulkPi = surf_i.bulkPi;
         surf_LRF_i.particle_mu_PCE = surf_i.particle_mu_PCE;
         float cosh_eta = cosh(surf_i.eta);

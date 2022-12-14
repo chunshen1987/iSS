@@ -76,6 +76,7 @@ class read_FOdata {
     void regulate_surface_cells(std::vector<FO_surf> &surf_ptr);
     void regulate_Wmunu(double u[4], double Wmunu[4][4],
                         double Wmunu_regulated[4][4]);
+    int getValuesFromHRGEOS(double ed, double nB, std::vector<double> &eos);
 };
 
 #endif  // SRC_READINDATA_H_
