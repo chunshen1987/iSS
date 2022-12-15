@@ -38,6 +38,9 @@ jobs:
       - name: Sampling Test static with finite net baryon density
         run: |
           $GITHUB_WORKSPACE/tests/RunAutoTestIdeal3.sh
+      - name: Sampling Test static with finite densities (BQS)
+        run: |
+          $GITHUB_WORKSPACE/tests/RunAutoTestIdeal4.sh
       - name: Sampling Test static with bulk viscosity
         run: |
           $GITHUB_WORKSPACE/tests/RunAutoTestViscous1.sh
