@@ -771,7 +771,7 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
     double u_flow[4];
 
     bool regulateTemperature = false;
-    if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91) {
+    if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91 || iEOS_MUSIC_ == 12) {
         regulateTemperature = true;
         cout << "Regulate local temperature with pure HRG EoS." << endl;
     }
@@ -781,6 +781,13 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
             std::vector<double> eosVar;    // {P, T, muB, muS, muQ}
             int status = getValuesFromHRGEOS(surf_i.Edec, surf_i.Bn, eosVar);
             if (status == 0) {      // success
+                //cout << "check: Tdec = " << surf_i.Tdec << " GeV, "
+                //     << eosVar[1] << " GeV, muB = " << surf_i.muB << " GeV, "
+                //     << eosVar[2] << " GeV, muS = " << surf_i.muS << " GeV, "
+                //     << eosVar[3] << " GeV, muQ = " << surf_i.muQ << " GeV, "
+                //     << eosVar[4] << endl;
+                //cout << "check: P = " << surf_i.Pdec << " GeV/fm^3, "
+                //     << eosVar[0] << " GeV/fm^3." << endl;
                 surf_i.Tdec = eosVar[1];
                 surf_i.muB  = eosVar[2];
                 surf_i.muS  = eosVar[3];
@@ -940,7 +947,7 @@ void read_FOdata::read_in_HRG_EOS() {
             for (int i = 0; i < 5; i++) {
                 double temp;
                 ss >> temp;
-                item.push_back(temp);
+                item[i] = temp;
             }
         }
         HRGEOS_.push_back(item);
@@ -1246,36 +1253,45 @@ int read_FOdata::getValuesFromHRGEOS(double ed, double nB,
     }
     int e_idx1 = e_idx*nBlen;
     int e_idx2 = (e_idx + 1)*nBlen;
+    //cout << "HRG size = " << HRGEOS_.size()
+    //     << ", dim = " << HRGEOS_[0].size()
+    //     << ", eidx1 = " << e_idx1 << ", eidx2 = " << e_idx2 << endl;
     double e_frac = (ed - HRGEOS_[e_idx1][0])/HRGEOS_de;
 
     double nB_frac1 = 0;
     double nB_frac2 = 0;
+    int nB_idx1 = 0;
+    int nB_idx2 = 0;
     if (nBlen > 1) {
-        double dnB1 = HRGEOS_[e_idx1][1];
-        double dnB2 = HRGEOS_[e_idx2][1];
-        int nB_idx1 = std::min(nBlen - 1, static_cast<int>(nB/dnB1));
-        int nB_idx2 = std::min(nBlen - 1, static_cast<int>(nB/dnB2));
+        double dnB1 = HRGEOS_[e_idx1+1][1];
+        double dnB2 = HRGEOS_[e_idx2+1][1];
+        nB_idx1 = std::min(nBlen - 2, static_cast<int>(nB/dnB1));
+        nB_idx2 = std::min(nBlen - 2, static_cast<int>(nB/dnB2));
         nB_frac1 = std::min(1., (nB - HRGEOS_[e_idx1+nB_idx1][1])/dnB1);
         nB_frac2 = std::min(1., (nB - HRGEOS_[e_idx2+nB_idx2][1])/dnB2);
+        //cout << "HRG size = " << HRGEOS_.size() << ", nB_idx1 = " << nB_idx1
+        //     << ", nB_idx2 = " << nB_idx2
+        //     << ", dnB1 = " << dnB1 << ", dnB2 = " << dnB2
+        //     << endl;
     }
 
-    double Pdec1 = (  HRGEOS_[e_idx1  ][2]*(1. - nB_frac1)
-                    + HRGEOS_[e_idx1+1][2]*nB_frac1);
-    double Pdec2 = (  HRGEOS_[e_idx2  ][2]*(1. - nB_frac2)
-                    + HRGEOS_[e_idx2+1][2]*nB_frac2);
-    double Tdec1 = (  HRGEOS_[e_idx1  ][3]*(1. - nB_frac1)
-                    + HRGEOS_[e_idx1+1][3]*nB_frac1);
-    double Tdec2 = (  HRGEOS_[e_idx2  ][3]*(1. - nB_frac2)
-                    + HRGEOS_[e_idx2+1][3]*nB_frac2);
+    double Pdec1 = (  HRGEOS_[e_idx1+nB_idx1  ][2]*(1. - nB_frac1)
+                    + HRGEOS_[e_idx1+nB_idx1+1][2]*nB_frac1);
+    double Pdec2 = (  HRGEOS_[e_idx2+nB_idx2  ][2]*(1. - nB_frac2)
+                    + HRGEOS_[e_idx2+nB_idx2+1][2]*nB_frac2);
+    double Tdec1 = (  HRGEOS_[e_idx1+nB_idx1  ][3]*(1. - nB_frac1)
+                    + HRGEOS_[e_idx1+nB_idx1+1][3]*nB_frac1);
+    double Tdec2 = (  HRGEOS_[e_idx2+nB_idx2  ][3]*(1. - nB_frac2)
+                    + HRGEOS_[e_idx2+nB_idx2+1][3]*nB_frac2);
 
     eosVar[0] = Pdec1*(1 - e_frac) + Pdec2*e_frac;    // interpolate P
     eosVar[1] = Tdec1*(1 - e_frac) + Tdec2*e_frac;    // interpolate T
     if (nBlen > 1) {
         for (int muCol = 4; muCol < 7; muCol++) {
-            double mu1 = (  HRGEOS_[e_idx1  ][muCol]*(1. - nB_frac1)
-                          + HRGEOS_[e_idx1+1][muCol]*nB_frac1);
-            double mu2 = (  HRGEOS_[e_idx2  ][muCol]*(1. - nB_frac2)
-                          + HRGEOS_[e_idx2+1][muCol]*nB_frac2);
+            double mu1 = (  HRGEOS_[e_idx1+nB_idx1  ][muCol]*(1. - nB_frac1)
+                          + HRGEOS_[e_idx1+nB_idx1+1][muCol]*nB_frac1);
+            double mu2 = (  HRGEOS_[e_idx2+nB_idx2  ][muCol]*(1. - nB_frac2)
+                          + HRGEOS_[e_idx2+nB_idx2+1][muCol]*nB_frac2);
             eosVar[muCol-2] = mu1*(1 - e_frac) + mu2*e_frac;
         }
     }

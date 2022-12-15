@@ -78,9 +78,9 @@ typedef struct {
 
 struct iSS_Hadron {
      int pid;
-     double mass;
-     double E, px, py, pz;
-     double t, x, y, z;
+     float mass;
+     float E, px, py, pz;
+     float t, x, y, z;
 };
 
 #endif  // DATA_STRUCT_H_

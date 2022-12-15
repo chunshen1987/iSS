@@ -4,7 +4,7 @@ hydro_mode = 2           # mode for reading in freeze out information
                          #    boost-invariant
                          # 2: reads outputs from MUSIC full (3+1)-d
 
-afterburner_type = 1     # 0: PDG_Decay
+afterburner_type = 2     # 0: PDG_Decay
                          # 1: UrQMD
                          # 2: SMASH
 
