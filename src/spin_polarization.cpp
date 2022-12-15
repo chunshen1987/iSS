@@ -643,7 +643,7 @@ void SpinPolarization::compute_spin_polarization_for_a_given_p(
         const float tau_peta = pmu[3]*surf.cosh_eta - pmu[0]*surf.sinh_eta;   // tau*p^eta
         const double mu = (  POI_info.baryon*surf.muB
                            + POI_info.strange*surf.muS
-                           + POI_info.charge*surf.muC);
+                           + POI_info.charge*surf.muQ);
         const double pdotu = pmu[0]*ut - pmu[1]*ux - pmu[2]*uy - pmu[3]*uz;
         const double pdsigma = (tau*(  ptau*surf.da0 + pmu[1]*surf.da1
                                      + pmu[2]*surf.da2 + tau_peta*surf.da3/tau)

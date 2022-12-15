@@ -24,6 +24,7 @@ class iSS {
     std::vector<FO_surf> FOsurf_array_;
     std::vector<FO_surf_LRF> FOsurf_LRF_array_;
     std::vector<float> FOsurf_Tmunu_;
+    std::vector<float> FOsurf_Q_;
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr_;
 
     int Nparticle;
@@ -32,7 +33,7 @@ class iSS {
 
     long randomSeed_;
 
-    std::vector<particle_info> particle;
+    std::vector<particle_info> particle_;
 
     std::unique_ptr<EmissionFunctionArray> efa_;
     std::unique_ptr<FSSW> spectra_sampler_;
@@ -101,6 +102,7 @@ class iSS {
                 std::vector<FO_surf> &FOsurf_ptr,
                 std::vector<FO_surf_LRF> &FOsurf_LRF_ptr);
     void computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr);
+    void getParticleQuantumNumbers(long monval, std::array<int, 3> &Qarr);
 };
 
 

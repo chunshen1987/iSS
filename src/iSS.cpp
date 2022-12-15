@@ -34,7 +34,7 @@ void iSS::clear() {
     FOsurf_array_.clear();
     FOsurf_LRF_array_.clear();
     FOsurf_Tmunu_.clear();
-    particle.clear();
+    particle_.clear();
 }
 
 
@@ -106,7 +106,7 @@ int iSS::read_in_FO_surface() {
     }
 
     afterburner_type_ = freeze_out_data.get_afterburner_type();
-    freeze_out_data.read_in_chemical_potentials(FOsurf_temp, particle);
+    freeze_out_data.read_in_chemical_potentials(FOsurf_temp, particle_);
     flag_PCE_ = freeze_out_data.get_flag_PCE();
 
     computeFOSurfTmunu(FOsurf_temp);
@@ -155,7 +155,7 @@ int iSS::generate_samples() {
     if (paraRdr_ptr->getVal("MC_sampling") == 4) {
         spectra_sampler_ = std::unique_ptr<FSSW> (new FSSW(
                     ran_gen_ptr_, &chosen_particles,
-                    particle, FOsurf_LRF_array_, flag_PCE_, paraRdr_ptr,
+                    particle_, FOsurf_LRF_array_, flag_PCE_, paraRdr_ptr,
                     path_, table_path_, afterburner_type_));
         spectra_sampler_->shell();
     } else {
@@ -167,7 +167,7 @@ int iSS::generate_samples() {
         efa_ = std::unique_ptr<EmissionFunctionArray> (
             new EmissionFunctionArray(
                 ran_gen_ptr_, &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
-                particle, FOsurf_array_, flag_PCE_, paraRdr_ptr,
+                particle_, FOsurf_array_, flag_PCE_, paraRdr_ptr,
                 path_, table_path_, afterburner_type_));
         efa_->shell();
     }
@@ -193,7 +193,7 @@ void iSS::transform_to_local_rest_frame(
         surf_LRF_i.Bn = surf_i.Bn;
         surf_LRF_i.muB = surf_i.muB;
         surf_LRF_i.muS = surf_i.muS;
-        surf_LRF_i.muQ = surf_i.muC;
+        surf_LRF_i.muQ = surf_i.muQ;
         surf_LRF_i.bulkPi = surf_i.bulkPi;
         surf_LRF_i.particle_mu_PCE = surf_i.particle_mu_PCE;
         float cosh_eta = cosh(surf_i.eta);
@@ -305,7 +305,7 @@ void iSS::transform_to_local_rest_frame(
 
 void iSS::compute_spin_polarization() {
     polarizor = std::unique_ptr<SpinPolarization> (
-            new SpinPolarization(FOsurf_array_, particle, path_, table_path_,
+            new SpinPolarization(FOsurf_array_, particle_, path_, table_path_,
                                  *paraRdr_ptr));
     polarizor->compute_spin_polarization_shell();
 }
@@ -315,15 +315,25 @@ void iSS::construct_Tmunu_from_particle_samples() {
     messager.info("Constructing the fluid cell T^{mu nu} from samples ...");
     double volume = (FOsurf_LRF_array_[0].da_mu_LRF[0]
                      /FOsurf_LRF_array_[0].u_tz[0]);
+    int monval_cached = 0;
+    std::array<int, 3> Qparticle = {0, 0, 0};
     double T[4][4];
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
             T[i][j] = 0.;
+    double netChargeArr[3] = {0., 0., 0.};
     int nev = get_number_of_sampled_events();
     for (int iev = 0; iev < nev; iev++) {
         int npart = get_number_of_particles(iev);
         for (int ipart = 0; ipart < npart; ipart++) {
             iSS_Hadron part_i = get_hadron(iev, ipart);
+            if (part_i.pid != monval_cached) {
+                getParticleQuantumNumbers(part_i.pid, Qparticle);
+                monval_cached = part_i.pid;
+            }
+            netChargeArr[0] += Qparticle[0];        // net baryon
+            netChargeArr[1] += Qparticle[1];        // net strangeness
+            netChargeArr[2] += Qparticle[2];        // net electric charge
             double p[4] = {part_i.E, part_i.px, part_i.py, part_i.pz};
             for (int ii = 0; ii < 4; ii++)
                 for (int jj = 0; jj < 4; jj++)
@@ -335,6 +345,8 @@ void iSS::construct_Tmunu_from_particle_samples() {
             T[i][j] /= (nev*volume);
         }
     }
+    for (int i = 0; i < 3; i++)
+        netChargeArr[i] /= (nev*volume);
 
     std::ofstream output("checkReconstructedTmunu.dat");
     output << "# Tmunu_FOcell[GeV/fm^3]  Tmunu_Particles[GeV/fm^3]  diff"
@@ -354,14 +366,36 @@ void iSS::construct_Tmunu_from_particle_samples() {
             messager.flush("info");
         }
     }
-
+    for (int i = 0; i < 1; i++) {    // only check net baryon density for now
+        output << std::scientific << std::setprecision(8)
+               << FOsurf_Q_[i] << "  " << netChargeArr[i] << "  "
+               << FOsurf_Q_[i] - netChargeArr[i] << std::endl;
+        messager << "check: nQ[" << i << "] = " << FOsurf_Q_[i]
+                 << " 1/fm^3," << netChargeArr[i] << " 1/fm^3, diff = "
+                 << FOsurf_Q_[i] - netChargeArr[i] << " 1/fm^3";
+        messager.flush("info");
+    }
     output.close();
+}
+
+
+void iSS::getParticleQuantumNumbers(long monval, std::array<int, 3> &Qarr) {
+    for (auto particle_i : particle_) {
+        if (particle_i.monval == monval) {
+            Qarr[0] = particle_i.baryon;
+            Qarr[1] = particle_i.strange;
+            Qarr[2] = particle_i.charge;
+            return;
+        }
+    }
 }
 
 
 void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
     FOsurf_Tmunu_.clear();
     FOsurf_Tmunu_.resize(16, 0.);
+    FOsurf_Q_.clear();
+    FOsurf_Q_.resize(3, 0.);
     float gmunu[4][4];              // define the metric
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
@@ -411,6 +445,7 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
                 FOsurf_Tmunu_[4*i+j] += Tmunu[i][j];
             }
         }
+        FOsurf_Q_[0] = surf_i.Bn;
     }
     messager << "The total energy-momentum tensor from the surface:";
     messager.flush("info");

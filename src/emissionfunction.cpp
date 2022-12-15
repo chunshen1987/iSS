@@ -467,7 +467,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
         double uy = surf->u2;
         double tau_ueta = surf->u3;
 
-        double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
+        double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
         if (flag_PCE_ == 1) {
             double mu_PCE =  surf->particle_mu_PCE[particle_idx];
             mu += mu_PCE;
@@ -699,7 +699,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
                 double uy = surf->u2;
                 double tau_ueta = surf->u3;
 
-                double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
+                double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
                 if (flag_PCE_ == 1) {
                     double mu_PCE = surf->particle_mu_PCE[particle_idx];
                     mu += mu_PCE;
@@ -1375,7 +1375,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
             double uy = surf->u2;
             double tau_ueta = surf->u3;
 
-            double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
+            double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
             if (flag_PCE_ == 1) {
                 double mu_PCE = surf->particle_mu_PCE[last_particle_idx];
                 mu += mu_PCE;
@@ -1835,7 +1835,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                 double uy = surf->u2;
                 double uz = surf->u3;
 
-                double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
+                double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
                 if (flag_PCE_ == 1) {
                     double mu_PCE = surf->particle_mu_PCE[last_particle_idx];
                     mu += mu_PCE;
@@ -2896,7 +2896,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
             const int baryon  = particle->baryon;
             const int strange = particle->strange;
             const int charge  = particle->charge;
-            double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
+            double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
             if (flag_PCE_ == 1) {
                 double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
                 mu += mu_PCE;
@@ -3055,7 +3055,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
         const int baryon  = particle->baryon;
         const int strange = particle->strange;
         const int charge  = particle->charge;
-        double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
+        double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
         if (flag_PCE_ == 1) {
             double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
             mu += mu_PCE;
@@ -4195,7 +4195,7 @@ int EmissionFunctionArray::sample_momemtum_from_a_fluid_cell(
         double &pT, double &phi, double &y_minus_eta_s
         ) {
     const double Tdec = surf->Tdec;
-    const double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
+    const double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
     const double inv_Tdec  = 1./Tdec;
     const double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI)*(hbarC*hbarC*hbarC));
     const double deltaf_prefactor = (
@@ -4320,7 +4320,7 @@ double EmissionFunctionArray::estimate_maximum(
     const double Pdec     = surf->Pdec;
     const double Edec     = surf->Edec;
 
-    double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muC;
+    double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
     if (flag_PCE_ == 1) {
         double mu_PCE = (
                     surf->particle_mu_PCE[real_particle_idx]);

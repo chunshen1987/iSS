@@ -56,7 +56,7 @@ typedef struct {
     float da0, da1, da2, da3;
     float u0, u1, u2, u3;
     float Edec, Tdec, Pdec;
-    float Bn, muB, muS, muC;
+    float Bn, muB, muS, muQ;
     float pi00, pi01, pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33;
     float bulkPi;
     float qmu0, qmu1, qmu2, qmu3;
@@ -80,9 +80,9 @@ typedef struct {
 
 struct iSS_Hadron {
      int pid;
-     double mass;
-     double E, px, py, pz;
-     double t, x, y, z;
+     float mass;
+     float E, px, py, pz;
+     float t, x, y, z;
 };
 
 #endif  // DATA_STRUCT_H_

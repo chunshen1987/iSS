@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+cp tests/music_input_9 tests/music_input
+
 ./iSS.e tests/iSS_parameters_ideal.dat tests testIdealOneFluidCell2.dat
 
 python3 tests/TestOutputFiles.py
