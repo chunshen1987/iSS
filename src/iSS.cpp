@@ -366,10 +366,12 @@ void iSS::construct_Tmunu_from_particle_samples() {
             messager.flush("info");
         }
     }
-    for (int i = 0; i < 1; i++) {    // only check net baryon density for now
-        output << std::scientific << std::setprecision(8)
-               << FOsurf_Q_[i] << "  " << netChargeArr[i] << "  "
-               << FOsurf_Q_[i] - netChargeArr[i] << std::endl;
+    for (int i = 0; i < 3; i++) {
+        if (i == 0) {       // only check net baryon density for now
+            output << std::scientific << std::setprecision(8)
+                   << FOsurf_Q_[i] << "  " << netChargeArr[i] << "  "
+                   << FOsurf_Q_[i] - netChargeArr[i] << std::endl;
+        }
         messager << "check: nQ[" << i << "] = " << FOsurf_Q_[i]
                  << " 1/fm^3," << netChargeArr[i] << " 1/fm^3, diff = "
                  << FOsurf_Q_[i] - netChargeArr[i] << " 1/fm^3";
@@ -446,6 +448,7 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
             }
         }
         FOsurf_Q_[0] = surf_i.Bn;
+        FOsurf_Q_[2] = 0.4*surf_i.Bn;
     }
     messager << "The total energy-momentum tensor from the surface:";
     messager.flush("info");

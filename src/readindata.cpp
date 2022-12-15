@@ -837,7 +837,8 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
     double u_flow[4];
 
     bool regulateTemperature = false;
-    if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91 || iEOS_MUSIC_ == 12) {
+    if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91
+            || iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14) {
         regulateTemperature = true;
         cout << "Regulate local temperature with pure HRG EoS." << endl;
     }
@@ -1019,6 +1020,8 @@ void read_FOdata::read_in_HRG_EOS() {
         eos_filename += "HRGEOS_PST-";
     } else if (iEOS_MUSIC_ == 12) {
         eos_filename += "HRGNEOS_B-";
+    } else if (iEOS_MUSIC_ == 14) {
+        eos_filename += "HRGNEOS_BQS-";
     }
 
     if (afterburner_type_ == AfterburnerType::SMASH) {
@@ -1049,6 +1052,12 @@ void read_FOdata::read_in_HRG_EOS() {
             item[3] = T_loc;
         } else if (iEOS_MUSIC_ == 12) {
             for (int i = 0; i < 5; i++) {
+                double temp;
+                ss >> temp;
+                item[i] = temp;
+            }
+        } else if (iEOS_MUSIC_ == 14) {
+            for (int i = 0; i < 7; i++) {
                 double temp;
                 ss >> temp;
                 item[i] = temp;
@@ -1344,7 +1353,7 @@ int read_FOdata::getValuesFromHRGEOS(double ed, double nB,
                                      std::vector<double> &eosVar) {
     eosVar.resize(5, 0);        // {P, T, muB, muS, muQ}
     int nBlen = 1;
-    if (iEOS_MUSIC_ == 12)
+    if (iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14)
         nBlen = 200;
     double HRGEOS_de = HRGEOS_[nBlen][0] - HRGEOS_[0][0];
     double HRGEOS_e0 = HRGEOS_[0][0];
