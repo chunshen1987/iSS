@@ -1303,7 +1303,7 @@ void FSSW::load_bulk_deltaf_14mom_table(string filepath) {
 void FSSW::load_CE_deltaf_NEOSBQS_table(string filepath) {
     std::string folder_name = "/urqmd";
     if (afterburner_type_ == AfterburnerType::SMASH) {
-        folder_name = "/smash_box";
+        folder_name = "/smash";
     }
     std::stringstream filename;
     filename << filepath << folder_name << "/NEoSBQS_CE_deltafCoeff.dat";
@@ -1315,54 +1315,34 @@ void FSSW::load_CE_deltaf_NEOSBQS_table(string filepath) {
     }
 
     // define table size
-    deltaf_coeff_NEOSBQS_table_length_e_ = 145;
-    deltaf_coeff_NEOSBQS_table_length_nB_ = 641;
+    deltaf_coeff_NEOSBQS_table_length_e_ = 200;
+    deltaf_coeff_NEOSBQS_table_length_nB_ = 200;
 
     string dummy;
     // read header
     std::getline(NEoS_table, dummy);
 
-    // allocate 2D tables
-    for (int i = 0; i < deltaf_coeff_NEOSBQS_table_length_e_; i++) {
-        std::vector<double> temp(deltaf_coeff_NEOSBQS_table_length_nB_, 0);
-        deltaf_coeff_CE_NEOSBQS_chat_tb_.push_back(temp);
-        deltaf_coeff_CE_NEOSBQS_zetahat_tb_.push_back(temp);
-        deltaf_coeff_CE_NEOSBQS_etahat_tb_.push_back(temp);
-    }
-
     // load 2D table
-    double temp1, temp2;
     for (int i = 0; i < deltaf_coeff_NEOSBQS_table_length_e_; i++) {
         for (int j = 0; j < deltaf_coeff_NEOSBQS_table_length_nB_; j++) {
-            NEoS_table >> temp1 >> temp2
-                       >> deltaf_coeff_CE_NEOSBQS_chat_tb_[i][j]
-                       >> deltaf_coeff_CE_NEOSBQS_zetahat_tb_[i][j]
-                       >> deltaf_coeff_CE_NEOSBQS_etahat_tb_[i][j];
-            if (j == 0) {
-                if (i == 0) {
-                    deltaf_coeff_NEOSBQS_table_e0_ = temp1;
-                    deltaf_coeff_NEOSBQS_table_nB0_ = temp2;
-                } else if (i == 1) {
-                    deltaf_coeff_NEOSBQS_table_de_ = (
-                            temp1 - deltaf_coeff_NEOSBQS_table_e0_);
-                }
-            } else if (j == 1) {
-                if (i == 0) {
-                    deltaf_coeff_NEOSBQS_table_dnB_ = (
-                            temp2 - deltaf_coeff_NEOSBQS_table_nB0_);
-                }
+            std::vector<double> temp(5, 0);
+            for (int k = 0; k < 5; k++) {
+                NEoS_table >> temp[k];
             }
+            deltaf_coeff_CE_NEOSBQS_tb_.push_back(temp);
         }
     }
+    deltaf_coeff_NEOSBQS_table_de_ = (  deltaf_coeff_CE_NEOSBQS_tb_[200][0]
+                                      - deltaf_coeff_CE_NEOSBQS_tb_[0][0]);
     NEoS_table.close();
 }
 
 
 void FSSW::load_22mom_deltaf_NEOSBQS_table(string filepath) {
     std::string folder_name = "/urqmd";
-    //if (afterburner_type_ == AfterburnerType::SMASH) {
-    //    folder_name = "/smash_box";
-    //}
+    if (afterburner_type_ == AfterburnerType::SMASH) {
+        folder_name = "/smash";
+    }
     std::stringstream filename;
     filename << filepath << folder_name << "/NEoSBQS_22mom_deltafCoeff.dat";
     ifstream NEoS_table(filename.str().c_str());
@@ -1373,51 +1353,25 @@ void FSSW::load_22mom_deltaf_NEOSBQS_table(string filepath) {
     }
 
     // define table size
-    deltaf_coeff_NEOSBQS_table_length_e_ = 145;
-    deltaf_coeff_NEOSBQS_table_length_nB_ = 641;
+    deltaf_coeff_NEOSBQS_table_length_e_ = 200;
+    deltaf_coeff_NEOSBQS_table_length_nB_ = 200;
 
     string dummy;
     // read header
     std::getline(NEoS_table, dummy);
 
-    // allocate 2D tables
-    for (int i = 0; i < deltaf_coeff_NEOSBQS_table_length_e_; i++) {
-        std::vector<double> temp(deltaf_coeff_NEOSBQS_table_length_nB_, 0);
-        deltaf_coeff_14mom_NEOSBQS_shear_tb_.push_back(temp);
-        deltaf_coeff_14mom_NEOSBQS_Pi_uu_tb_.push_back(temp);
-        deltaf_coeff_14mom_NEOSBQS_Pi_tr_tb_.push_back(temp);
-        deltaf_coeff_14mom_NEOSBQS_Pi_Bu_tb_.push_back(temp);
-        deltaf_coeff_14mom_NEOSBQS_Pi_Su_tb_.push_back(temp);
-        deltaf_coeff_14mom_NEOSBQS_Pi_Qu_tb_.push_back(temp);
-    }
-
     // load 2D table
-    double temp1, temp2;
     for (int i = 0; i < deltaf_coeff_NEOSBQS_table_length_e_; i++) {
         for (int j = 0; j < deltaf_coeff_NEOSBQS_table_length_nB_; j++) {
-            NEoS_table >> temp1 >> temp2
-                       >> deltaf_coeff_14mom_NEOSBQS_shear_tb_[i][j]
-                       >> deltaf_coeff_14mom_NEOSBQS_Pi_uu_tb_[i][j]
-                       >> deltaf_coeff_14mom_NEOSBQS_Pi_tr_tb_[i][j]
-                       >> deltaf_coeff_14mom_NEOSBQS_Pi_Bu_tb_[i][j]
-                       >> deltaf_coeff_14mom_NEOSBQS_Pi_Su_tb_[i][j]
-                       >> deltaf_coeff_14mom_NEOSBQS_Pi_Qu_tb_[i][j];
-            if (j == 0) {
-                if (i == 0) {
-                    deltaf_coeff_NEOSBQS_table_e0_ = temp1;
-                    deltaf_coeff_NEOSBQS_table_nB0_ = temp2;
-                } else if (i == 1) {
-                    deltaf_coeff_NEOSBQS_table_de_ = (
-                            temp1 - deltaf_coeff_NEOSBQS_table_e0_);
-                }
-            } else if (j == 1) {
-                if (i == 0) {
-                    deltaf_coeff_NEOSBQS_table_dnB_ = (
-                            temp2 - deltaf_coeff_NEOSBQS_table_nB0_);
-                }
+            std::vector<double> temp(8, 0);
+            for (int k = 0; k < 8; k++) {
+                NEoS_table >> temp[k];
             }
+            deltaf_coeff_22mom_NEOSBQS_tb_.push_back(temp);
         }
     }
+    deltaf_coeff_NEOSBQS_table_de_ = (  deltaf_coeff_22mom_NEOSBQS_tb_[200][0]
+                                      - deltaf_coeff_22mom_NEOSBQS_tb_[0][0]);
     NEoS_table.close();
 }
 
@@ -1479,80 +1433,113 @@ void FSSW::getbulkvisCoefficients(const double Tdec, const double mu_B,
 void FSSW::getCENEOSBQSCoefficients(const double Edec, const double nB,
                                     std::vector<double> &visCoefficients) {
     visCoefficients.resize(3, 0.);
-    int idx_e = static_cast<int>((Edec - deltaf_coeff_NEOSBQS_table_e0_)
+    int idx_e = static_cast<int>((Edec - deltaf_coeff_CE_NEOSBQS_tb_[0][0])
                                  /deltaf_coeff_NEOSBQS_table_de_);
-    int idx_nB = static_cast<int>((nB - deltaf_coeff_NEOSBQS_table_nB0_)
-                                  /deltaf_coeff_NEOSBQS_table_dnB_);
-    double x_fraction = ((Edec - deltaf_coeff_NEOSBQS_table_e0_)
-                         /deltaf_coeff_NEOSBQS_table_de_ - idx_e);
-    double y_fraction = ((nB - deltaf_coeff_NEOSBQS_table_nB0_)
-                         /deltaf_coeff_NEOSBQS_table_dnB_ - idx_nB);
-
     // avoid overflow and underflow
-    int idx_e1 = std::max(
-        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 1, idx_e));
-    int idx_nB1 = std::max(
-        0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB));
-    int idx_e2 = std::max(
-        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 1, idx_e + 1));
-    int idx_nB2 = std::max(
-        0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB + 1));
+    idx_e = std::max(
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 2, idx_e));
+    int Ne1 = idx_e*deltaf_coeff_NEOSBQS_table_length_e_;
+    int Ne2 = (idx_e+1)*deltaf_coeff_NEOSBQS_table_length_e_;
+    double e_frac = ((Edec - deltaf_coeff_CE_NEOSBQS_tb_[Ne1][0])
+                     /deltaf_coeff_NEOSBQS_table_de_);
 
-    double chat = bilinearInterp(deltaf_coeff_CE_NEOSBQS_chat_tb_,
-                                 idx_e1, idx_e2, idx_nB1, idx_nB2,
-                                 x_fraction, y_fraction);
-    double zetahat = bilinearInterp(deltaf_coeff_CE_NEOSBQS_zetahat_tb_,
-                                    idx_e1, idx_e2, idx_nB1, idx_nB2,
-                                    x_fraction, y_fraction);
-    double etahat = bilinearInterp(deltaf_coeff_CE_NEOSBQS_etahat_tb_,
-                                   idx_e1, idx_e2, idx_nB1, idx_nB2,
-                                   x_fraction, y_fraction);
-    visCoefficients[0] = 1./zetahat;
-    visCoefficients[1] = 1./3. - chat;
-    visCoefficients[2] = etahat;
+    double dnB1 = deltaf_coeff_CE_NEOSBQS_tb_[Ne1+1][1];
+    double dnB2 = deltaf_coeff_CE_NEOSBQS_tb_[Ne2+1][1];
+    int idx_nB1 = static_cast<int>((nB)/dnB1);
+    int idx_nB2 = static_cast<int>((nB)/dnB2);
+    // avoid overflow and underflow
+    idx_nB1 = std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 2, idx_nB1);
+    idx_nB2 = std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 2, idx_nB2);
+    double nB_frac1 = std::min(
+            1., (nB - deltaf_coeff_CE_NEOSBQS_tb_[Ne1+idx_nB1][1])/dnB1);
+    double nB_frac2 = std::min(
+            1., (nB - deltaf_coeff_CE_NEOSBQS_tb_[Ne2+idx_nB2][1])/dnB2);
+
+    // check
+    //cout << "ed = " << Edec
+    //     << ", e0 = " << deltaf_coeff_CE_NEOSBQS_tb_[Ne1][0]
+    //     << ", e1 = " << deltaf_coeff_CE_NEOSBQS_tb_[Ne2][0]
+    //     << ", efrac = " << e_frac
+    //     << ", nB = " << nB
+    //     << ", nB1_0 = " << deltaf_coeff_CE_NEOSBQS_tb_[Ne1+idx_nB1][1]
+    //     << ", nB1_1 = " << deltaf_coeff_CE_NEOSBQS_tb_[Ne1+idx_nB1+1][1]
+    //     << ", nB_frac1 = " << nB_frac1
+    //     << ", nB2_0 = " << deltaf_coeff_CE_NEOSBQS_tb_[Ne2+idx_nB2][1]
+    //     << ", nB2_1 = " << deltaf_coeff_CE_NEOSBQS_tb_[Ne2+idx_nB2+1][1]
+    //     << ", nB_frac2 = " << nB_frac2
+    //     << endl;
+
+    std::vector<double> interpCoeff(3, 0);
+    for (int i = 2; i < 5; i++) {
+        // c2_hat, zeta_hat, eta_hat
+        double temp1 = (
+              deltaf_coeff_CE_NEOSBQS_tb_[Ne1+idx_nB1  ][i]*(1 - nB_frac1)
+            + deltaf_coeff_CE_NEOSBQS_tb_[Ne1+idx_nB1+1][i]*nB_frac1);
+        double temp2 = (
+              deltaf_coeff_CE_NEOSBQS_tb_[Ne2+idx_nB2  ][i]*(1 - nB_frac2)
+            + deltaf_coeff_CE_NEOSBQS_tb_[Ne2+idx_nB2+1][i]*nB_frac2);
+
+        interpCoeff[i-2] = temp1*(1. - e_frac) + temp2*e_frac;
+    }
+    visCoefficients[0] = 1./interpCoeff[1];
+    visCoefficients[1] = 1./3. - interpCoeff[0];
+    visCoefficients[2] = interpCoeff[2];
 }
 
 
 void FSSW::get22momNEOSBQSCoefficients(const double Edec, const double nB,
                                        std::vector<double> &visCoefficients) {
     visCoefficients.resize(6, 0.);
-    int idx_e = static_cast<int>((Edec - deltaf_coeff_NEOSBQS_table_e0_)
+    int idx_e = static_cast<int>((Edec - deltaf_coeff_22mom_NEOSBQS_tb_[0][0])
                                  /deltaf_coeff_NEOSBQS_table_de_);
-    int idx_nB = static_cast<int>((nB - deltaf_coeff_NEOSBQS_table_nB0_)
-                                  /deltaf_coeff_NEOSBQS_table_dnB_);
-    double x_fraction = ((Edec - deltaf_coeff_NEOSBQS_table_e0_)
-                         /deltaf_coeff_NEOSBQS_table_de_ - idx_e);
-    double y_fraction = ((nB - deltaf_coeff_NEOSBQS_table_nB0_)
-                         /deltaf_coeff_NEOSBQS_table_dnB_ - idx_nB);
-
     // avoid overflow and underflow
-    int idx_e1 = std::max(
-        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 1, idx_e));
-    int idx_nB1 = std::max(
-        0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB));
-    int idx_e2 = std::max(
-        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 1, idx_e + 1));
-    int idx_nB2 = std::max(
-        0, std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 1, idx_nB + 1));
+    idx_e = std::max(
+        0, std::min(deltaf_coeff_NEOSBQS_table_length_e_ - 2, idx_e));
+    int Ne1 = idx_e*deltaf_coeff_NEOSBQS_table_length_e_;
+    int Ne2 = (idx_e+1)*deltaf_coeff_NEOSBQS_table_length_e_;
+    double e_frac = ((Edec - deltaf_coeff_22mom_NEOSBQS_tb_[Ne1][0])
+                     /deltaf_coeff_NEOSBQS_table_de_);
 
-    visCoefficients[0] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_shear_tb_,
-                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
-                                        x_fraction, y_fraction);
-    visCoefficients[1] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_uu_tb_,
-                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
-                                        x_fraction, y_fraction);
-    visCoefficients[2] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_tr_tb_,
-                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
-                                        x_fraction, y_fraction);
-    visCoefficients[3] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_Bu_tb_,
-                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
-                                        x_fraction, y_fraction);
-    visCoefficients[4] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_Su_tb_,
-                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
-                                        x_fraction, y_fraction);
-    visCoefficients[5] = bilinearInterp(deltaf_coeff_14mom_NEOSBQS_Pi_Qu_tb_,
-                                        idx_e1, idx_e2, idx_nB1, idx_nB2,
-                                        x_fraction, y_fraction);
+    double dnB1 = deltaf_coeff_22mom_NEOSBQS_tb_[Ne1+1][1];
+    double dnB2 = deltaf_coeff_22mom_NEOSBQS_tb_[Ne2+1][1];
+    int idx_nB1 = static_cast<int>((nB)/dnB1);
+    int idx_nB2 = static_cast<int>((nB)/dnB2);
+    // avoid overflow and underflow
+    idx_nB1 = std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 2, idx_nB1);
+    idx_nB2 = std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 2, idx_nB2);
+    double nB_frac1 = std::min(
+            1., (nB - deltaf_coeff_22mom_NEOSBQS_tb_[Ne1+idx_nB1][1])/dnB1);
+    double nB_frac2 = std::min(
+            1., (nB - deltaf_coeff_22mom_NEOSBQS_tb_[Ne2+idx_nB2][1])/dnB2);
+
+    // check
+    //cout << "ed = " << Edec
+    //     << ", e0 = " << deltaf_coeff_22mom_NEOSBQS_tb_[Ne1][0]
+    //     << ", e1 = " << deltaf_coeff_22mom_NEOSBQS_tb_[Ne2][0]
+    //     << ", efrac = " << e_frac
+    //     << ", nB = " << nB
+    //     << ", nB1_0 = " << deltaf_coeff_22mom_NEOSBQS_tb_[Ne1+idx_nB1][1]
+    //     << ", nB1_1 = " << deltaf_coeff_22mom_NEOSBQS_tb_[Ne1+idx_nB1+1][1]
+    //     << ", nB_frac1 = " << nB_frac1
+    //     << ", nB2_0 = " << deltaf_coeff_22mom_NEOSBQS_tb_[Ne2+idx_nB2][1]
+    //     << ", nB2_1 = " << deltaf_coeff_22mom_NEOSBQS_tb_[Ne2+idx_nB2+1][1]
+    //     << ", nB_frac2 = " << nB_frac2
+    //     << endl;
+
+    std::vector<double> interpCoeff(6, 0);
+    for (int i = 2; i < 8; i++) {
+        double temp1 = (
+              deltaf_coeff_22mom_NEOSBQS_tb_[Ne1+idx_nB1  ][i]*(1 - nB_frac1)
+            + deltaf_coeff_22mom_NEOSBQS_tb_[Ne1+idx_nB1+1][i]*nB_frac1);
+        double temp2 = (
+              deltaf_coeff_22mom_NEOSBQS_tb_[Ne2+idx_nB2  ][i]*(1 - nB_frac2)
+            + deltaf_coeff_22mom_NEOSBQS_tb_[Ne2+idx_nB2+1][i]*nB_frac2);
+
+        interpCoeff[i-2] = temp1*(1. - e_frac) + temp2*e_frac;
+    }
+
+    for (int i = 0; i < 6; i++)
+        visCoefficients[i] = interpCoeff[i];
 }
 
 

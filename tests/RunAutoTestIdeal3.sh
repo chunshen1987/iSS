@@ -2,7 +2,7 @@
 
 cp tests/music_input_12 tests/music_input
 
-./iSS.e tests/iSS_parameters.dat tests testIdealOneFluidCell3.dat
+./iSS.e tests/iSS_parameters_ideal.dat tests testIdealOneFluidCell3.dat
 
 python3 tests/TestOutputFiles.py
 STATUS=$?
