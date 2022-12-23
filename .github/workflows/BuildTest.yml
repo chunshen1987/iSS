@@ -41,9 +41,15 @@ jobs:
       - name: Sampling Test static with finite densities (BQS)
         run: |
           $GITHUB_WORKSPACE/tests/RunAutoTestIdeal4.sh
-      - name: Sampling Test static with bulk viscosity
+      - name: Sampling Test static with bulk viscosity (mu_B = 0, CE)
         run: |
           $GITHUB_WORKSPACE/tests/RunAutoTestViscous1.sh
-      - name: Sampling Test static with shear viscosity
+      - name: Sampling Test static with shear viscosity (mu_B = 0, CE)
         run: |
           $GITHUB_WORKSPACE/tests/RunAutoTestViscous2.sh
+      - name: Sampling Test static with bulk viscosity (finite mu_B, 22 mom.)
+        run: |
+          $GITHUB_WORKSPACE/tests/RunAutoTestViscous3.sh
+      - name: Sampling Test static with shear viscosity (finite mu_B, 22 mom.)
+        run: |
+          $GITHUB_WORKSPACE/tests/RunAutoTestViscous4.sh
