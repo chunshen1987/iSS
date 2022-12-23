@@ -786,14 +786,16 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
                 //     << eosVar[1] << " GeV, muB = " << surf_i.muB << " GeV, "
                 //     << eosVar[2] << " GeV, muS = " << surf_i.muS << " GeV, "
                 //     << eosVar[3] << " GeV, muQ = " << surf_i.muQ << " GeV, "
-                //     << eosVar[4] << endl;
+                //     << eosVar[4] << " GeV" << endl;
                 //cout << "check: P = " << surf_i.Pdec << " GeV/fm^3, "
                 //     << eosVar[0] << " GeV/fm^3." << endl;
                 surf_i.Tdec = eosVar[1];
                 surf_i.muB  = eosVar[2];
                 surf_i.muS  = eosVar[3];
                 surf_i.muQ  = eosVar[4];
-                surf_i.bulkPi = surf_i.bulkPi + surf_i.Pdec - eosVar[0];
+                // I don't want to introduce artificial bulk Pi to ensure
+                // the trace of Tmunu is continuious here.
+                //surf_i.bulkPi = surf_i.bulkPi + surf_i.Pdec - eosVar[0];
                 surf_i.Pdec = eosVar[0];
             }
         }
