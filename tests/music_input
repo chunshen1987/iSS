@@ -1,6 +1,6 @@
-EOS_to_use  9
+EOS_to_use 14
 Include_Bulk_Visc_Yes_1_No_0  1
-Include_Rhob_Yes_1_No_0  0
+Include_Rhob_Yes_1_No_0  1
 turn_on_baryon_diffusion  0
 freeze_surface_in_binary  0
 EndOfData
