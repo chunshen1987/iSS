@@ -912,8 +912,7 @@ void read_FOdata::read_chemical_potentials_music(
 
 void read_FOdata::read_in_HRG_EOS() {
     cout << " -- Read in pure HRG EoS table...";
-    std::string eos_filename = (particle_table_path_
-                                + "/EOS_tables/");
+    std::string eos_filename = table_path_ + "/EOS_tables/";
     if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91) {
         eos_filename += "HRGEOS_PST-";
     } else if (iEOS_MUSIC_ == 12) {
