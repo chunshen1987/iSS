@@ -172,7 +172,7 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
         surface_file.read(reinterpret_cast<char*>(&temp), sizeof(float));
         count++;
     }
-    int counted_line = count/34;
+    int counted_line = count/36;
     surface_file.close();
     return(counted_line);
 }
@@ -256,6 +256,8 @@ void read_FOdata::read_in_chemical_potentials(
         } else if (iEOS_MUSIC_ >= 10 && iEOS_MUSIC_ <=15) {   // NEoS
             N_stableparticle = 0;
         } else if (iEOS_MUSIC_ == 17) {       // BEST
+            N_stableparticle = 0;
+        } else if (iEOS_MUSIC_ == 20) {       // BEST
             N_stableparticle = 0;
         } else {
             messager << "invalid iEOS_MUSIC_: " << iEOS_MUSIC_;
@@ -416,8 +418,8 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     while (!surfdat.eof()) {
         FO_surf surf_elem;
         if (surface_in_binary) {
-            float array[34];
-            for (int ii = 0; ii < 34; ii++) {
+            float array[36];
+            for (int ii = 0; ii < 36; ii++) {
                 float temp = 0.;
                 surfdat.read(reinterpret_cast<char*>(&temp), sizeof(float));
                 array[ii] = temp;
@@ -456,11 +458,14 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             surf_elem.bulkPi = array[28]*hbarC;   // GeV/fm^3
 
             surf_elem.Bn   = array[29];             // 1/fm^3
-            surf_elem.qmu0 = array[30];
-            surf_elem.qmu1 = array[31];
-            surf_elem.qmu2 = array[32];
-            surf_elem.qmu3 = array[33];
+            surf_elem.Qn   = array[30];             // 1/fm^3
+            surf_elem.Sn   = array[31];             // 1/fm^3
+            surf_elem.qmu0 = array[32];
+            surf_elem.qmu1 = array[33];
+            surf_elem.qmu2 = array[34];
+            surf_elem.qmu3 = array[35];
         } else {
+            // Not adapted to rhoQ and rhoS at pos 30 and 31.
             getline(surfdat, input, '\n');
             std::stringstream ss(input);
 
@@ -606,6 +611,8 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
 
         surf_elem.bulkPi = 0.0;
         surf_elem.Bn = 0.0;
+        surf_elem.Qn = 0.0;
+        surf_elem.Sn = 0.0;
 
         surf_elem.qmu0 = 0.0e0;
         surf_elem.qmu1 = 0.0e0;
@@ -643,8 +650,8 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
     while (!surfdat.eof()) {
         FO_surf surf_elem;
         if (surface_in_binary) {
-            float array[34];
-            for (int i = 0; i < 34; i++) {
+            float array[36];
+            for (int i = 0; i < 36; i++) {
                 float temp = 0.;
                 surfdat.read(reinterpret_cast<char*>(&temp), sizeof(float));
                 array[i] = temp;
@@ -683,11 +690,15 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
             surf_elem.bulkPi = array[28]*hbarC;   // GeV/fm^3
 
             surf_elem.Bn   = array[29];             // 1/fm^3
-            surf_elem.qmu0 = array[30];
-            surf_elem.qmu1 = array[31];
-            surf_elem.qmu2 = array[32];
-            surf_elem.qmu3 = array[33];
+            surf_elem.Qn   = array[30];             // 1/fm^3
+            surf_elem.Sn   = array[31];             // 1/fm^3
+                                                    
+            surf_elem.qmu0 = array[32];
+            surf_elem.qmu1 = array[33];
+            surf_elem.qmu2 = array[34];
+            surf_elem.qmu3 = array[35];
         } else {
+            // not adapted to rhoq and rhos at pos 30, 31.
             // freeze out position
             surfdat >> surf_elem.tau;
             surfdat >> surf_elem.xpt;
@@ -913,12 +924,12 @@ void read_FOdata::read_chemical_potentials_music(
 void read_FOdata::read_in_HRG_EOS() {
     cout << " -- Read in pure HRG EoS table...";
     std::string eos_filename = table_path_ + "/EOS_tables/";
-    if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91) {
-        eos_filename += "HRGEOS_PST-";
-    } else if (iEOS_MUSIC_ == 12) {
+    if (iEOS_MUSIC_ == 12) {
         eos_filename += "HRGNEOS_B-";
     } else if (iEOS_MUSIC_ == 14) {
         eos_filename += "HRGNEOS_BQS-";
+    } else {
+        eos_filename += "HRGEOS_PST-";
     }
 
     if (afterburner_type_ == AfterburnerType::SMASH) {
