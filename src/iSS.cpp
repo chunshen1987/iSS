@@ -87,8 +87,12 @@ int iSS::read_in_FO_surface() {
     std::vector<FO_surf> FOsurf_temp;
     read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
                                 particle_table_path_);
-    //freeze_out_data.read_in_freeze_out_data(FOsurf_array_);
-    freeze_out_data.read_in_freeze_out_data(FOsurf_temp, surface_filename_);
+    int mode = paraRdr_ptr->getVal("hydro_mode");
+    //if (mode == 11) {
+    //} else {
+        freeze_out_data.read_in_freeze_out_data(FOsurf_temp,
+                                                surface_filename_);
+    //}
     messager << "total number of cells: " <<  FOsurf_temp.size();
     messager.flush("info");
     if (FOsurf_temp.size() == 0) {
