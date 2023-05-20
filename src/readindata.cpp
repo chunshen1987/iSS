@@ -101,6 +101,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
     } else {
         afterburner_type_ = AfterburnerType::PDG_Decay;
     }
+
     if (iEOS_MUSIC_ == 9) {
         afterburner_type_ = AfterburnerType::UrQMD;
     }
@@ -108,73 +109,6 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
         afterburner_type_ = AfterburnerType::SMASH;
     }
     read_in_HRG_EOS();
-}
-
-
-int read_FOdata::get_number_of_freezeout_cells(std::string surfaceFilename) {
-    int number_of_cells = 0;
-    if (mode == 0) {  // outputs from VISH2+1
-        ostringstream decdatfile;
-        decdatfile << path_ << "/decdat2.dat";
-        Table block_file(decdatfile.str().c_str());
-        number_of_cells = block_file.getNumberOfRows();
-    } else if (mode == 1) {  // outputs from MUSIC boost-invariant
-        ostringstream surface_file;
-        surface_file << path_ << "/" << surfaceFilename;
-        if (surface_in_binary) {
-            number_of_cells = get_number_of_lines_of_binary_surface_file(
-                                                        surface_file.str());
-            n_eta_skip = 1;
-        } else {
-            Table block_file(surface_file.str().c_str());
-
-            // determine number of the eta slides that are output
-            double eta_target = block_file.get(4, 1);
-            int num_temp = 0;
-            for (int i = 0; i < block_file.getNumberOfRows(); i++) {
-                if (block_file.get(4, i+1) == eta_target)
-                    num_temp++;
-            }
-            number_of_cells = num_temp;
-            n_eta_skip = block_file.getNumberOfRows()/number_of_cells;
-        }
-    } else if (mode == 2) {  // outputs from MUSIC full (3+1)-d
-        int number_of_lines = 0;
-        ostringstream surface_filename;
-        surface_filename << path_ << "/" << surfaceFilename;
-        if (surface_in_binary) {
-            number_of_cells = get_number_of_lines_of_binary_surface_file(
-                                                    surface_filename.str());
-        } else {
-            std::string temp_line;
-            std::ifstream surface_file(surface_filename.str().c_str());
-            while (std::getline(surface_file, temp_line)) {
-                ++number_of_lines;
-            }
-            surface_file.close();
-            number_of_cells = number_of_lines;
-        }
-    } else if (mode == 10) {  // outputs from hydro analysis
-        ostringstream surface_file;
-        surface_file << path_ << "/hyper_surface_2+1d.dat";
-        Table block_file(surface_file.str().c_str());
-        number_of_cells = block_file.getNumberOfRows();
-    }
-    return(number_of_cells);
-}
-
-
-int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
-    std::ifstream surface_file(filename.c_str(), std::ios::binary);
-    int count = 0;
-    float temp = 0.;
-    while(surface_file) {
-        surface_file.read(reinterpret_cast<char*>(&temp), sizeof(float));
-        count++;
-    }
-    int counted_line = count/34;
-    surface_file.close();
-    return(counted_line);
 }
 
 
@@ -913,12 +847,13 @@ void read_FOdata::read_chemical_potentials_music(
 void read_FOdata::read_in_HRG_EOS() {
     cout << " -- Read in pure HRG EoS table...";
     std::string eos_filename = table_path_ + "/EOS_tables/";
-    if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91) {
-        eos_filename += "HRGEOS_PST-";
-    } else if (iEOS_MUSIC_ == 12) {
+    if (iEOS_MUSIC_ == 12) {
         eos_filename += "HRGNEOS_B-";
     } else if (iEOS_MUSIC_ == 14) {
         eos_filename += "HRGNEOS_BQS-";
+    } else {
+        // default HRG for mu_B = 0
+        eos_filename += "HRGEOS_PST-";
     }
 
     if (afterburner_type_ == AfterburnerType::SMASH) {

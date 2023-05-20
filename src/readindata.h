@@ -43,11 +43,9 @@ class read_FOdata {
 
     ~read_FOdata() {};
 
-    int get_number_of_freezeout_cells(std::string surface_filename);
     int get_IEOS_music() const {return(iEOS_MUSIC_);}
 
     AfterburnerType get_afterburner_type() const {return(afterburner_type_);}
-    int get_number_of_lines_of_binary_surface_file(string filename);
     int get_flag_PCE() {return(flag_PCE_);}
     void read_in_HRG_EOS();
     void read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr,
