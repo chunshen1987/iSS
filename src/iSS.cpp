@@ -83,16 +83,38 @@ void iSS::perform_checks() {
 }
 
 
+void iSS::getSurfaceCellFromJETSCAPE(std::vector<FO_surf> &FOsurf_arr) {
+    read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
+                                particle_table_path_);
+    int mode = paraRdr_ptr->getVal("hydro_mode");
+    messager << "total number of cells: " <<  FOsurf_arr.size();
+    messager.flush("info");
+    if (FOsurf_arr.size() == 0) {
+        messager << "No freeze-out fluid cell, exit now ...";
+        messager.flush("Warning");
+        exit(1);
+    }
+
+    afterburner_type_ = freeze_out_data.get_afterburner_type();
+    freeze_out_data.read_in_chemical_potentials(FOsurf_arr, particle_);
+    flag_PCE_ = freeze_out_data.get_flag_PCE();
+
+    computeFOSurfTmunu(FOsurf_arr);
+    if (paraRdr_ptr->getVal("MC_sampling") == 4) {
+        transform_to_local_rest_frame(FOsurf_arr, FOsurf_LRF_array_);
+    } else {
+        FOsurf_array_ = FOsurf_arr;
+    }
+    messager.info(" -- Read in data finished!");
+}
+
+
 int iSS::read_in_FO_surface() {
     std::vector<FO_surf> FOsurf_temp;
     read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
                                 particle_table_path_);
     int mode = paraRdr_ptr->getVal("hydro_mode");
-    //if (mode == 11) {
-    //} else {
-        freeze_out_data.read_in_freeze_out_data(FOsurf_temp,
-                                                surface_filename_);
-    //}
+    freeze_out_data.read_in_freeze_out_data(FOsurf_temp, surface_filename_);
     messager << "total number of cells: " <<  FOsurf_temp.size();
     messager.flush("info");
     if (FOsurf_temp.size() == 0) {

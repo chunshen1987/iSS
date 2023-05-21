@@ -56,6 +56,7 @@ class iSS {
 
     int shell();
     int read_in_FO_surface();
+    void getSurfaceCellFromJETSCAPE(std::vector<FO_surf> &FOsurf_arr);
     int generate_samples();
 
     int get_number_of_sampled_events() {
