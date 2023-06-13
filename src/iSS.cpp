@@ -84,6 +84,9 @@ void iSS::perform_checks() {
 
 
 void iSS::getSurfaceCellFromJETSCAPE(std::vector<FO_surf> &FOsurf_arr) {
+    FOsurf_array_.clear();
+    FOsurf_LRF_array_.clear();
+
     read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
                                 particle_table_path_);
     int mode = paraRdr_ptr->getVal("hydro_mode");
@@ -92,7 +95,6 @@ void iSS::getSurfaceCellFromJETSCAPE(std::vector<FO_surf> &FOsurf_arr) {
     if (FOsurf_arr.size() == 0) {
         messager << "No freeze-out fluid cell, exit now ...";
         messager.flush("Warning");
-        exit(1);
     }
 
     afterburner_type_ = freeze_out_data.get_afterburner_type();
