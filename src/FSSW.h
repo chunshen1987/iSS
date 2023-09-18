@@ -26,6 +26,7 @@ class FSSW {
  private:
     int hydro_mode;   // switch for (2+1)-d or (3+1)-d hypersurface
     int flag_PCE_;
+    int echoLevel_;
 
     pretty_ostream messager_;
 

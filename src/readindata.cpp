@@ -28,6 +28,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
         particle_table_path_(particle_table_path) {
     paraRdr = paraRdr_in;
 
+    echoLevel_ = paraRdr->getVal("JSechoLevel", 1);
     mode = paraRdr->getVal("hydro_mode");
     turn_on_bulk = paraRdr->getVal("turn_on_bulk");
     turn_on_rhob = paraRdr->getVal("turn_on_rhob");
@@ -43,7 +44,9 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
     iEOS_MUSIC_ = 0;
     if (mode == 1 || mode == 2) {
         // determine read in format in surface.dat from MUSIC simulation
-        messager.info("read in hyper-surface from MUSIC simulations ...");
+        if (echoLevel_ > 0) {
+            messager.info("read in hyper-surface from MUSIC simulations ...");
+        }
         ostringstream config_file;
         config_file << path_ << "/music_input";
         std::ifstream configuration(config_file.str().c_str());
@@ -83,14 +86,18 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
             }
         }
         configuration.close();
-        if (surface_in_binary)
-            messager.info("the hyper-surface surface is in the binary format.");
-        if (turn_on_bulk == 1)
-            messager.info("the hyper-surface includes bulk viscosity.");
-        if (turn_on_rhob == 1)
-            messager.info("the hyper-surface includes net baryon density.");
-        if (turn_on_diff == 1)
-            messager.info("the hyper-surface includes baryon diffusion.");
+        if (echoLevel_ > 0) {
+            if (surface_in_binary)
+                messager.info(
+                        "the hyper-surface surface is in the binary format.");
+            if (turn_on_bulk == 1)
+                messager.info("the hyper-surface includes bulk viscosity.");
+            if (turn_on_rhob == 1)
+                messager.info(
+                        "the hyper-surface includes net baryon density.");
+            if (turn_on_diff == 1)
+                messager.info("the hyper-surface includes baryon diffusion.");
+        }
     }
     n_eta_skip = 0;
     int afterburner_id = paraRdr->getVal("afterburner_type");
@@ -204,11 +211,15 @@ void read_FOdata::read_in_chemical_potentials(
 
     // read particle resonance decay table
     Nparticle = read_resonances_list(particle_ptr);
-    messager << "total number of particle species: " << Nparticle;
-    messager.flush("info");
+    if (echoLevel_ > 0) {
+        messager << "total number of particle species: " << Nparticle;
+        messager.flush("info");
+    }
 
     if (N_stableparticle > 0) {
-        messager.info(" -- EOS is partially chemical equilibrium ");
+        if (echoLevel_ > 0) {
+            messager.info(" -- EOS is partially chemical equilibrium ");
+        }
         flag_PCE_ = 1;
         int FO_length = surf_ptr.size();
         double** particle_mu = new double* [N_stableparticle];
@@ -228,7 +239,9 @@ void read_FOdata::read_in_chemical_potentials(
             delete [] particle_mu[i];
         delete [] particle_mu;
     } else {
-        messager.info(" -- EOS is chemical equilibrium. ");
+        if (echoLevel_ > 0) {
+            messager.info(" -- EOS is chemical equilibrium. ");
+        }
         flag_PCE_ = 0;
     }
 }
@@ -236,7 +249,9 @@ void read_FOdata::read_in_chemical_potentials(
 
 void read_FOdata::read_decdat(std::vector<FO_surf> &surf_ptr) {
     double temp, temp_vx, temp_vy;
-    cout <<" -- Read in information on freeze out surface...";
+    if (echoLevel_ > 0) {
+        cout <<" -- Read in information on freeze out surface...";
+    }
     ostringstream decdat_stream;
     decdat_stream << path_ << "/decdat2.dat";
     std::ifstream decdat(decdat_stream.str().c_str());
@@ -295,12 +310,16 @@ void read_FOdata::read_decdat(std::vector<FO_surf> &surf_ptr) {
         getline(decdat, input, '\n');
     }
     decdat.close();
-    cout << "done" << endl;
+    if (echoLevel_ > 0) {
+        cout << "done" << endl;
+    }
 }
 
 
 void read_FOdata::read_surfdat(std::vector<FO_surf> &surf_ptr) {
-    cout<<" -- Read spatial positions of freeze out surface...";
+    if (echoLevel_ > 0) {
+        cout<<" -- Read spatial positions of freeze out surface...";
+    }
     ostringstream surfdat_stream;
     double dummy;
     char rest_dummy[512];
@@ -313,12 +332,16 @@ void read_FOdata::read_surfdat(std::vector<FO_surf> &surf_ptr) {
         surfdat.getline(rest_dummy, 512);
     }
     surfdat.close();
-    cout << "done" << endl;
+    if (echoLevel_ > 0) {
+        cout << "done" << endl;
+    }
 }
 
 
 void read_FOdata::read_FOsurfdat_VISH2p1(std::vector<FO_surf> &surf_ptr) {
-    cout << " -- Loading the decoupling data from VISH2+1 ...." << endl;
+    if (echoLevel_ > 0) {
+        cout << " -- Loading the decoupling data from VISH2+1 ...." << endl;
+    }
     // read the data arrays for the decoupling information
     read_decdat(surf_ptr);
     // read the positions of the freeze out surface
@@ -328,8 +351,10 @@ void read_FOdata::read_FOsurfdat_VISH2p1(std::vector<FO_surf> &surf_ptr) {
 
 void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
                 std::vector<FO_surf> &surf_ptr, std::string surface_filename) {
-    cout << " -- Read spatial positions of freeze out surface from MUSIC "
-         << "(boost-invariant) ...";
+    if (echoLevel_ > 0) {
+        cout << " -- Read spatial positions of freeze out surface from MUSIC "
+             << "(boost-invariant) ...";
+    }
     ostringstream surfdat_stream;
     double dummy;
     string input;
@@ -476,14 +501,18 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
         }
     }
     surfdat.close();
-    cout << "done" << endl;
+    if (echoLevel_ > 0) {
+        cout << "done" << endl;
+    }
 }
 
 
 void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
                                         std::vector<FO_surf> &surf_ptr) {
-    cout << " -- Read spatial positions of freeze out surface from "
-         << "hydro_analysis (boost-invariant) ...";
+    if (echoLevel_ > 0) {
+        cout << " -- Read spatial positions of freeze out surface from "
+             << "hydro_analysis (boost-invariant) ...";
+    }
     ostringstream surfdat_stream;
     string input;
     double temp_tau, temp_xpt, temp_ypt;
@@ -553,13 +582,17 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
     }
     surfdat.close();
 
-    cout << "done" << endl;
+    if (echoLevel_ > 0) {
+        cout << "done" << endl;
+    }
 }
 
 
 void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
                                        std::string surface_filename) {
-    cout << " -- Read spatial positions of freeze out surface from MUSIC...";
+    if (echoLevel_ > 0) {
+        cout << " -- Read spatial positions of freeze out surface from MUSIC...";
+    }
     ostringstream surfdat_stream;
     double dummy;
     surfdat_stream << path_ << "/" << surface_filename;
@@ -695,7 +728,9 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
         }
     }
     surfdat.close();
-    cout << "done" << endl;
+    if (echoLevel_ > 0) {
+        cout << "done" << endl;
+    }
 }
 
 
@@ -708,7 +743,9 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
     if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91
             || iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14) {
         regulateTemperature = true;
-        cout << "Regulate local temperature with pure HRG EoS." << endl;
+        if (echoLevel_ > 0) {
+            cout << "Regulate local temperature with pure HRG EoS." << endl;
+        }
     }
 
     for (auto &surf_i: surf_ptr) {
@@ -778,7 +815,9 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
 
 void read_FOdata::read_decdat_mu(int FO_length, int N_stable, 
                                  double** particle_mu) {
-    cout << " -- Read chemical potential for stable particles...";
+    if (echoLevel_ > 0) {
+        cout << " -- Read chemical potential for stable particles...";
+    }
     ostringstream decdat_mu_stream;
     double dummy;
     decdat_mu_stream << path_ << "/decdat_mu.dat";
@@ -800,7 +839,9 @@ void read_FOdata::read_decdat_mu(int FO_length, int N_stable,
         }
     }
 
-    cout<<"done" << endl;
+    if (echoLevel_ > 0) {
+        cout<<"done" << endl;
+    }
     return;
 }
 
@@ -808,8 +849,10 @@ void read_FOdata::read_decdat_mu(int FO_length, int N_stable,
 void read_FOdata::read_chemical_potentials_music(
     int FO_length, std::vector<FO_surf> &FOsurf_ptr, int N_stable,
     double** particle_mu) {
-    cout << " -- Interpolating chemical potentials for stable particles "
-         << "(MUSIC IEOS = " << iEOS_MUSIC_ << ") ...";
+    if (echoLevel_ > 0) {
+        cout << " -- Interpolating chemical potentials for stable particles "
+             << "(MUSIC IEOS = " << iEOS_MUSIC_ << ") ...";
+    }
 
     Table mu_table;
     if (iEOS_MUSIC_ == 3) {
@@ -840,12 +883,16 @@ void read_FOdata::read_chemical_potentials_music(
         }
     }
 
-    cout << "done" << endl;
+    if (echoLevel_ > 0) {
+        cout << "done" << endl;
+    }
 }
 
 
 void read_FOdata::read_in_HRG_EOS() {
-    cout << " -- Read in pure HRG EoS table...";
+    if (echoLevel_ > 0) {
+        cout << " -- Read in pure HRG EoS table...";
+    }
     std::string eos_filename = table_path_ + "/EOS_tables/";
     if (iEOS_MUSIC_ == 12) {
         eos_filename += "HRGNEOS_B-";
@@ -899,13 +946,17 @@ void read_FOdata::read_in_HRG_EOS() {
         std::getline(eosFile, strLine);
     }
     eosFile.close();
-    cout << "done." << endl;
+    if (echoLevel_ > 0) {
+        cout << "done." << endl;
+    }
 }
 
 
 int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
     double eps = 1e-15;
-    cout << " -- Read in particle resonance decay table...";
+    if (echoLevel_ > 0) {
+        cout << " -- Read in particle resonance decay table...";
+    }
     std::string reso_filename;
     if (afterburner_type_ == AfterburnerType::SMASH) {
         reso_filename = particle_table_path_ + "/pdg-SMASH.dat";
@@ -1046,7 +1097,9 @@ int read_FOdata::read_resonances_list(std::vector<particle_info> &particle) {
             particle_i.sign = 0;
         }
     }
-    cout << "done." << endl;
+    if (echoLevel_ > 0) {
+        cout << "done." << endl;
+    }
     return(particle.size());
 }
 
@@ -1059,8 +1112,10 @@ void read_FOdata::calculate_particle_mu_PCE(int Nparticle,
     int Nstable_particle;
     int Idummy;
     char cdummy[256];
-    cout << " -- Read particle table and calculating chemical potential "
-         << "for particles..." << endl;
+    if (echoLevel_ > 0) {
+        cout << " -- Read particle table and calculating chemical potential "
+             << "for particles..." << endl;
+    }
     std::ifstream particletable;
     if (mode == 0) {
         particletable.open(table_path_ + "/EOS_particletable.dat");

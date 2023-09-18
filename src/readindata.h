@@ -18,6 +18,7 @@ class read_FOdata {
     const std::string table_path_;
     const std::string particle_table_path_;
 
+    int echoLevel_;
     int mode;
     bool surface_in_binary;
     bool quantum_statistics_;
