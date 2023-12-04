@@ -72,8 +72,13 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     USE_BINARY_FORMAT        = paraRdr->getVal("use_binary_format");
     INCLUDE_DELTAF           = paraRdr->getVal("include_deltaf_shear");
     INCLUDE_BULK_DELTAF      = paraRdr->getVal("include_deltaf_bulk");
-    bulk_deltaf_kind_         = paraRdr->getVal("bulk_deltaf_kind");
+    bulk_deltaf_kind_        = paraRdr->getVal("bulk_deltaf_kind");
     INCLUDE_DIFFUSION_DELTAF = paraRdr->getVal("include_deltaf_diffusion");
+    if (paraRdr->getVal("RegVisYield", 0) == 1) {
+        flagRegVisYield_ = true;
+    } else {
+        flagRegVisYield_ = false;
+    }
 
     if (bulk_deltaf_kind_ == 21) {
         NEoS_deltaf_kind_ = 1;
@@ -703,6 +708,9 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         }
 
         total_N = N_eq + deltaN_bulk + deltaN_qmu;
+        if (flagRegVisYield_) {
+            total_N = std::min(2.*N_eq, total_N);
+        }
 
         dN_dxtdy_for_one_particle_species[l] = std::max(0., total_N);
     }
