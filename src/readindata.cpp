@@ -937,7 +937,7 @@ void read_FOdata::read_in_HRG_EOS() {
     } else if (afterburner_type_ == AfterburnerType::UrQMD) {
         eos_filename += "urqmd_v3.3+.dat";
     } else {
-        eos_filename = "s95pv1.dat";
+        eos_filename += "s95pv1.dat";
     }
 
     std::ifstream eosFile(eos_filename.c_str());

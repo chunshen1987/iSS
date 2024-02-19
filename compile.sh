@@ -3,7 +3,7 @@
 mkdir -p build
 cd build
 rm -fr *
-CXX=g++-12 cmake ..
+cmake ..
 make -j4
 make install
 cd ..
