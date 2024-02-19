@@ -1018,12 +1018,12 @@ void read_FOdata::read_in_HRG_EOS() {
     cout << " -- Read in pure HRG EoS table...";
     std::string eos_filename = (particle_table_path_
                                 + "/EOS_tables/");
-    if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91) {
-        eos_filename += "HRGEOS_PST-";
-    } else if (iEOS_MUSIC_ == 12) {
+    if (iEOS_MUSIC_ == 12) {
         eos_filename += "HRGNEOS_B-";
     } else if (iEOS_MUSIC_ == 14) {
         eos_filename += "HRGNEOS_BQS-";
+    } else {
+        eos_filename += "HRGEOS_PST-";
     }
 
     if (afterburner_type_ == AfterburnerType::SMASH) {
@@ -1031,7 +1031,7 @@ void read_FOdata::read_in_HRG_EOS() {
     } else if (afterburner_type_ == AfterburnerType::UrQMD) {
         eos_filename += "urqmd_v3.3+.dat";
     } else {
-        eos_filename = "s95pv1.dat";
+        eos_filename += "s95pv1.dat";
     }
 
     std::ifstream eosFile(eos_filename.c_str());
