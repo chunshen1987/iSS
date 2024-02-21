@@ -213,6 +213,7 @@ class FSSW {
     double bilinearInterp(std::vector<std::vector<double>>&mat,
                           int idx_e1, int idx_e2, int idx_nB1, int idx_nB2,
                           double x_fraction, double y_fraction);
+    int getParticleInfo(const int monval) const;
 };
 
 #endif  // SRC_FSSW_H_

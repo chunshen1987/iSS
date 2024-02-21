@@ -2028,25 +2028,40 @@ double FSSW::bilinearInterp(std::vector<std::vector<double>>&mat,
 
 void FSSW::computeAvgTotalEnergyMomentum() {
     std::vector<std::vector<double>> PmuList;
+    std::vector<std::vector<double>> ChargesList;
     for (auto const &ev_i: (*Hadron_list)) {
         std::vector<double> totalPmu(4, 0.);
+        std::vector<double> totalCharges(3, 0.);
         for (auto &part_i: (*ev_i)) {
             totalPmu[0] += part_i.E;
             totalPmu[1] += part_i.px;
             totalPmu[2] += part_i.py;
             totalPmu[3] += part_i.pz;
+            int idx = getParticleInfo(part_i.pid);
+            totalCharges[0] += particles[idx].baryon;
+            totalCharges[1] += particles[idx].charge;
+            totalCharges[2] += particles[idx].strange;
         }
         PmuList.push_back(totalPmu);
+        ChargesList.push_back(totalCharges);
     }
     int nev = 0;
     std::vector<double> Pmu_avg(4, 0);
     std::vector<double> Pmu_err(4, 0);
+    std::vector<double> nQ_avg(3, 0);
+    std::vector<double> nQ_err(3, 0);
     for (auto const &Pmu_i : PmuList) {
         for (int j = 0; j < 4; j++) {
             Pmu_avg[j] += Pmu_i[j];
             Pmu_err[j] += Pmu_i[j]*Pmu_i[j];
         }
         nev++;
+    }
+    for (auto const &nQ_i : ChargesList) {
+        for (int j = 0; j < 3; j++) {
+            nQ_avg[j] += nQ_i[j];
+            nQ_err[j] += nQ_i[j]*nQ_i[j];
+        }
     }
     messager_.info("Averaged total energy and momentum:");
     for (int i = 0; i < 4; i++) {
@@ -2056,5 +2071,22 @@ void FSSW::computeAvgTotalEnergyMomentum() {
                   << Pmu_err[i] << " GeV.";
         messager_.flush("info");
     }
+    messager_.info("Averaged total conserved charges:");
+    for (int i = 0; i < 3; i++) {
+        nQ_avg[i] = nQ_avg[i]/nev;
+        nQ_err[i] = sqrt((nQ_err[i]/nev - nQ_avg[i]*nQ_avg[i])/nev);
+        messager_ << "<nQ[" << i << "]> = " << nQ_avg[i] << " +/- "
+                  << nQ_err[i] << " GeV.";
+        messager_.flush("info");
+    }
+}
 
+
+int FSSW::getParticleInfo(const int monval) const {
+    for (unsigned int i = 0; i < particles.size(); i++) {
+        if (monval == particles[i].monval) {
+            return(i);
+        }
+    }
+    return(0);
 }
