@@ -68,7 +68,7 @@ typedef struct {
     iSS_data::Vec4 da_mu_LRF;
     iSS_data::Vec4 u_tz;
     float Edec, Tdec, Pdec;
-    float Bn, muB, muS, muQ;
+    float Bn, Qn, Sn, muB, muS, muQ;
     float bulkPi;
     float piLRF_xx, piLRF_xy, piLRF_xz, piLRF_yy, piLRF_yz;
     float qmuLRF_x, qmuLRF_y, qmuLRF_z;
