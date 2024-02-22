@@ -1434,7 +1434,7 @@ int read_FOdata::getValuesFromHRGEOS3D(const double ed, const double nB,
                 + HRGEOS_[e_idx2+nB_idx2*nQlen+nQ_idx22+1][mCol]*nQ_frac22);
         float var1 = var11*(1. - nB_frac1) + var12*nB_frac1;
         float var2 = var21*(1. - nB_frac2) + var22*nB_frac2;
-        eosVar[mCol-2] = var1*(1 - e_frac) + var2*e_frac;
+        eosVar[mCol-3] = var1*(1 - e_frac) + var2*e_frac;
     }
     return(0);
 }
