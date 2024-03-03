@@ -32,7 +32,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
     turn_on_bulk = paraRdr->getVal("turn_on_bulk");
     turn_on_rhob = paraRdr->getVal("turn_on_rhob");
     turn_on_diff = paraRdr->getVal("turn_on_diff");
-    surface_in_binary = true;
+    surface_in_binary_ = true;
     include_vorticity_ = false;
 
     if (paraRdr->getVal("quantum_statistics") == 1) {
@@ -74,9 +74,9 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
                 int flag_b;
                 ss >> flag_b;
                 if (flag_b == 1) {
-                    surface_in_binary = true;
+                    surface_in_binary_ = true;
                 } else {
-                    surface_in_binary = false;
+                    surface_in_binary_ = false;
                 }
             }
             if (temp_name == "output_vorticity") {
@@ -92,7 +92,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
             }
         }
         configuration.close();
-        if (surface_in_binary)
+        if (surface_in_binary_)
             messager.info("the hyper-surface surface is in the binary format.");
         if (turn_on_bulk == 1)
             messager.info("the hyper-surface includes bulk viscosity.");
@@ -130,7 +130,12 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
     if (iEOS_MUSIC_ == 91) {
         afterburner_type_ = AfterburnerType::SMASH;
     }
-    read_in_HRG_EOS();
+    if (paraRdr->getVal("regulateEOS", 0) == 1) {
+        regulateEOS_ = true;
+        read_in_HRG_EOS();
+    } else {
+        regulateEOS_ = false;
+    }
 }
 
 
@@ -144,7 +149,7 @@ int read_FOdata::get_number_of_freezeout_cells(std::string surfaceFilename) {
     } else if (mode == 1) {  // outputs from MUSIC boost-invariant
         ostringstream surface_file;
         surface_file << path_ << "/" << surfaceFilename;
-        if (surface_in_binary) {
+        if (surface_in_binary_) {
             number_of_cells = get_number_of_lines_of_binary_surface_file(
                                                         surface_file.str());
             n_eta_skip = 1;
@@ -165,7 +170,7 @@ int read_FOdata::get_number_of_freezeout_cells(std::string surfaceFilename) {
         int number_of_lines = 0;
         ostringstream surface_filename;
         surface_filename << path_ << "/" << surfaceFilename;
-        if (surface_in_binary) {
+        if (surface_in_binary_) {
             number_of_cells = get_number_of_lines_of_binary_surface_file(
                                                     surface_filename.str());
         } else {
@@ -255,7 +260,7 @@ void read_FOdata::read_in_chemical_potentials(
         }
         configuration.close();
         std::ifstream particletable;
-        if (iEOS_MUSIC_ == 2) {       // s95p-v1
+        if (iEOS_MUSIC_ <= 2) {         // ideal-gas, EOS-Q, and s95p-v1
             N_stableparticle = 0;
         } else if (iEOS_MUSIC_ == 3) {  // s95p-v1-PCE150
             particletable.open(
@@ -440,7 +445,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     double temp_tau, temp_xpt, temp_ypt, temp_eta;
     surfdat_stream << path_ << "/" << surface_filename;
     std::ifstream surfdat;
-    if (surface_in_binary) {
+    if (surface_in_binary_) {
         surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);
     } else {
         surfdat.open(surfdat_stream.str().c_str());
@@ -452,7 +457,7 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     }
     while (!surfdat.eof()) {
         FO_surf surf_elem;
-        if (surface_in_binary) {
+        if (surface_in_binary_) {
             std::vector<float> array_loc(fluid_cell_size, 0.0);
             for (int ii = 0; ii < fluid_cell_size; ii++) {
                 float temp = 0.;
@@ -681,7 +686,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
     double dummy;
     surfdat_stream << path_ << "/" << surface_filename;
     std::ifstream surfdat;
-    if (surface_in_binary) {
+    if (surface_in_binary_) {
         surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);
     } else {
         surfdat.open(surfdat_stream.str().c_str());
@@ -693,7 +698,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
     }
     while (!surfdat.eof()) {
         FO_surf surf_elem;
-        if (surface_in_binary) {
+        if (surface_in_binary_) {
             std::vector<float> array_loc(fluid_cell_size, 0.0);
             for (int i = 0; i < fluid_cell_size; i++) {
                 float temp = 0.;
@@ -836,15 +841,12 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
     double pi_reg[4][4];
     double u_flow[4];
 
-    bool regulateTemperature = false;
-    if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91
-            || iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14) {
-        regulateTemperature = true;
-        cout << "Regulate local temperature with pure HRG EoS." << endl;
+    if (regulateEOS_) {
+        messager.info("Regulate local temperature with pure HRG EoS.");
     }
 
     for (auto &surf_i: surf_ptr) {
-        if (regulateTemperature) {
+        if (regulateEOS_) {
             std::vector<double> eosVar;    // {P, T, muB, muS, muQ}
             int status = getValuesFromHRGEOS(surf_i.Edec, surf_i.Bn, eosVar);
             if (status == 0) {      // success
@@ -1046,13 +1048,7 @@ void read_FOdata::read_in_HRG_EOS() {
     while (!eosFile.eof()) {
         std::stringstream ss(strLine);
         std::vector<double> item(7, 0);     // {ed, nB, P, T, muB, muS, muQ}
-        if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91) {
-            double temp, ed_loc, P_loc, T_loc;
-            ss >> ed_loc >> P_loc >> temp >> T_loc;
-            item[0] = ed_loc;
-            item[2] = P_loc;
-            item[3] = T_loc;
-        } else if (iEOS_MUSIC_ == 12) {
+        if (iEOS_MUSIC_ == 12) {
             for (int i = 0; i < 5; i++) {
                 double temp;
                 ss >> temp;
@@ -1064,6 +1060,12 @@ void read_FOdata::read_in_HRG_EOS() {
                 ss >> temp;
                 item[i] = temp;
             }
+        } else {
+            double temp, ed_loc, P_loc, T_loc;
+            ss >> ed_loc >> P_loc >> temp >> T_loc;
+            item[0] = ed_loc;
+            item[2] = P_loc;
+            item[3] = T_loc;
         }
         HRGEOS_.push_back(item);
         std::getline(eosFile, strLine);
@@ -1355,8 +1357,9 @@ int read_FOdata::getValuesFromHRGEOS(double ed, double nB,
                                      std::vector<double> &eosVar) {
     eosVar.resize(5, 0);        // {P, T, muB, muS, muQ}
     int nBlen = 1;
-    if (iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14)
+    if (iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14) {
         nBlen = 200;
+    }
     double HRGEOS_de = HRGEOS_[nBlen][0] - HRGEOS_[0][0];
     double HRGEOS_e0 = HRGEOS_[0][0];
     int e_idx = static_cast<int>((ed - HRGEOS_e0)/HRGEOS_de);

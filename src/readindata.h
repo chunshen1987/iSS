@@ -19,9 +19,10 @@ class read_FOdata {
     const std::string particle_table_path_;
 
     int mode;
-    bool surface_in_binary;
+    bool surface_in_binary_;
     bool include_vorticity_;
     bool quantum_statistics_;
+    bool regulateEOS_;
 
     // flag to determine whether the EoS is partial chemical equilibrium or not
     int flag_PCE_;
