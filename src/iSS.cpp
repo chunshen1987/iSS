@@ -376,21 +376,21 @@ void iSS::getParticleQuantumNumbers(long monval, std::array<int, 3> &Qarr) {
 
 
 void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
-    //FOsurf_Tmunu_.clear();
-    //FOsurf_Tmunu_.resize(16, 0.);
+    FOsurf_Tmunu_.clear();
+    FOsurf_Tmunu_.resize(16, 0.);
     FOsurf_Q_.clear();
     FOsurf_Q_.resize(3, 0.);
-    //float gmunu[4][4];              // define the metric
-    //for (int i = 0; i < 4; i++)
-    //    for (int j = 0; j < 4; j++)
-    //        gmunu[i][j] = 0.;
-    //gmunu[0][0] = 1.;
-    //for (int i = 1; i < 4; i++)
-    //    gmunu[i][i] = -1.;
+    float gmunu[4][4];              // define the metric
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 4; j++)
+            gmunu[i][j] = 0.;
+    gmunu[0][0] = 1.;
+    for (int i = 1; i < 4; i++)
+        gmunu[i][i] = -1.;
 
-    //float u[4];
-    //float pi_tz[4][4];
-    //float Tmunu[4][4];
+    float u[4];
+    float pi_tz[4][4];
+    float Tmunu[4][4];
     for (auto &surf_i: FOsurf_ptr) {
         float udotsigma = surf_i.tau*(
                 surf_i.u0*surf_i.da0 + surf_i.u1*surf_i.da1
@@ -398,43 +398,43 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
         FOsurf_Q_[0] += surf_i.Bn*udotsigma;
         FOsurf_Q_[1] += surf_i.Qn*udotsigma;
         FOsurf_Q_[2] += surf_i.Sn*udotsigma;
-        //float cosh_eta = cosh(surf_i.eta);
-        //float sinh_eta = sinh(surf_i.eta);
-        //u[0] = surf_i.u0*cosh_eta + surf_i.u3*sinh_eta;
-        //u[1] = surf_i.u1;
-        //u[2] = surf_i.u2;
-        //u[3] = surf_i.u3*cosh_eta + surf_i.u0*sinh_eta;
-        //pi_tz[0][0] = (  surf_i.pi00*cosh_eta*cosh_eta
-        //               + 2.*surf_i.pi03*cosh_eta*sinh_eta
-        //               + surf_i.pi33*sinh_eta*sinh_eta);
-        //pi_tz[0][1] = surf_i.pi01*cosh_eta + surf_i.pi13*sinh_eta;
-        //pi_tz[0][2] = surf_i.pi02*cosh_eta + surf_i.pi23*sinh_eta;
-        //pi_tz[0][3] = (  surf_i.pi00*cosh_eta*sinh_eta
-        //               + surf_i.pi03*(cosh_eta*cosh_eta + sinh_eta*sinh_eta)
-        //               + surf_i.pi33*sinh_eta*cosh_eta);
-        //pi_tz[1][0] = pi_tz[0][1];
-        //pi_tz[1][1] = surf_i.pi11;
-        //pi_tz[1][2] = surf_i.pi12;
-        //pi_tz[1][3] = surf_i.pi01*sinh_eta + surf_i.pi13*cosh_eta;
-        //pi_tz[2][0] = pi_tz[0][2];
-        //pi_tz[2][1] = surf_i.pi12;
-        //pi_tz[2][2] = surf_i.pi22;
-        //pi_tz[2][3] = surf_i.pi02*sinh_eta + surf_i.pi23*cosh_eta;
-        //pi_tz[3][0] = pi_tz[0][3];
-        //pi_tz[3][1] = pi_tz[1][3];
-        //pi_tz[3][2] = pi_tz[2][3];
-        //pi_tz[3][3] = (  surf_i.pi00*sinh_eta*sinh_eta
-        //               + 2.*surf_i.pi03*sinh_eta*cosh_eta
-        //               + surf_i.pi33*cosh_eta*cosh_eta);
-        //for (int i = 0; i < 4; i++) {
-        //    for (int j = 0; j < 4; j++) {
-        //        Tmunu[i][j] = (
-        //            surf_i.Edec*u[i]*u[j]
-        //            - (surf_i.Pdec + surf_i.bulkPi)*(gmunu[i][j] - u[i]*u[j])
-        //            + pi_tz[i][j]);
-        //        FOsurf_Tmunu_[4*i+j] += Tmunu[i][j]*udotsigma;
-        //    }
-        //}
+        float cosh_eta = cosh(surf_i.eta);
+        float sinh_eta = sinh(surf_i.eta);
+        u[0] = surf_i.u0*cosh_eta + surf_i.u3*sinh_eta;
+        u[1] = surf_i.u1;
+        u[2] = surf_i.u2;
+        u[3] = surf_i.u3*cosh_eta + surf_i.u0*sinh_eta;
+        pi_tz[0][0] = (  surf_i.pi00*cosh_eta*cosh_eta
+                       + 2.*surf_i.pi03*cosh_eta*sinh_eta
+                       + surf_i.pi33*sinh_eta*sinh_eta);
+        pi_tz[0][1] = surf_i.pi01*cosh_eta + surf_i.pi13*sinh_eta;
+        pi_tz[0][2] = surf_i.pi02*cosh_eta + surf_i.pi23*sinh_eta;
+        pi_tz[0][3] = (  surf_i.pi00*cosh_eta*sinh_eta
+                       + surf_i.pi03*(cosh_eta*cosh_eta + sinh_eta*sinh_eta)
+                       + surf_i.pi33*sinh_eta*cosh_eta);
+        pi_tz[1][0] = pi_tz[0][1];
+        pi_tz[1][1] = surf_i.pi11;
+        pi_tz[1][2] = surf_i.pi12;
+        pi_tz[1][3] = surf_i.pi01*sinh_eta + surf_i.pi13*cosh_eta;
+        pi_tz[2][0] = pi_tz[0][2];
+        pi_tz[2][1] = surf_i.pi12;
+        pi_tz[2][2] = surf_i.pi22;
+        pi_tz[2][3] = surf_i.pi02*sinh_eta + surf_i.pi23*cosh_eta;
+        pi_tz[3][0] = pi_tz[0][3];
+        pi_tz[3][1] = pi_tz[1][3];
+        pi_tz[3][2] = pi_tz[2][3];
+        pi_tz[3][3] = (  surf_i.pi00*sinh_eta*sinh_eta
+                       + 2.*surf_i.pi03*sinh_eta*cosh_eta
+                       + surf_i.pi33*cosh_eta*cosh_eta);
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                Tmunu[i][j] = (
+                    surf_i.Edec*u[i]*u[j]
+                    - (surf_i.Pdec + surf_i.bulkPi)*(gmunu[i][j] - u[i]*u[j])
+                    + pi_tz[i][j]);
+                FOsurf_Tmunu_[4*i+j] += Tmunu[i][j];
+            }
+        }
     }
     //messager << "The total energy-momentum tensor from the surface:";
     //messager.flush("info");
@@ -446,7 +446,7 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
     //        messager.flush("info");
     //    }
     //}
-    messager << "The total charges from the surface:";
+    messager << "The total charges from the surface (B, Q, S):";
     messager.flush("info");
     for (int i = 0; i < 3; i++) {
         messager << "nQ[" << i << "] = "
