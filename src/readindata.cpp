@@ -574,6 +574,8 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             } else {
                 surf_elem.Bn = 0.0;
             }
+            surf_elem.Qn = 0.;
+            surf_elem.Sn = 0.;
             if (turn_on_diff == 1) {
                 ss >> surf_elem.qmu0;
                 ss >> surf_elem.qmu1;
@@ -813,6 +815,8 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
             } else {
                 surf_elem.Bn = 0.0;
             }
+            surf_elem.Qn = 0.;
+            surf_elem.Sn = 0.;
             if (turn_on_diff == 1) {
                 surfdat >> surf_elem.qmu0;
                 surfdat >> surf_elem.qmu1;

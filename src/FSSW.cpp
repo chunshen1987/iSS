@@ -2076,7 +2076,7 @@ void FSSW::computeAvgTotalEnergyMomentum() {
         nQ_avg[i] = nQ_avg[i]/nev;
         nQ_err[i] = sqrt((nQ_err[i]/nev - nQ_avg[i]*nQ_avg[i])/nev);
         messager_ << "<nQ[" << i << "]> = " << nQ_avg[i] << " +/- "
-                  << nQ_err[i] << " GeV.";
+                  << nQ_err[i] << ".";
         messager_.flush("info");
     }
 }
