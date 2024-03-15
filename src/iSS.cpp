@@ -324,11 +324,12 @@ void iSS::construct_Tmunu_from_particle_samples() {
     }
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
-            T[i][j] /= (nev*volume);
+            T[i][j] /= nev;
         }
     }
-    for (int i = 0; i < 3; i++)
-        netChargeArr[i] /= (nev*volume);
+    for (int i = 0; i < 3; i++) {
+        netChargeArr[i] /= nev;
+    }
 
     std::ofstream output("checkReconstructedTmunu.dat");
     output << "# Tmunu_FOcell[GeV/fm^3]  Tmunu_Particles[GeV/fm^3]  diff"
@@ -338,12 +339,12 @@ void iSS::construct_Tmunu_from_particle_samples() {
             output << std::scientific << std::setprecision(8)
                    << FOsurf_Tmunu_[4*i+j] << "  "
                    << T[i][j] << "  "
-                   << FOsurf_Tmunu_[4*i+j] - T[i][j]
+                   << (FOsurf_Tmunu_[4*i+j] - T[i][j])/volume
                    << std::endl;
             messager << "check: T[" << i << "][" << j << "] = "
                      << FOsurf_Tmunu_[4*i+j] << " GeV/fm^3,  "
                      << T[i][j] << " GeV/fm^3, diff = "
-                     << FOsurf_Tmunu_[4*i+j] - T[i][j]
+                     << (FOsurf_Tmunu_[4*i+j] - T[i][j])/volume
                      << " GeV/fm^3";
             messager.flush("info");
         }
@@ -352,11 +353,11 @@ void iSS::construct_Tmunu_from_particle_samples() {
         if (i == 0) {       // only check net baryon density for now
             output << std::scientific << std::setprecision(8)
                    << FOsurf_Q_[i] << "  " << netChargeArr[i] << "  "
-                   << FOsurf_Q_[i] - netChargeArr[i] << std::endl;
+                   << (FOsurf_Q_[i] - netChargeArr[i])/volume << std::endl;
         }
         messager << "check: nQ[" << i << "] = " << FOsurf_Q_[i]
                  << " 1/fm^3," << netChargeArr[i] << " 1/fm^3, diff = "
-                 << FOsurf_Q_[i] - netChargeArr[i] << " 1/fm^3";
+                 << (FOsurf_Q_[i] - netChargeArr[i])/volume << " 1/fm^3";
         messager.flush("info");
     }
     output.close();
@@ -432,20 +433,20 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
                     surf_i.Edec*u[i]*u[j]
                     - (surf_i.Pdec + surf_i.bulkPi)*(gmunu[i][j] - u[i]*u[j])
                     + pi_tz[i][j]);
-                FOsurf_Tmunu_[4*i+j] += Tmunu[i][j];
+                FOsurf_Tmunu_[4*i+j] += Tmunu[i][j]*udotsigma;
             }
         }
     }
-    //messager << "The total energy-momentum tensor from the surface:";
-    //messager.flush("info");
-    //for (int i = 0; i < 4; i++) {
-    //    for (int j = 0; j < 4; j++) {
-    //        messager << "T[" << i << "][" << j << "] = "
-    //                 << std::scientific << std::setprecision(6)
-    //                 << FOsurf_Tmunu_[4*i+j] << " GeV/fm^3.";
-    //        messager.flush("info");
-    //    }
-    //}
+    messager << "The total energy-momentum tensor from the surface:";
+    messager.flush("info");
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            messager << "T[" << i << "][" << j << "] = "
+                     << std::scientific << std::setprecision(6)
+                     << FOsurf_Tmunu_[4*i+j] << " GeV/fm^3.";
+            messager.flush("info");
+        }
+    }
     messager << "The total charges from the surface (B, Q, S):";
     messager.flush("info");
     for (int i = 0; i < 3; i++) {
