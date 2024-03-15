@@ -32,7 +32,8 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
     turn_on_bulk = paraRdr->getVal("turn_on_bulk");
     turn_on_rhob = paraRdr->getVal("turn_on_rhob");
     turn_on_diff = paraRdr->getVal("turn_on_diff");
-    surface_in_binary = true;
+    surface_in_binary_ = true;
+    include_vorticity_ = false;
 
     if (paraRdr->getVal("quantum_statistics") == 1) {
         quantum_statistics_ = true;
@@ -73,17 +74,25 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
                 int flag_b;
                 ss >> flag_b;
                 if (flag_b == 1) {
-                    surface_in_binary = true;
+                    surface_in_binary_ = true;
                 } else {
-                    surface_in_binary = false;
+                    surface_in_binary_ = false;
                 }
+            }
+            if (temp_name == "output_vorticity") {
+                int flag_vor;
+                ss >> flag_vor;
+                if (flag_vor == 1)
+                    include_vorticity_ = true;
+                else
+                    include_vorticity_ = false;
             }
             if (temp_name == "EOS_to_use") {
                 ss >> iEOS_MUSIC_;
             }
         }
         configuration.close();
-        if (surface_in_binary)
+        if (surface_in_binary_)
             messager.info("the hyper-surface surface is in the binary format.");
         if (turn_on_bulk == 1)
             messager.info("the hyper-surface includes bulk viscosity.");
@@ -91,7 +100,21 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
             messager.info("the hyper-surface includes net baryon density.");
         if (turn_on_diff == 1)
             messager.info("the hyper-surface includes baryon diffusion.");
+        if (include_vorticity_)
+            messager.info("the hyper-surface includes vorticity arrays.");
     }
+
+    if (paraRdr->getVal("calculate_polarization", 0) == 1
+            && !include_vorticity_) {
+        messager.error("The surface does not contains vorticity arrays!");
+        messager.error("Can not compute the spin polarization!");
+        paraRdr->setVal("calculate_polarization", 0);
+    }
+
+    fluid_cell_size = 36;
+    if (include_vorticity_)
+        fluid_cell_size += 38;
+
     n_eta_skip = 0;
     int afterburner_id = paraRdr->getVal("afterburner_type");
     if (afterburner_id == 1) {
@@ -107,10 +130,16 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
     if (iEOS_MUSIC_ == 91) {
         afterburner_type_ = AfterburnerType::SMASH;
     }
-    if (iEOS_MUSIC_ == 20) {
-        read_in_HRG_EOS_binary();
+
+    if (paraRdr->getVal("regulateEOS", 0) == 1) {
+        regulateEOS_ = true;
+        if (iEOS_MUSIC_ == 20) {
+            read_in_HRG_EOS_binary();
+        } else {
+            read_in_HRG_EOS();
+        }
     } else {
-        read_in_HRG_EOS();
+        regulateEOS_ = false;
     }
 }
 
@@ -125,7 +154,7 @@ int read_FOdata::get_number_of_freezeout_cells(std::string surfaceFilename) {
     } else if (mode == 1) {  // outputs from MUSIC boost-invariant
         ostringstream surface_file;
         surface_file << path_ << "/" << surfaceFilename;
-        if (surface_in_binary) {
+        if (surface_in_binary_) {
             number_of_cells = get_number_of_lines_of_binary_surface_file(
                                                         surface_file.str());
             n_eta_skip = 1;
@@ -146,7 +175,7 @@ int read_FOdata::get_number_of_freezeout_cells(std::string surfaceFilename) {
         int number_of_lines = 0;
         ostringstream surface_filename;
         surface_filename << path_ << "/" << surfaceFilename;
-        if (surface_in_binary) {
+        if (surface_in_binary_) {
             number_of_cells = get_number_of_lines_of_binary_surface_file(
                                                     surface_filename.str());
         } else {
@@ -176,7 +205,17 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
         surface_file.read(reinterpret_cast<char*>(&temp), sizeof(float));
         count++;
     }
-    int counted_line = count/36;
+    count -= 1;
+    if (count % fluid_cell_size != 0) {
+        messager << "The input file format is not correct!";
+        messager.flush("error");
+        messager << "Every line should have " << fluid_cell_size
+                 << " variables, but we got " << count
+                 << " variables in total!";
+        messager.flush("error");
+        exit(1);
+    }
+    int counted_line = count/fluid_cell_size;
     surface_file.close();
     return(counted_line);
 }
@@ -184,6 +223,9 @@ int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
 
 void read_FOdata::read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr,
                                           std::string surface_filename) {
+    int ncells = get_number_of_freezeout_cells(surface_filename);
+    messager << "total number of cells: " <<  ncells;
+    messager.flush("info");
     if (mode == 0)         // VISH2+1 outputs
         read_FOsurfdat_VISH2p1(surf_ptr);
     else if (mode == 1)    // MUSIC boost invariant outputs
@@ -223,7 +265,7 @@ void read_FOdata::read_in_chemical_potentials(
         }
         configuration.close();
         std::ifstream particletable;
-        if (iEOS_MUSIC_ == 2) {       // s95p-v1
+        if (iEOS_MUSIC_ <= 2) {         // ideal-gas, EOS-Q, and s95p-v1
             N_stableparticle = 0;
         } else if (iEOS_MUSIC_ == 3) {  // s95p-v1-PCE150
             particletable.open(
@@ -321,6 +363,8 @@ void read_FOdata::read_decdat(std::vector<FO_surf> &surf_ptr) {
 
         ss >> surf_elem.tau;
         surf_elem.eta = 0.0;
+        surf_elem.cosh_eta = 1.0;
+        surf_elem.sinh_eta = 0.0;
 
         ss >> surf_elem.da0;
         ss >> surf_elem.da1;
@@ -406,10 +450,9 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     double dummy;
     string input;
     double temp_tau, temp_xpt, temp_ypt, temp_eta;
-    int idx = 0;
     surfdat_stream << path_ << "/" << surface_filename;
     std::ifstream surfdat;
-    if (surface_in_binary) {
+    if (surface_in_binary_) {
         surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);
     } else {
         surfdat.open(surfdat_stream.str().c_str());
@@ -421,53 +464,59 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     }
     while (!surfdat.eof()) {
         FO_surf surf_elem;
-        if (surface_in_binary) {
-            float array[36];
-            for (int ii = 0; ii < 36; ii++) {
+        if (surface_in_binary_) {
+            std::vector<float> array_loc(fluid_cell_size, 0.0);
+            for (int ii = 0; ii < fluid_cell_size; ii++) {
                 float temp = 0.;
                 surfdat.read(reinterpret_cast<char*>(&temp), sizeof(float));
-                array[ii] = temp;
+                array_loc[ii] = temp;
             }
-            surf_elem.tau = array[0];
-            surf_elem.xpt = array[1];
-            surf_elem.ypt = array[2];
+            surf_elem.tau = array_loc[0];
+            surf_elem.xpt = array_loc[1];
+            surf_elem.ypt = array_loc[2];
             surf_elem.eta = 0.0;
-            surf_elem.da0 = array[4];
-            surf_elem.da1 = array[5];
-            surf_elem.da2 = array[6];
+            surf_elem.cosh_eta = 1.0;
+            surf_elem.sinh_eta = 0.0;
+            surf_elem.da0 = array_loc[4];
+            surf_elem.da1 = array_loc[5];
+            surf_elem.da2 = array_loc[6];
             surf_elem.da3 = 0.0;
-            surf_elem.u0  = array[8];
-            surf_elem.u1  = array[9];
-            surf_elem.u2  = array[10];
-            surf_elem.u3  = array[11];
+            surf_elem.u0  = array_loc[8];
+            surf_elem.u1  = array_loc[9];
+            surf_elem.u2  = array_loc[10];
+            surf_elem.u3  = array_loc[11];
 
-            surf_elem.Edec = array[12]*hbarC;
-            surf_elem.Tdec = array[13]*hbarC;
-            surf_elem.muB  = array[14]*hbarC;
-            surf_elem.muS  = array[15]*hbarC;
-            surf_elem.muQ  = array[16]*hbarC;
-            surf_elem.Pdec = array[17]*surf_elem.Tdec - surf_elem.Edec;
+            surf_elem.Edec = array_loc[12]*hbarC;
+            surf_elem.Tdec = array_loc[13]*hbarC;
+            surf_elem.muB  = array_loc[14]*hbarC;
+            surf_elem.muS  = array_loc[15]*hbarC;
+            surf_elem.muQ  = array_loc[16]*hbarC;
+            surf_elem.Pdec = array_loc[17]*surf_elem.Tdec - surf_elem.Edec;
 
-            surf_elem.pi00 = array[18]*hbarC;  // GeV/fm^3
-            surf_elem.pi01 = array[19]*hbarC;  // GeV/fm^3
-            surf_elem.pi02 = array[20]*hbarC;  // GeV/fm^3
-            surf_elem.pi03 = array[21]*hbarC;  // GeV/fm^3
-            surf_elem.pi11 = array[22]*hbarC;  // GeV/fm^3
-            surf_elem.pi12 = array[23]*hbarC;  // GeV/fm^3
-            surf_elem.pi13 = array[24]*hbarC;  // GeV/fm^3
-            surf_elem.pi22 = array[25]*hbarC;  // GeV/fm^3
-            surf_elem.pi23 = array[26]*hbarC;  // GeV/fm^3
-            surf_elem.pi33 = array[27]*hbarC;  // GeV/fm^3
+            surf_elem.pi00 = array_loc[18]*hbarC;  // GeV/fm^3
+            surf_elem.pi01 = array_loc[19]*hbarC;  // GeV/fm^3
+            surf_elem.pi02 = array_loc[20]*hbarC;  // GeV/fm^3
+            surf_elem.pi03 = array_loc[21]*hbarC;  // GeV/fm^3
+            surf_elem.pi11 = array_loc[22]*hbarC;  // GeV/fm^3
+            surf_elem.pi12 = array_loc[23]*hbarC;  // GeV/fm^3
+            surf_elem.pi13 = array_loc[24]*hbarC;  // GeV/fm^3
+            surf_elem.pi22 = array_loc[25]*hbarC;  // GeV/fm^3
+            surf_elem.pi23 = array_loc[26]*hbarC;  // GeV/fm^3
+            surf_elem.pi33 = array_loc[27]*hbarC;  // GeV/fm^3
 
-            surf_elem.bulkPi = array[28]*hbarC;   // GeV/fm^3
+            surf_elem.bulkPi = array_loc[28]*hbarC;   // GeV/fm^3
 
-            surf_elem.Bn   = array[29];             // 1/fm^3
-            surf_elem.Qn   = array[30];             // 1/fm^3
-            surf_elem.Sn   = array[31];             // 1/fm^3
-            surf_elem.qmu0 = array[32];
-            surf_elem.qmu1 = array[33];
-            surf_elem.qmu2 = array[34];
-            surf_elem.qmu3 = array[35];
+            surf_elem.Bn   = array_loc[29];             // 1/fm^3
+            surf_elem.Qn   = array_loc[30];             // 1/fm^3
+            surf_elem.Sn   = array_loc[31];             // 1/fm^3
+            surf_elem.qmu0 = array_loc[32];
+            surf_elem.qmu1 = array_loc[33];
+            surf_elem.qmu2 = array_loc[34];
+            surf_elem.qmu3 = array_loc[35];
+            if (include_vorticity_) {
+                for (int ii = 0; ii < 38; ii++)
+                    surf_elem.vorticity_arr.push_back(array_loc[36+ii]);
+            }
         } else {
             // Not adapted to rhoQ and rhoS at pos 30 and 31.
             getline(surfdat, input, '\n');
@@ -537,7 +586,13 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
                 surf_elem.qmu3 = 0.0e0;
             }
         }
-        idx++;
+
+        double u_dot_dsigma = surf_elem.tau*(
+            surf_elem.u0*surf_elem.da0 + surf_elem.u1*surf_elem.da1
+            + surf_elem.u2*surf_elem.da2
+            + surf_elem.u3*surf_elem.da3/surf_elem.tau);
+        if (u_dot_dsigma < 0) continue;
+
         if (!surfdat.eof()) {
             if (surf_elem.Tdec > 0.01) {
                 surf_ptr.push_back(surf_elem);
@@ -563,7 +618,6 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
     string input;
     double temp_tau, temp_xpt, temp_ypt;
     double temp_vx, temp_vy;
-    int idx = 0;
     surfdat_stream << path_ << "/hyper_surface_2+1d.dat";
     std::ifstream surfdat(surfdat_stream.str().c_str());
     getline(surfdat, input, '\n' );
@@ -578,6 +632,8 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
         surf_elem.xpt = temp_xpt;
         surf_elem.ypt = temp_ypt;
         surf_elem.eta = 0.0;
+        surf_elem.cosh_eta = 1.0;
+        surf_elem.sinh_eta = 0.0;
 
         // freeze out normal vectors
         ss >> surf_elem.da0;
@@ -625,7 +681,6 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
 
         surf_ptr.push_back(surf_elem);
 
-        idx++;
         getline(surfdat, input, '\n' );
     }
     surfdat.close();
@@ -641,7 +696,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
     double dummy;
     surfdat_stream << path_ << "/" << surface_filename;
     std::ifstream surfdat;
-    if (surface_in_binary) {
+    if (surface_in_binary_) {
         surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);
     } else {
         surfdat.open(surfdat_stream.str().c_str());
@@ -653,54 +708,59 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
     }
     while (!surfdat.eof()) {
         FO_surf surf_elem;
-        if (surface_in_binary) {
-            float array[36];
-            for (int i = 0; i < 36; i++) {
+        if (surface_in_binary_) {
+            std::vector<float> array_loc(fluid_cell_size, 0.0);
+            for (int i = 0; i < fluid_cell_size; i++) {
                 float temp = 0.;
                 surfdat.read(reinterpret_cast<char*>(&temp), sizeof(float));
-                array[i] = temp;
+                array_loc[i] = temp;
             }
-            surf_elem.tau = array[0];
-            surf_elem.xpt = array[1];
-            surf_elem.ypt = array[2];
-            surf_elem.eta = array[3];
-            surf_elem.da0 = array[4];
-            surf_elem.da1 = array[5];
-            surf_elem.da2 = array[6];
-            surf_elem.da3 = array[7];
-            surf_elem.u0  = array[8];
-            surf_elem.u1  = array[9];
-            surf_elem.u2  = array[10];
-            surf_elem.u3  = array[11];
+            surf_elem.tau = array_loc[0];
+            surf_elem.xpt = array_loc[1];
+            surf_elem.ypt = array_loc[2];
+            surf_elem.eta = array_loc[3];
+            surf_elem.cosh_eta = cosh(surf_elem.eta);
+            surf_elem.sinh_eta = sinh(surf_elem.eta);
+            surf_elem.da0 = array_loc[4];
+            surf_elem.da1 = array_loc[5];
+            surf_elem.da2 = array_loc[6];
+            surf_elem.da3 = array_loc[7];
+            surf_elem.u0  = array_loc[8];
+            surf_elem.u1  = array_loc[9];
+            surf_elem.u2  = array_loc[10];
+            surf_elem.u3  = array_loc[11];
 
-            surf_elem.Edec = array[12]*hbarC;
-            surf_elem.Tdec = array[13]*hbarC;
-            surf_elem.muB  = array[14]*hbarC;
-            surf_elem.muS  = array[15]*hbarC;
-            surf_elem.muQ  = array[16]*hbarC;
-            surf_elem.Pdec = array[17]*surf_elem.Tdec - surf_elem.Edec;
+            surf_elem.Edec = array_loc[12]*hbarC;
+            surf_elem.Tdec = array_loc[13]*hbarC;
+            surf_elem.muB  = array_loc[14]*hbarC;
+            surf_elem.muS  = array_loc[15]*hbarC;
+            surf_elem.muQ  = array_loc[16]*hbarC;
+            surf_elem.Pdec = array_loc[17]*surf_elem.Tdec - surf_elem.Edec;
 
-            surf_elem.pi00 = array[18]*hbarC;  // GeV/fm^3
-            surf_elem.pi01 = array[19]*hbarC;  // GeV/fm^3
-            surf_elem.pi02 = array[20]*hbarC;  // GeV/fm^3
-            surf_elem.pi03 = array[21]*hbarC;  // GeV/fm^3
-            surf_elem.pi11 = array[22]*hbarC;  // GeV/fm^3
-            surf_elem.pi12 = array[23]*hbarC;  // GeV/fm^3
-            surf_elem.pi13 = array[24]*hbarC;  // GeV/fm^3
-            surf_elem.pi22 = array[25]*hbarC;  // GeV/fm^3
-            surf_elem.pi23 = array[26]*hbarC;  // GeV/fm^3
-            surf_elem.pi33 = array[27]*hbarC;  // GeV/fm^3
+            surf_elem.pi00 = array_loc[18]*hbarC;  // GeV/fm^3
+            surf_elem.pi01 = array_loc[19]*hbarC;  // GeV/fm^3
+            surf_elem.pi02 = array_loc[20]*hbarC;  // GeV/fm^3
+            surf_elem.pi03 = array_loc[21]*hbarC;  // GeV/fm^3
+            surf_elem.pi11 = array_loc[22]*hbarC;  // GeV/fm^3
+            surf_elem.pi12 = array_loc[23]*hbarC;  // GeV/fm^3
+            surf_elem.pi13 = array_loc[24]*hbarC;  // GeV/fm^3
+            surf_elem.pi22 = array_loc[25]*hbarC;  // GeV/fm^3
+            surf_elem.pi23 = array_loc[26]*hbarC;  // GeV/fm^3
+            surf_elem.pi33 = array_loc[27]*hbarC;  // GeV/fm^3
 
-            surf_elem.bulkPi = array[28]*hbarC;   // GeV/fm^3
+            surf_elem.bulkPi = array_loc[28]*hbarC;   // GeV/fm^3
 
-            surf_elem.Bn   = array[29];             // 1/fm^3
-            surf_elem.Qn   = array[30];             // 1/fm^3
-            surf_elem.Sn   = array[31];             // 1/fm^3
-                                                    
-            surf_elem.qmu0 = array[32];
-            surf_elem.qmu1 = array[33];
-            surf_elem.qmu2 = array[34];
-            surf_elem.qmu3 = array[35];
+            surf_elem.Bn   = array_loc[29];             // 1/fm^3
+            surf_elem.Qn   = array_loc[30];             // 1/fm^3
+            surf_elem.Sn   = array_loc[31];             // 1/fm^3
+            surf_elem.qmu0 = array_loc[32];
+            surf_elem.qmu1 = array_loc[33];
+            surf_elem.qmu2 = array_loc[34];
+            surf_elem.qmu3 = array_loc[35];
+            if (include_vorticity_) {
+                for (int ii = 0; ii < 38; ii++)
+                    surf_elem.vorticity_arr.push_back(array_loc[36+ii]);
+            }
         } else {
             // not adapted to rhoq and rhos at pos 30, 31.
             // freeze out position
@@ -708,6 +768,8 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
             surfdat >> surf_elem.xpt;
             surfdat >> surf_elem.ypt;
             surfdat >> surf_elem.eta;
+            surf_elem.cosh_eta = cosh(surf_elem.eta);
+            surf_elem.sinh_eta = sinh(surf_elem.eta);
 
             // freeze out normal vectors
             surfdat >> surf_elem.da0;
@@ -763,6 +825,13 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
                 surf_elem.qmu3 = 0.0e0;
             }
         }
+
+        double u_dot_dsigma = surf_elem.tau*(
+            surf_elem.u0*surf_elem.da0 + surf_elem.u1*surf_elem.da1
+            + surf_elem.u2*surf_elem.da2
+            + surf_elem.u3*surf_elem.da3/surf_elem.tau);
+        if (u_dot_dsigma < 0) continue;
+
         if (!surfdat.eof()) {
             if (surf_elem.Tdec > 0.01) {
                 surf_ptr.push_back(surf_elem);
@@ -785,15 +854,12 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
     double pi_reg[4][4];
     double u_flow[4];
 
-    bool regulateTemperature = false;
-    if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91
-            || iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14 || iEOS_MUSIC_ == 20) {
-        regulateTemperature = true;
-        cout << "Regulate local temperature with pure HRG EoS." << endl;
+    if (regulateEOS_) {
+        messager.info("Regulate local temperature with pure HRG EoS.");
     }
 
     for (auto &surf_i: surf_ptr) {
-        if (regulateTemperature) {
+        if (regulateEOS_) {
             std::vector<float> eosVar;    // {P, T, muB, muS, muQ}
             int status = -1;
             if (iEOS_MUSIC_ == 20) {
@@ -859,6 +925,44 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
         surf_i.pi22 = pi_reg[2][2];
         surf_i.pi23 = pi_reg[2][3];
         surf_i.pi33 = pi_reg[3][3];
+
+        if (include_vorticity_) {
+            // sigma^{\mu\nu} is in Cartesian Coordinates
+            double cosh_eta = cosh(surf_i.eta);
+            double sinh_eta = sinh(surf_i.eta);
+            u_flow[0] = surf_i.u0*cosh_eta + surf_i.u3*sinh_eta;
+            u_flow[1] = surf_i.u1;
+            u_flow[2] = surf_i.u2;
+            u_flow[3] = surf_i.u3*cosh_eta + surf_i.u0*sinh_eta;
+            pi_init[0][0] = surf_i.vorticity_arr[24];
+            pi_init[0][1] = surf_i.vorticity_arr[25];
+            pi_init[0][2] = surf_i.vorticity_arr[26];
+            pi_init[0][3] = surf_i.vorticity_arr[27];
+            pi_init[1][0] = surf_i.vorticity_arr[25];
+            pi_init[1][1] = surf_i.vorticity_arr[28];
+            pi_init[1][2] = surf_i.vorticity_arr[29];
+            pi_init[1][3] = surf_i.vorticity_arr[30];
+            pi_init[2][0] = surf_i.vorticity_arr[26];
+            pi_init[2][1] = surf_i.vorticity_arr[29];
+            pi_init[2][2] = surf_i.vorticity_arr[31];
+            pi_init[2][3] = surf_i.vorticity_arr[32];
+            pi_init[3][0] = surf_i.vorticity_arr[27];
+            pi_init[3][1] = surf_i.vorticity_arr[30];
+            pi_init[3][2] = surf_i.vorticity_arr[32];
+            pi_init[3][3] = surf_i.vorticity_arr[33];
+
+            regulate_Wmunu(u_flow, pi_init, pi_reg);
+            surf_i.vorticity_arr[24] = pi_reg[0][0];
+            surf_i.vorticity_arr[25] = pi_reg[0][1];
+            surf_i.vorticity_arr[26] = pi_reg[0][2];
+            surf_i.vorticity_arr[27] = pi_reg[0][3];
+            surf_i.vorticity_arr[28] = pi_reg[1][1];
+            surf_i.vorticity_arr[29] = pi_reg[1][2];
+            surf_i.vorticity_arr[30] = pi_reg[1][3];
+            surf_i.vorticity_arr[31] = pi_reg[2][2];
+            surf_i.vorticity_arr[32] = pi_reg[2][3];
+            surf_i.vorticity_arr[33] = pi_reg[3][3];
+        }
     }
 }
 
@@ -933,7 +1037,8 @@ void read_FOdata::read_chemical_potentials_music(
 
 void read_FOdata::read_in_HRG_EOS() {
     cout << " -- Read in pure HRG EoS table...";
-    std::string eos_filename = table_path_ + "/EOS_tables/";
+    std::string eos_filename = (particle_table_path_
+                                + "/EOS_tables/");
     if (iEOS_MUSIC_ == 12) {
         eos_filename += "HRGNEOS_B-";
     } else if (iEOS_MUSIC_ == 14) {
@@ -962,13 +1067,7 @@ void read_FOdata::read_in_HRG_EOS() {
     while (!eosFile.eof()) {
         std::stringstream ss(strLine);
         std::vector<float> item(7, 0);     // {ed, nB, P, T, muB, muS, muQ}
-        if (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91) {
-            float temp, ed_loc, P_loc, T_loc;
-            ss >> ed_loc >> P_loc >> temp >> T_loc;
-            item[0] = ed_loc;
-            item[2] = P_loc;
-            item[3] = T_loc;
-        } else if (iEOS_MUSIC_ == 12) {
+        if (iEOS_MUSIC_ == 12) {
             for (int i = 0; i < 5; i++) {
                 float temp;
                 ss >> temp;
@@ -980,6 +1079,12 @@ void read_FOdata::read_in_HRG_EOS() {
                 ss >> temp;
                 item[i] = temp;
             }
+        } else {
+            float temp, ed_loc, P_loc, T_loc;
+            ss >> ed_loc >> P_loc >> temp >> T_loc;
+            item[0] = ed_loc;
+            item[2] = P_loc;
+            item[3] = T_loc;
         }
         HRGEOS_.push_back(item);
         std::getline(eosFile, strLine);
@@ -1304,8 +1409,9 @@ int read_FOdata::getValuesFromHRGEOS(const double ed, const double nB,
                                      std::vector<float> &eosVar) {
     eosVar.resize(5, 0);        // {P, T, muB, muS, muQ}
     int nBlen = 1;
-    if (iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14)
+    if (iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14) {
         nBlen = 200;
+    }
     double HRGEOS_de = HRGEOS_[nBlen][0] - HRGEOS_[0][0];
     double HRGEOS_e0 = HRGEOS_[0][0];
     int e_idx = static_cast<int>((ed - HRGEOS_e0)/HRGEOS_de);

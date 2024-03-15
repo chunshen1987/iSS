@@ -52,6 +52,7 @@ typedef struct {
 
 typedef struct {
     float tau, xpt, ypt, eta;
+    float cosh_eta, sinh_eta;
     float da0, da1, da2, da3;
     float u0, u1, u2, u3;
     float Edec, Tdec, Pdec;
@@ -60,6 +61,7 @@ typedef struct {
     float bulkPi;
     float qmu0, qmu1, qmu2, qmu3;
     std::vector<float> particle_mu_PCE;
+    std::vector<float> vorticity_arr;
 } FO_surf;
 
 

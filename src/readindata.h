@@ -19,8 +19,10 @@ class read_FOdata {
     const std::string particle_table_path_;
 
     int mode;
-    bool surface_in_binary;
+    bool surface_in_binary_;
+    bool include_vorticity_;
     bool quantum_statistics_;
+    bool regulateEOS_;
 
     // flag to determine whether the EoS is partial chemical equilibrium or not
     int flag_PCE_;
@@ -31,6 +33,7 @@ class read_FOdata {
     int n_eta_skip;
     int iEOS_MUSIC_;
 
+    int fluid_cell_size;
     std::vector<std::vector<float>> HRGEOS_;
 
     AfterburnerType afterburner_type_;

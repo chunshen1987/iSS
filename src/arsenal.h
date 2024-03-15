@@ -75,4 +75,17 @@ void GaussLegendre_getWeight(int npts,double* x,double* w, double A, double B, i
 
 void get_bin_average_and_count(istream& is, ostream& os, vector<double>* bins, long col_to_bin=0, void (*func)(vector<double>*)=NULL, long wanted_data_columns=-1, bool silence=false); // Note that col_to_bin starts with 1, and bins is assumed to be monotonically increasing
 
+double*** create_a_3D_Matrix(const int nx, const int ny, const int nz,
+                             const double val);
+void delete_a_3D_Matrix(double*** Arr_3D, const int nx, const int ny);
+
+void set_val_in_3D_Matrix(double*** Arr_3D, const int nx, const int ny,
+                          const int nz, const double val);
+double**** create_a_4D_Matrix(const int nx, const int ny, const int nz,
+                              const int n4, const double val);
+void delete_a_4D_Matrix(double**** Arr_4D, const int nx, const int ny,
+                        const int nz);
+void set_val_in_4D_Matrix(double**** Arr_4D, const int nx, const int ny,
+                          const int nz, const int n4, const double val);
+
 #endif

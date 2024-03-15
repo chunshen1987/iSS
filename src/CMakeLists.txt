@@ -1,24 +1,25 @@
 set (SOURCES
-  iSS.cpp
-  arsenal.cpp
-  ParameterReader.cpp
-  RandomVariable1DArray.cpp
-  RandomVariable2DArray.cpp
-  Random.cpp
-  TableFunction.cpp
-  Table.cpp
-  emissionfunction.cpp
-  readindata.cpp
-  particle_decay.cpp
-  pretty_ostream.cpp
-  MomentumSamplerShell.cpp
-  BosonMomentumSampler.cpp
-  FermionMomentumSampler.cpp
-  MomentumSamplerBase.cpp
-  FSSW.cpp
-  Histogram.cpp
-  Spectators.cpp
-  )
+    iSS.cpp
+    arsenal.cpp
+    ParameterReader.cpp
+    RandomVariable1DArray.cpp
+    RandomVariable2DArray.cpp
+    Random.cpp
+    TableFunction.cpp
+    Table.cpp
+    emissionfunction.cpp
+    readindata.cpp
+    particle_decay.cpp
+    pretty_ostream.cpp
+    MomentumSamplerShell.cpp
+    BosonMomentumSampler.cpp
+    FermionMomentumSampler.cpp
+    MomentumSamplerBase.cpp
+    FSSW.cpp
+    spin_polarization.cpp
+    Histogram.cpp
+    Spectators.cpp
+)
 
 add_library(${lib_name} SHARED ${SOURCES})
 if (APPLE)
