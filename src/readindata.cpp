@@ -359,7 +359,6 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     double dummy;
     string input;
     double temp_tau, temp_xpt, temp_ypt, temp_eta;
-    int idx = 0;
     surfdat_stream << path_ << "/" << surface_filename;
     std::ifstream surfdat;
     if (surface_in_binary) {
@@ -487,7 +486,6 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
                 surf_elem.qmu3 = 0.0e0;
             }
         }
-        idx++;
         if (!surfdat.eof()) {
             if (surf_elem.Tdec > 0.01) {
                 surf_ptr.push_back(surf_elem);

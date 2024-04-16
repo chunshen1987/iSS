@@ -91,7 +91,6 @@ void iSS::getSurfaceCellFromJETSCAPE(std::vector<FO_surf> &FOsurf_arr) {
     echoLevel_ = paraRdr_ptr->getVal("JSechoLevel", 1);
     read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
                                 particle_table_path_);
-    int mode = paraRdr_ptr->getVal("hydro_mode");
     messager << "total number of cells: " <<  FOsurf_arr.size();
     messager.flush("info");
     if (FOsurf_arr.size() == 0) {
@@ -120,7 +119,6 @@ int iSS::read_in_FO_surface() {
     std::vector<FO_surf> FOsurf_temp;
     read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
                                 particle_table_path_);
-    int mode = paraRdr_ptr->getVal("hydro_mode");
     freeze_out_data.read_in_freeze_out_data(FOsurf_temp, surface_filename_);
     if (echoLevel_ > 0) {
         messager << "total number of cells: " <<  FOsurf_temp.size();
