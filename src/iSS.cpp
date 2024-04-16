@@ -88,13 +88,12 @@ void iSS::getSurfaceCellFromJETSCAPE(std::vector<FO_surf> &FOsurf_arr) {
     FOsurf_array_.clear();
     FOsurf_LRF_array_.clear();
 
+    echoLevel_ = paraRdr_ptr->getVal("JSechoLevel", 1);
     read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
                                 particle_table_path_);
     int mode = paraRdr_ptr->getVal("hydro_mode");
-    if (echoLevel_ > 0) {
-        messager << "total number of cells: " <<  FOsurf_arr.size();
-        messager.flush("info");
-    }
+    messager << "total number of cells: " <<  FOsurf_arr.size();
+    messager.flush("info");
     if (FOsurf_arr.size() == 0) {
         messager << "No freeze-out fluid cell, exit now ...";
         messager.flush("Warning");
