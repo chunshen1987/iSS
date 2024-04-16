@@ -1344,7 +1344,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
         long number_to_sample = determine_number_to_sample(
                                         dN, sampling_model, sampling_para1);
         // write to control file
-        sprintf(line_buffer, "%lu\n", number_to_sample);
+        snprintf(line_buffer, 500, "%lu\n", number_to_sample);
         control_str_buffer << line_buffer;
         control_writing_signal++;
         if (control_writing_signal == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
@@ -1539,18 +1539,18 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
             // write to sample file
             if (!USE_OSCAR_FORMAT)
             {
-                sprintf(line_buffer, 
-                        "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", 
-                        FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, 
-                        pT, phi, surf->da0, surf->da1, surf->da2, vx, vy, y, 
-                        eta_s, E, p_z, t, z);
+                snprintf(line_buffer, 500,
+                         "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", 
+                         FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, 
+                         pT, phi, surf->da0, surf->da1, surf->da2, vx, vy, y, 
+                         eta_s, E, p_z, t, z);
             }
             // To be combined to OSCAR
             if (USE_OSCAR_FORMAT)
             {
-                sprintf(line_buffer, 
-                        "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", 
-                        px, py, p_z, E, mass, surf->xpt, surf->ypt, z, t);
+                snprintf(line_buffer, 500,
+                         "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", 
+                         px, py, p_z, E, mass, surf->xpt, surf->ypt, z, t);
             }
             sample_str_buffer << line_buffer;
             sample_writing_signal++;
@@ -1787,7 +1787,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
         long number_to_sample = determine_number_to_sample(
                                     dN, sampling_model, sampling_para1);
         // write to control file
-        sprintf(line_buffer, "%lu\n", number_to_sample);
+        snprintf(line_buffer, 500, "%lu\n", number_to_sample);
         control_str_buffer << line_buffer;
         control_writing_signal++;
         if (control_writing_signal == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
@@ -2050,17 +2050,17 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
 
             // write to sample file
             if (!USE_OSCAR_FORMAT) {
-                sprintf(line_buffer, 
-                        "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", 
-                        FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, 
-                        pT, phi, surf->da0, surf->da1, surf->da2, 
-                        surf->u1/surf->u0, surf->u2/surf->u0, y, eta_s, E, 
-                        p_z, t, z);
+                snprintf(line_buffer, 500,
+                         "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", 
+                         FO_idx, surf->tau, surf->xpt, surf->ypt, y_minus_eta_s, 
+                         pT, phi, surf->da0, surf->da1, surf->da2, 
+                         surf->u1/surf->u0, surf->u2/surf->u0, y, eta_s, E, 
+                         p_z, t, z);
             } else {
                 // To be combined to OSCAR
-                sprintf(line_buffer, 
-                        "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", 
-                        px, py, p_z, E, mass, surf->xpt, surf->ypt, z, t);
+                snprintf(line_buffer, 500,
+                         "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", 
+                         px, py, p_z, E, mass, surf->xpt, surf->ypt, z, t);
             }
             sample_str_buffer << line_buffer;
             sample_writing_signal++;
@@ -2699,17 +2699,17 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
                     oscar << setw(10) << ipart + 1 << "  "
                           << setw(10) << (*(*Hadron_list)[iev])[ipart].pid
                           << "  ";
-                    sprintf(line_buffer, 
-                            "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e",
-                            (*(*Hadron_list)[iev])[ipart].px,
-                            (*(*Hadron_list)[iev])[ipart].py,
-                            (*(*Hadron_list)[iev])[ipart].pz,
-                            (*(*Hadron_list)[iev])[ipart].E,
-                            (*(*Hadron_list)[iev])[ipart].mass,
-                            (*(*Hadron_list)[iev])[ipart].x,
-                            (*(*Hadron_list)[iev])[ipart].y,
-                            (*(*Hadron_list)[iev])[ipart].z,
-                            (*(*Hadron_list)[iev])[ipart].t);
+                    snprintf(line_buffer, 500,
+                             "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e",
+                             (*(*Hadron_list)[iev])[ipart].px,
+                             (*(*Hadron_list)[iev])[ipart].py,
+                             (*(*Hadron_list)[iev])[ipart].pz,
+                             (*(*Hadron_list)[iev])[ipart].E,
+                             (*(*Hadron_list)[iev])[ipart].mass,
+                             (*(*Hadron_list)[iev])[ipart].x,
+                             (*(*Hadron_list)[iev])[ipart].y,
+                             (*(*Hadron_list)[iev])[ipart].z,
+                             (*(*Hadron_list)[iev])[ipart].t);
                     oscar << line_buffer << endl;
                 }
             }
@@ -3442,7 +3442,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
             control_writing_signal++;
             if (flag_output_samples_into_files == 1) {
                 // write to control file
-                sprintf(line_buffer, "%lu\n", number_to_sample);
+                snprintf(line_buffer, 500, "%lu\n", number_to_sample);
                 control_str_buffer << line_buffer;
                 if (control_writing_signal
                         == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
@@ -4440,19 +4440,19 @@ std::string EmissionFunctionArray::add_one_sampled_particle(
 
     // write to sample file
     if (!USE_OSCAR_FORMAT) {
-        sprintf(line_buffer, 
-                "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", 
-                FO_idx, surf->tau, surf->xpt, surf->ypt, 
-                y_minus_eta_s, pT, phi, surf->da0, surf->da1, 
-                surf->da2, surf->u1/surf->u0, 
-                surf->u2/surf->u0, rapidity_y, eta_s, E, p_z, 
-                t, z);
+        snprintf(line_buffer, 500,
+                 "%lu  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e  %e\n", 
+                 FO_idx, surf->tau, surf->xpt, surf->ypt, 
+                 y_minus_eta_s, pT, phi, surf->da0, surf->da1, 
+                 surf->da2, surf->u1/surf->u0, 
+                 surf->u2/surf->u0, rapidity_y, eta_s, E, p_z, 
+                 t, z);
     } else {
         // To be combined to OSCAR
-        sprintf(line_buffer, 
-                "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", 
-                px, py, p_z, E, mass, surf->xpt, 
-                surf->ypt, z, t);
+        snprintf(line_buffer, 500,
+                 "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e\n", 
+                 px, py, p_z, E, mass, surf->xpt, 
+                 surf->ypt, z, t);
     }
     text_string = line_buffer;
 

@@ -27,7 +27,6 @@ class iSS {
     std::vector<float> FOsurf_Q_;
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr_;
 
-    int Nparticle;
     int flag_PCE_;
     AfterburnerType afterburner_type_;
 
