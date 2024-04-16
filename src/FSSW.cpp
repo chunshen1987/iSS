@@ -27,7 +27,7 @@
 #include "Stopwatch.h"
 
 using iSS_data::AMOUNT_OF_OUTPUT;
-using iSS_data::Vec4;
+using iSS_data::VecD4;
 using std::cout;
 using std::endl;
 using std::string;
@@ -469,17 +469,17 @@ void FSSW::combine_samples_to_OSCAR() {
                     oscar << setw(10) << ipart + 1 << "  "
                           << setw(10) << (*(*Hadron_list)[iev])[ipart].pid
                           << "  ";
-                    sprintf(line_buffer,
-                            "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e",
-                            (*(*Hadron_list)[iev])[ipart].px,
-                            (*(*Hadron_list)[iev])[ipart].py,
-                            (*(*Hadron_list)[iev])[ipart].pz,
-                            (*(*Hadron_list)[iev])[ipart].E,
-                            (*(*Hadron_list)[iev])[ipart].mass,
-                            (*(*Hadron_list)[iev])[ipart].x,
-                            (*(*Hadron_list)[iev])[ipart].y,
-                            (*(*Hadron_list)[iev])[ipart].z,
-                            (*(*Hadron_list)[iev])[ipart].t);
+                    snprintf(line_buffer, 500,
+                             "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e",
+                             (*(*Hadron_list)[iev])[ipart].px,
+                             (*(*Hadron_list)[iev])[ipart].py,
+                             (*(*Hadron_list)[iev])[ipart].pz,
+                             (*(*Hadron_list)[iev])[ipart].E,
+                             (*(*Hadron_list)[iev])[ipart].mass,
+                             (*(*Hadron_list)[iev])[ipart].x,
+                             (*(*Hadron_list)[iev])[ipart].y,
+                             (*(*Hadron_list)[iev])[ipart].z,
+                             (*(*Hadron_list)[iev])[ipart].t);
                     oscar << line_buffer << endl;
                 }
             }
@@ -1945,39 +1945,21 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         if (ran_gen_ptr->rand_uniform() < accept_prob) {
             // accept the sample
             // now we need to boost the momentum to the lab frame
-            Vec4 pLRF = {static_cast<float>(p0), static_cast<float>(px),
-                         static_cast<float>(py), static_cast<float>(pz)};
-            Vec4 umu = {surf->u_tz[0], surf->u_tz[1],
-                        surf->u_tz[2], surf->u_tz[3]};
-            Vec4 pLab = {0., 0., 0., 0.};
+            VecD4 pLRF = {p0, px, py, pz};
+            VecD4 umu = {surf->u_tz[0], surf->u_tz[1],
+                         surf->u_tz[2], surf->u_tz[3]};
+            VecD4 pLab = {0., 0., 0., 0.};
             boost_vector_back_to_lab_frame(pLRF, pLab, umu);
 
             // assigned to the return variables
-            pT = sqrt(pLab[1]*pLab[1] + pLab[2]*pLab[2]);
-            phi = atan2(pLab[2], pLab[1]);
+            // if E and p^z are too close, resample one
             double y = 0.5*log((pLab[0] + pLab[3])/(pLab[0] - pLab[3]));
-            if (std::isnan(y) || std::isinf(y)) {
-                // pLab[0] and pLab[3] are too close
-                // recompute pLab[3] with E, pT, and mass
-                pLab[3] = sqrt(pLab[0]*pLab[0] - pT*pT - mass*mass);
-                y = 0.5*log((pLab[0] + pLab[3])/(pLab[0] - pLab[3]));
-                if (std::isnan(y) || std::isinf(y)) {
-                    std::cout << "[Error]: sampled y is " << y << "!"
-                              << std::endl;
-                    std::cout << "umu = "
-                              << umu[0] << ", " << umu[1] << ", " << umu[2]
-                              << ", " << umu[3] << std::endl;
-                    std::cout << "pLRF = "
-                              << pLRF[0] << ", " << pLRF[1] << ", "
-                              << pLRF[2] << ", " << pLRF[3] << std::endl;
-                    std::cout << "pLab = "
-                              << pLab[0] << ", " << pLab[1] << ", "
-                              << pLab[2] << ", " << pLab[3] << std::endl;
-                    exit(1);
-                }
+            if (!std::isnan(y) && !std::isinf(y)) {
+                pT = sqrt(pLab[1]*pLab[1] + pLab[2]*pLab[2]);
+                phi = atan2(pLab[2], pLab[1]);
+                y_minus_eta_s = y - surf->eta;
+                return(1);
             }
-            y_minus_eta_s = y - surf->eta;
-            return(1);
         }
         tries++;
     }
@@ -2018,7 +2000,7 @@ void FSSW::add_one_sampled_particle(
 // this function boost a 4-vector from the fluid local rest frame to
 // the lab frame. The fluid velocity is u^\mu.
 void FSSW::boost_vector_back_to_lab_frame(
-                            Vec4 &p_LRF, Vec4 &p_lab, Vec4 &umu) const {
+                            VecD4 &p_LRF, VecD4 &p_lab, VecD4 &umu) const {
     double p_dot_u = 0.;
     for (int i = 1; i < 4; i++)
         p_dot_u += p_LRF[i]*umu[i];

@@ -29,7 +29,7 @@ class MomentumSamplerBase {
     std::vector<double> CDF_2_;
 
     MomentumSamplerBase();
-    ~MomentumSamplerBase() {};
+    virtual ~MomentumSamplerBase() {};
 
     virtual double CDF_0(const double Etilde) const {return(0.0*Etilde);}
     virtual double CDF_1(const double Etilde) const {return(0.0*Etilde);}
