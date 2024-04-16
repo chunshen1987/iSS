@@ -517,7 +517,6 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
     string input;
     double temp_tau, temp_xpt, temp_ypt;
     double temp_vx, temp_vy;
-    int idx = 0;
     surfdat_stream << path_ << "/hyper_surface_2+1d.dat";
     std::ifstream surfdat(surfdat_stream.str().c_str());
     getline(surfdat, input, '\n' );
@@ -577,7 +576,6 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
 
         surf_ptr.push_back(surf_elem);
 
-        idx++;
         getline(surfdat, input, '\n' );
     }
     surfdat.close();

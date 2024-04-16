@@ -475,17 +475,17 @@ void FSSW::combine_samples_to_OSCAR() {
                     oscar << setw(10) << ipart + 1 << "  "
                           << setw(10) << (*(*Hadron_list)[iev])[ipart].pid
                           << "  ";
-                    sprintf(line_buffer,
-                            "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e",
-                            (*(*Hadron_list)[iev])[ipart].px,
-                            (*(*Hadron_list)[iev])[ipart].py,
-                            (*(*Hadron_list)[iev])[ipart].pz,
-                            (*(*Hadron_list)[iev])[ipart].E,
-                            (*(*Hadron_list)[iev])[ipart].mass,
-                            (*(*Hadron_list)[iev])[ipart].x,
-                            (*(*Hadron_list)[iev])[ipart].y,
-                            (*(*Hadron_list)[iev])[ipart].z,
-                            (*(*Hadron_list)[iev])[ipart].t);
+                    snprintf(line_buffer, 500,
+                             "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e",
+                             (*(*Hadron_list)[iev])[ipart].px,
+                             (*(*Hadron_list)[iev])[ipart].py,
+                             (*(*Hadron_list)[iev])[ipart].pz,
+                             (*(*Hadron_list)[iev])[ipart].E,
+                             (*(*Hadron_list)[iev])[ipart].mass,
+                             (*(*Hadron_list)[iev])[ipart].x,
+                             (*(*Hadron_list)[iev])[ipart].y,
+                             (*(*Hadron_list)[iev])[ipart].z,
+                             (*(*Hadron_list)[iev])[ipart].t);
                     oscar << line_buffer << endl;
                 }
             }

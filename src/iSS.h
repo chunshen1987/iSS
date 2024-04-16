@@ -28,7 +28,6 @@ class iSS {
 
     int echoLevel_;
 
-    int Nparticle;
     int flag_PCE_;
     AfterburnerType afterburner_type_;
 
