@@ -207,9 +207,9 @@ class FSSW {
         const int particle_monval, const double mass,
         const double pT, const double phi,
         const double y_minus_eta_s, const double eta_s);
-    void boost_vector_back_to_lab_frame(iSS_data::Vec4 &p_LRF,
-                                        iSS_data::Vec4 &p_lab,
-                                        iSS_data::Vec4 &umu) const;
+    void boost_vector_back_to_lab_frame(iSS_data::VecD4 &p_LRF,
+                                        iSS_data::VecD4 &p_lab,
+                                        iSS_data::VecD4 &umu) const;
     double bilinearInterp(std::vector<std::vector<double>>&mat,
                           int idx_e1, int idx_e2, int idx_nB1, int idx_nB2,
                           double x_fraction, double y_fraction);
