@@ -87,13 +87,14 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     }
 
     bulk_deltaf_kind_ = paraRdr->getVal("bulk_deltaf_kind", 20);
+    deltaf_max_ratio_ = paraRdr->getVal("deltaf_max_ratio");
+    deltaf_max_ratio_ = std::max(0., std::min(1., deltaf_max_ratio_));
 
+    NEoS_deltaf_kind_ = -1;
     if (bulk_deltaf_kind_ == 21) {
         NEoS_deltaf_kind_ = 1;
     } else if (bulk_deltaf_kind_ == 20) {
         NEoS_deltaf_kind_ = 0;
-    } else {
-        NEoS_deltaf_kind_ = -1;
     }
 
     local_charge_conservation = paraRdr->getVal("local_charge_conservation");
@@ -1950,8 +1951,12 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
                            *qmufactor/deltaf_qmu_coeff);
         }
 
+        double deltaf_total = delta_f_shear + delta_f_bulk + delta_f_qmu;
+        double deltaf_regulated = deltaf_total*(
+            std::min(1., deltaf_max_ratio_/(std::abs(deltaf_total) + 1e-16)));
+
         double fact1 = pdsigma/p0/dsigam_fac;
-        double fact2 = (1. + delta_f_shear + delta_f_bulk + delta_f_qmu)/2.;
+        double fact2 = (1. + deltaf_regulated)/(1. + deltaf_max_ratio_);
         fact1 = std::max(0., std::min(1., fact1));
         fact2 = std::max(0., std::min(1., fact2));
         double accept_prob = fact1*fact2;
