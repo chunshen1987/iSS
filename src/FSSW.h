@@ -44,7 +44,7 @@ class FSSW {
     int USE_OSCAR_FORMAT;
     int USE_GZIP_FORMAT;
     int USE_BINARY_FORMAT;
-    int INCLUDE_DELTAF, INCLUDE_BULK_DELTAF, INCLUDE_DIFFUSION_DELTAF;
+    bool INCLUDE_SHEAR_DELTAF, INCLUDE_BULK_DELTAF, INCLUDE_DIFFUSION_DELTAF;
     int NEoS_deltaf_kind_;        // 0: 14-mom, 1: CE
     int bulk_deltaf_kind_;
 
