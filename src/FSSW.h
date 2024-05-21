@@ -41,10 +41,11 @@ class FSSW {
     int local_charge_conservation;
 
     ParameterReader *paraRdr; // used to pass-in parameters
-    int USE_OSCAR_FORMAT;
-    int USE_GZIP_FORMAT;
-    int USE_BINARY_FORMAT;
-    int INCLUDE_DELTAF, INCLUDE_BULK_DELTAF, INCLUDE_DIFFUSION_DELTAF;
+    bool bUSE_OSCAR_FORMAT;
+    bool bUSE_OSCAR2013;
+    bool bUSE_GZIP_FORMAT;
+    bool bUSE_BINARY_FORMAT;
+    bool bINCLUDE_SHEAR_DELTAF, bINCLUDE_BULK_DELTAF, bINCLUDE_DIFFUSION_DELTAF;
     int NEoS_deltaf_kind_;        // 0: 14-mom, 1: CE
     int bulk_deltaf_kind_;
 
@@ -142,6 +143,7 @@ class FSSW {
     void shell();  // it all starts here...
 
     void combine_samples_to_OSCAR();
+    void combine_samples_to_OSCAR2013();
     void combine_samples_to_gzip_file();
     void combine_samples_to_binary_file();
 
