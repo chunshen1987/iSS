@@ -314,21 +314,21 @@ void EOS_4D::initialize_eos() {
     messenger.info("Read in 4D EOS");
 
     std::stringstream spath;
-    spath << "./EOS/neos4D/";
+    spath << "./iSS_tables/EOS_Tables/HRG4D/";
     std::string path = spath.str();
     messenger << "from path " << path;
     messenger.flush("info");
 
     // Read EoS in binary
     // 1D Tables
-    read_eos_binary(path + "neos4d_p_b.dat", pressure_vec);
-    read_eos_binary(path + "neos4d_t_b.dat", temp_vec);
-    read_eos_binary(path  + "neos4d_mub_b.dat", mub_vec);
-    read_eos_binary(path  + "neos4d_muq_b.dat", muq_vec);
-    read_eos_binary(path  + "neos4d_mus_b.dat", mus_vec);
+    read_eos_binary(path + "HRG_p_b.dat", pressure_vec);
+    read_eos_binary(path + "HRG_t_b.dat", temp_vec);
+    read_eos_binary(path  + "HRG_mub_b.dat", mub_vec);
+    read_eos_binary(path  + "HRG_muq_b.dat", muq_vec);
+    read_eos_binary(path  + "HRG_mus_b.dat", mus_vec);
 
     // Header info
-    read_header_binary(path + "neos4d_t_b.dat");
+    read_header_binary(path + "HRG_t_b.dat");
 
     // Get max values of EoS table for interpolation boundary.
     get_eos_max_values();
