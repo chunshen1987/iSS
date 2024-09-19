@@ -9,7 +9,7 @@
 #include "data_struct.h"
 #include "ParameterReader.h"
 #include "pretty_ostream.h"
-#include "EOS_4D.h"
+#include "eos_4D.h"
 
 class read_FOdata {
  private:
