@@ -7,6 +7,7 @@ set (SOURCES
     Random.cpp
     TableFunction.cpp
     Table.cpp
+    eos_4D.cpp
     emissionfunction.cpp
     readindata.cpp
     particle_decay.cpp

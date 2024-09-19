@@ -134,7 +134,8 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
     if (paraRdr->getVal("regulateEOS", 0) == 1) {
         regulateEOS_ = true;
         if (iEOS_MUSIC_ == 20) {
-            read_in_HRG_EOS_binary();
+            eos_4d_.initialize_eos();
+            //read_in_HRG_EOS_binary();
         } else {
             read_in_HRG_EOS();
         }
@@ -867,8 +868,11 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
             std::vector<float> eosVar;    // {P, T, muB, muS, muQ}
             int status = -1;
             if (iEOS_MUSIC_ == 20) {
-                status = getValuesFromHRGEOS3D(surf_i.Edec, surf_i.Bn,
-                                               surf_i.Qn, eosVar);
+                //status = getValuesFromHRGEOS3D(surf_i.Edec, surf_i.Bn,
+                //                               surf_i.Qn, eosVar);
+                eos_4d_.getThermalVariables(surf_i.Edec, surf_i.Bn,
+                                            surf_i.Qn, surf_i.Sn, eosVar);
+                status = 0;
             } else {
                 status = getValuesFromHRGEOS(surf_i.Edec, surf_i.Bn, eosVar);
             }

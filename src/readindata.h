@@ -9,6 +9,7 @@
 #include "data_struct.h"
 #include "ParameterReader.h"
 #include "pretty_ostream.h"
+#include "EOS_4D.h"
 
 class read_FOdata {
  private:
@@ -23,6 +24,8 @@ class read_FOdata {
     bool include_vorticity_;
     bool quantum_statistics_;
     bool regulateEOS_;
+
+    EOS_4D eos_4d_;
 
     // flag to determine whether the EoS is partial chemical equilibrium or not
     int flag_PCE_;
