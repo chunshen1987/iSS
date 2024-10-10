@@ -27,6 +27,8 @@ class EOS_4D {
     const double alphaNf = (8/45.0 + 7/60.0*3.0)*M_PI*M_PI;
     const double OneoveralphaNf = 1./alphaNf;
 
+    const double hbarc3 = 0.19733*0.19733*0.19733;
+
     // 1D tables.
     std::vector<float> pressure_vec;
     std::vector<float> temp_vec;

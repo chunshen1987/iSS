@@ -38,27 +38,7 @@ void EOS_4D::read_header_binary(std::string filepath, int header_size) {
     mubtilde0 = hd[0];muqtilde0 = hd[1];mustilde0 = hd[2];
     dmubtilde = hd[4];dmuqtilde = hd[5];dmustilde = hd[6];
     N_mub = hd[8];N_muq = hd[9];N_mus = hd[10];N_T = hd[11];
-
-
-    // Get variables in fm-1 divide by hbarc
-    mubtilde0 /= iSS_data::hbarC;
-    muqtilde0 /= iSS_data::hbarC;
-    mustilde0 /= iSS_data::hbarC;
-    Ttilde0 /= iSS_data::hbarC;
-
-    dmubtilde /= iSS_data::hbarC;
-    dmuqtilde /= iSS_data::hbarC;
-    dmustilde /= iSS_data::hbarC;
-    dTtilde /= iSS_data::hbarC;
-
-    N_T += 1;
-    N_mub += 1;
-    N_muq += 1;
-    N_mus += 1;
-
     ifs.close();
-    //std::cout << N_T << " " << N_mub << "  " << N_muq << "  " << N_mus
-    //          << std::endl;
 }
 
 
@@ -84,12 +64,10 @@ void EOS_4D::read_eos_binary(std::string filepath,
     }
 }
 
-
 int EOS_4D::index(int i_T, int i_mub, int i_muq, int i_mus) const {
     int idx = ((i_T*N_mus + i_mus)*N_muq + i_muq)*N_mub + i_mub;
     return(idx);
 }
-
 
 void EOS_4D::FourDLInterp(const std::vector<float> &data,
                           const std::array<float, 4> &TildeVar,
@@ -103,16 +81,16 @@ void EOS_4D::FourDLInterp(const std::vector<float> &data,
 
     // Calculate the weights associated to the sixteen surrounding point
     int iT = static_cast<int>(Tfrac);
-    iT = std::max(0, std::min(N_T - 2, iT));
+    iT = std::max(0, std::min(N_T - 1, iT));
     int iT1 = iT + 1;
     int ib = static_cast<int>(mubfrac);
-    ib = std::max(0, std::min(N_mub - 2, ib));
+    ib = std::max(0, std::min(N_mub - 1, ib));
     int ib1 = ib + 1;
     int iq = static_cast<int>(muqfrac);
-    iq = std::max(0, std::min(N_muq - 2, iq));
+    iq = std::max(0, std::min(N_muq - 1, iq));
     int iq1 = iq + 1;
     int is = static_cast<int>(musfrac);
-    is = std::max(0, std::min(N_mus - 2, is));
+    is = std::max(0, std::min(N_mus - 1, is));
     int is1 = is + 1;
 
     float dx = std::max(0., std::min(1., Tfrac - iT));
@@ -297,11 +275,20 @@ void EOS_4D::FourDLInterp(const std::vector<float> &data,
 void EOS_4D::get_tilde_variables(
         double e, double rhob, double rhoq, double rhos,
         std::array<float, 4> &TildeVar) const {
-    double Ttilde_sq = sqrt(e/3.0 * OneoveralphaNf);
-    double Ttilde = sqrt(Ttilde_sq);                       // fm-1
-    double mubtilde = (5*rhob - rhoq + 2*rhos)/Ttilde_sq;  // fm-1
-    double muqtilde = (- rhob + 2*rhoq - rhos)/Ttilde_sq;  // fm-1
-    double mustilde = (2*rhob - rhoq + 2*rhos)/Ttilde_sq;  // fm-1
+    // Input e, n in GeV/fm3 and 1/fm3
+    // Translate in GeV to get tilde var in GeV
+
+    double e_ = e*hbarc3;
+    double rhob_ = rhob*hbarc3; 
+    double rhoq_ = rhoq*hbarc3; 
+    double rhos_ = rhos*hbarc3; 
+
+    double Ttilde_sq = sqrt(12/(19*M_PI*M_PI) * e_);
+    double Ttilde = sqrt(Ttilde_sq);                       // GeV 
+    double mubtilde = (5*rhob_ - rhoq_ + 2*rhos_)/Ttilde_sq;  // GeV
+    double muqtilde = (- rhob_ + 2*rhoq_ - rhos_)/Ttilde_sq;  // GeV
+    double mustilde = (2*rhob_ - rhoq_ + 2*rhos_)/Ttilde_sq;  // GeV
+
 
     TildeVar[0] = static_cast<float>(Ttilde);
     TildeVar[1] = static_cast<float>(mubtilde);
@@ -314,7 +301,7 @@ void EOS_4D::initialize_eos() {
     messenger.info("Read in 4D EOS");
 
     std::stringstream spath;
-    spath << "./iSS_tables/EOS_Tables/HRG4D/";
+    spath << "./iSS_tables/EOS_tables/HRG4D/";
     std::string path = spath.str();
     messenger << "from path " << path;
     messenger.flush("info");
