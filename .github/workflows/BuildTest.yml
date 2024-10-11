@@ -32,7 +32,9 @@ jobs:
           make install
       - name: Sampling Test static ideal
         run: |
-          pip3 install numpy
+          python3 -m venv venv
+          source venv/bin/activate
+          python3 -m pip install numpy
           $GITHUB_WORKSPACE/tests/RunAutoTestIdeal1.sh
       - name: Sampling Test flow ideal
         run: |
