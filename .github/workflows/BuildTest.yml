@@ -38,22 +38,29 @@ jobs:
           $GITHUB_WORKSPACE/tests/RunAutoTestIdeal1.sh
       - name: Sampling Test flow ideal
         run: |
+          source venv/bin/activate
           $GITHUB_WORKSPACE/tests/RunAutoTestIdeal2.sh
       - name: Sampling Test static with finite net baryon density
         run: |
+          source venv/bin/activate
           $GITHUB_WORKSPACE/tests/RunAutoTestIdeal3.sh
       - name: Sampling Test static with finite densities (BQS)
         run: |
+          source venv/bin/activate
           $GITHUB_WORKSPACE/tests/RunAutoTestIdeal4.sh
       - name: Sampling Test static with bulk viscosity (mu_B = 0, CE)
         run: |
+          source venv/bin/activate
           $GITHUB_WORKSPACE/tests/RunAutoTestViscous1.sh
       - name: Sampling Test static with shear viscosity (mu_B = 0, CE)
         run: |
+          source venv/bin/activate
           $GITHUB_WORKSPACE/tests/RunAutoTestViscous2.sh
       - name: Sampling Test static with bulk viscosity (finite mu_B, 22 mom.)
         run: |
+          source venv/bin/activate
           $GITHUB_WORKSPACE/tests/RunAutoTestViscous3.sh
       - name: Sampling Test static with shear viscosity (finite mu_B, 22 mom.)
         run: |
+          source venv/bin/activate
           $GITHUB_WORKSPACE/tests/RunAutoTestViscous4.sh
