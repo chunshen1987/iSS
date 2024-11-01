@@ -1615,6 +1615,9 @@ void FSSW::getNewRTACoefficients(
 
         visCoefficients[i] = temp1 * (1. - frac_gamma) + temp2 * frac_gamma;
     }
+
+    // convert units
+    visCoefficients[0] *= (Tdec * Tdec * Tdec * Tdec) / (hbarC * hbarC * hbarC);
 }
 
 void FSSW::load_deltaf_qmu_coeff_table(string filename) {
@@ -1936,8 +1939,6 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         mass,
         static_cast<double>(
             baryon * surf->muB + strange * surf->muS + charge * surf->muQ));
-    const double deltaf_prefactor =
-        (1.0 / (2.0 * Tdec * Tdec * (surf->Edec + surf->Pdec)));
     const double prefactor_qmu = surf->Bn / (surf->Edec + surf->Pdec);
     const double dsigam_fac =
         (std::abs(surf->da_mu_LRF[0])
@@ -1991,6 +1992,8 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
                      * pow(p0 / Tdec, deltaf_newRTA_gamma_ - 1)
                      / (2. * visCoefficients[0]));
             } else {
+                const double deltaf_prefactor =
+                    (1.0 / (2.0 * Tdec * Tdec * (surf->Edec + surf->Pdec)));
                 delta_f_shear = (1. - sign * f0) * Wfactor * deltaf_prefactor;
             }
         }
