@@ -17,11 +17,12 @@ include_deltaf_shear = 1      # include delta f contribution from shear
 include_deltaf_bulk = 1       # include delta f contribution from bulk
 include_deltaf_diffusion = 0  # include delta f contribution from diffusion
 
-bulk_deltaf_kind = 1     # 0 : 14-moment approximation (s95p-v0-PCE)
+deltaf_kind = 1          # 0 : 14-moment approximation (s95p-v0-PCE)
                          # 1 : relaxation time approximation [default]
                          # 11: OSU 14-moment
                          # 20: WSU 22-moment (NEoS-BQS) shear and bulk
                          # 21: WSU Chapman-Enskog (NEoS-BQS) shear and bulk
+
 
 restrict_deltaf = 1      # flag to apply restriction on the size of delta f
 deltaf_max_ratio = 1.0   # the maximum allowed size of delta f w.r.t f0

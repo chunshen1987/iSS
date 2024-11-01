@@ -91,7 +91,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     USE_BINARY_FORMAT = paraRdr->getVal("use_binary_format");
     INCLUDE_DELTAF = paraRdr->getVal("include_deltaf_shear");
     INCLUDE_BULK_DELTAF = paraRdr->getVal("include_deltaf_bulk");
-    bulk_deltaf_kind = paraRdr->getVal("bulk_deltaf_kind");
+    bulk_deltaf_kind = paraRdr->getVal("deltaf_kind");
     INCLUDE_DIFFUSION_DELTAF = paraRdr->getVal("include_deltaf_diffusion");
 
     turn_on_rhob = paraRdr->getVal("turn_on_rhob");

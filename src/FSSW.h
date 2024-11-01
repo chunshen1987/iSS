@@ -46,7 +46,7 @@ class FSSW {
     int USE_BINARY_FORMAT;
     bool INCLUDE_SHEAR_DELTAF, INCLUDE_BULK_DELTAF, INCLUDE_DIFFUSION_DELTAF;
     int NEoS_deltaf_kind_;  // 0: 14-mom, 1: CE
-    int bulk_deltaf_kind_;
+    int deltaf_kind_;
 
     double deltaf_max_ratio_;
 
