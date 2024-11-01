@@ -102,6 +102,11 @@ class FSSW {
     std::vector<std::vector<double>> deltaf_coeff_22mom_NEOSBQS_tb_;
     std::vector<std::vector<double>> deltaf_coeff_CE_NEOSBQS_tb_;
 
+    // tables for new RTA deltaf coefficients
+    double deltaf_newRTA_T0_, deltaf_newRTA_dT_;
+    double deltaf_newRTA_gamma0_, deltaf_newRTA_dgamma_;
+    std::vector<std::vector<double>> deltaf_coeff_newRTA_shear_;
+
     // arrays to speed up computing particle yield
     double sf_dx, sf_x_min, sf_x_max;
     int sf_tb_length;
@@ -171,6 +176,8 @@ class FSSW {
     void load_22mom_deltaf_NEOSBQS_table(string filepath);
     void load_deltaf_qmu_coeff_table(std::string filename);
     double get_deltaf_qmu_coeff(double T, double muB);
+
+    void load_deltaf_table_newRTA(std::string filepath);
 
     void check_samples_in_memory();
     int get_number_of_sampled_events() { return (Hadron_list->size()); };

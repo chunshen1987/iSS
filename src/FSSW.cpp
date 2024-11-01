@@ -205,6 +205,10 @@ FSSW::FSSW(
         load_22mom_deltaf_NEOSBQS_table(table_path_ + "/deltaf_tables");
     }
 
+    if (deltaf_kind_ == 31) {
+        load_deltaf_table_newRTA(table_path_ + "/deltaf_tables/newRTA");
+    }
+
     // load table for diffusion delta f coeffient
     if (INCLUDE_DIFFUSION_DELTAF) {
         load_deltaf_qmu_coeff_table(
@@ -1369,6 +1373,41 @@ void FSSW::load_22mom_deltaf_NEOSBQS_table(string filepath) {
         (deltaf_coeff_22mom_NEOSBQS_tb_[200][0]
          - deltaf_coeff_22mom_NEOSBQS_tb_[0][0]);
     NEoS_table.close();
+}
+
+void FSSW::load_deltaf_table_newRTA(std::string filepath) {
+    deltaf_coeff_newRTA_shear_.clear();
+
+    deltaf_newRTA_gamma0_ = 0.0;
+    deltaf_newRTA_dgamma_ = 0.5;
+    deltaf_newRTA_T0_ = 0.1;
+    deltaf_newRTA_dT_ = 0.005;
+    // read in shear tables
+    std::string shearFolderPath = filepath + "/shear";
+    const int nTables = 4;
+    const int tableLength = 21;
+    std::string gammaList[nTables] = {"0,0", "0,5", "1,0", "1,5"};
+    for (int i = 0; i < nTables; i++) {
+        std::string shearFileName =
+            (shearFolderPath + "/beta_pi_gam-EQ-" + gammaList[i]
+             + "-v7-weights-quant.dat");
+        ifstream shearTable(shearFileName.c_str());
+        if (!shearTable) {
+            messager_ << "Can not found file: " << shearFileName;
+            messager_.flush("error");
+            exit(1);
+        }
+        std::string dummy;
+        // read header
+        std::getline(shearTable, dummy);
+
+        std::vector<double> beta_pi(tableLength, 0);
+        for (int j = 0; j < tableLength; j++) {
+            shearTable >> dummy >> beta_pi[j];
+        }
+        deltaf_coeff_newRTA_shear_.push_back(beta_pi);
+        shearTable.close();
+    }
 }
 
 void FSSW::getbulkvisCoefficients(
