@@ -1407,6 +1407,9 @@ void FSSW::load_deltaf_table_newRTA(std::string filepath) {
         std::vector<double> beta_pi(tableLength, 0);
         for (int j = 0; j < tableLength; j++) {
             shearTable >> dummy >> beta_pi[j];
+            double Tlocal = deltaf_newRTA_T0_ + j * deltaf_newRTA_dT_;
+            beta_pi[j] = beta_pi[j] * Tlocal * Tlocal * Tlocal * Tlocal
+                         / (hbarC * hbarC * hbarC);
         }
         deltaf_coeff_newRTA_shear_.push_back(beta_pi);
         shearTable.close();
@@ -1615,9 +1618,6 @@ void FSSW::getNewRTACoefficients(
 
         visCoefficients[i] = temp1 * (1. - frac_gamma) + temp2 * frac_gamma;
     }
-
-    // convert units
-    visCoefficients[0] *= (Tdec * Tdec * Tdec * Tdec) / (hbarC * hbarC * hbarC);
 }
 
 void FSSW::load_deltaf_qmu_coeff_table(string filename) {
