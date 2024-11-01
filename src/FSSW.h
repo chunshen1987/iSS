@@ -50,6 +50,8 @@ class FSSW {
 
     double deltaf_max_ratio_;
 
+    double deltaf_newRTA_gamma_;
+
     // dN/(dxt dy) for one particle species
     std::vector<double> dN_dxtdy_for_one_particle_species;
 
@@ -170,6 +172,8 @@ class FSSW {
     void get22momNEOSBQSCoefficients(
         const double Edec, const double nB,
         std::vector<double> &visCoefficients);
+    void getNewRTACoefficients(
+        const double Tdec, std::vector<double> &visCoefficients);
 
     void load_bulk_deltaf_14mom_table(string filepath);
     void load_CE_deltaf_NEOSBQS_table(string filepath);

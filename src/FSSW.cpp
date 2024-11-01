@@ -207,6 +207,7 @@ FSSW::FSSW(
 
     if (deltaf_kind_ == 31) {
         load_deltaf_table_newRTA(table_path_ + "/deltaf_tables/newRTA");
+        deltaf_newRTA_gamma_ = paraRdr->getVal("deltaf_newRTA_gamma", 1.0);
     }
 
     // load table for diffusion delta f coeffient
@@ -987,10 +988,12 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 } else if (NEoS_deltaf_kind_ == 0) {
                     get22momNEOSBQSCoefficients(
                         surf->Edec, surf->Bn, visCoefficients);
+                } else if (deltaf_kind_ == 31) {
+                    getNewRTACoefficients(surf->Tdec, visCoefficients);
                 }
 
                 if (INCLUDE_BULK_DELTAF) {
-                    if (NEoS_deltaf_kind_ == -1) {
+                    if (NEoS_deltaf_kind_ == -1 && deltaf_kind_ != 31) {
                         if (deltaf_kind_ == 11) {
                             // OSU 14-moment
                             getbulkvisCoefficients(
@@ -1584,6 +1587,36 @@ void FSSW::get22momNEOSBQSCoefficients(
     for (int i = 0; i < 6; i++) visCoefficients[i] = interpCoeff[i];
 }
 
+void FSSW::getNewRTACoefficients(
+    const double Tdec, std::vector<double> &visCoefficients) {
+    visCoefficients.resize(4, 0.);  // beta_pi, bulk coefficients
+    int idx_T =
+        static_cast<int>((Tdec - deltaf_newRTA_T0_) / deltaf_newRTA_dT_);
+    idx_T = std::max(0, std::min(19, idx_T));
+    double frac_T = (Tdec - deltaf_newRTA_T0_) / deltaf_newRTA_dT_ - idx_T;
+    frac_T = std::max(0., std::min(1., frac_T));
+
+    int idx_gamma = static_cast<int>(
+        (deltaf_newRTA_gamma_ - deltaf_newRTA_gamma0_) / deltaf_newRTA_dgamma_);
+    idx_gamma = std::max(0, std::min(2, idx_gamma));
+    double frac_gamma =
+        (deltaf_newRTA_gamma_ - deltaf_newRTA_gamma0_) / deltaf_newRTA_dgamma_
+        - idx_gamma;
+    frac_gamma = std::max(0., std::min(1., frac_gamma));
+
+    for (int i = 0; i < 1; i++) {
+        double temp1 =
+            deltaf_coeff_newRTA_shear_[idx_gamma][idx_T] * (1. - frac_T)
+            + deltaf_coeff_newRTA_shear_[idx_gamma][idx_T + 1] * frac_T;
+
+        double temp2 =
+            deltaf_coeff_newRTA_shear_[idx_gamma + 1][idx_T] * (1. - frac_T)
+            + deltaf_coeff_newRTA_shear_[idx_gamma + 1][idx_T + 1] * frac_T;
+
+        visCoefficients[i] = temp1 * (1. - frac_gamma) + temp2 * frac_gamma;
+    }
+}
+
 void FSSW::load_deltaf_qmu_coeff_table(string filename) {
     ifstream table(filename.c_str());
     deltaf_qmu_coeff_table_length_T = 150;
@@ -1946,12 +1979,17 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
                  + 2. * px * pz * surf->piLRF_xz + py * py * surf->piLRF_yy
                  + 2. * py * pz * surf->piLRF_yz
                  + pz * pz * (-surf->piLRF_xx - surf->piLRF_yy));
-            if (NEoS_deltaf_kind_ == 1) {
+            if (deltaf_kind_ == 20) {
+                delta_f_shear = (1. - sign * f0) * Wfactor * visCoefficients[0];
+            } else if (deltaf_kind_ == 21) {
                 delta_f_shear =
                     ((1. - sign * f0) * Wfactor / (2. * visCoefficients[2])
                      / (p0 * Tdec));
-            } else if (NEoS_deltaf_kind_ == 0) {
-                delta_f_shear = (1. - sign * f0) * Wfactor * visCoefficients[0];
+            } else if (deltaf_kind_ == 31) {
+                delta_f_shear =
+                    ((1. - sign * f0) * Wfactor / (Tdec * Tdec)
+                     * pow(p0 / Tdec, deltaf_newRTA_gamma_ - 1)
+                     / (2. * visCoefficients[0]));
             } else {
                 delta_f_shear = (1. - sign * f0) * Wfactor * deltaf_prefactor;
             }
