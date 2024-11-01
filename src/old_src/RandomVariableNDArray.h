@@ -6,19 +6,24 @@
 
 using namespace std;
 
-class RandomVariableNDArray
-{
+class RandomVariableNDArray {
   private:
-    vector<double>* invCDF; // holds the inverse CDF of the data
-    vector<long>* shape; // shape of the data; lower dimension goes first: A[3][2]->shape[0]=2, shape[1]=3
-    int dimension; // dimension of data
-    vector<long> *product_of_sizes; // list of length for each dimension and their products
-    double data_sum; // "tolerance zero value", max and sum
-    bool destructive; // true: the array passed in will be re-used to store inverse CDF; false: a new memory area will be allocated
+    vector<double>* invCDF;  // holds the inverse CDF of the data
+    vector<long>* shape;     // shape of the data; lower dimension goes first:
+                             // A[3][2]->shape[0]=2, shape[1]=3
+    int dimension;           // dimension of data
+    vector<long>* product_of_sizes;  // list of length for each dimension and
+                                     // their products
+    double data_sum;                 // "tolerance zero value", max and sum
+    bool
+        destructive;  // true: the array passed in will be re-used to store
+                      // inverse CDF; false: a new memory area will be allocated
   public:
-    RandomVariableNDArray(vector<double>*, vector<long>&, double zero=1e-30, bool destructive=true);
+    RandomVariableNDArray(
+        vector<double>*, vector<long>&, double zero = 1e-30,
+        bool destructive = true);
     ~RandomVariableNDArray();
-    inline double get_sum() {return data_sum;};
+    inline double get_sum() { return data_sum; };
     long sampleAccToInvCDF(long*);
     inline void idx_1_to_n(long, long*);
     inline long idx_n_to_1(long*);

@@ -6,13 +6,14 @@
 #include "MomentumSamplerBase.h"
 
 class FermionMomentumSampler : public MomentumSamplerBase {
- private:
+  private:
     double m0_;
     int trunc_order_;
 
- public:
-    FermionMomentumSampler(std::shared_ptr<RandomUtil::Random> ran_gen,
-                           double m0, int trunc_order);
+  public:
+    FermionMomentumSampler(
+        std::shared_ptr<RandomUtil::Random> ran_gen, double m0,
+        int trunc_order);
     ~FermionMomentumSampler() {};
 
     double CDF_0(const double Etilde) const;

@@ -3,23 +3,23 @@
 #ifndef RandomVariable2DArray_h
 #define RandomVariable2DArray_h
 
-
 #include <memory>
+
 #include "Random.h"
 
 class RandomVariable2DArray {
- private:
+  private:
     std::vector<double>* invCDF;
-    long size_left, size_right, data_size; // col, row, and col*row of data
-    //double data_zero;
-    double data_max, data_sum; // "tolerance zero value", max and sum
+    long size_left, size_right, data_size;  // col, row, and col*row of data
+    // double data_zero;
+    double data_max, data_sum;  // "tolerance zero value", max and sum
 
     std::weak_ptr<RandomUtil::Random> ran_gen_ptr;
 
   public:
-    RandomVariable2DArray(double**, long, long,
-                          std::shared_ptr<RandomUtil::Random> ran_gen,
-                          double=1e-30);
+    RandomVariable2DArray(
+        double**, long, long, std::shared_ptr<RandomUtil::Random> ran_gen,
+        double = 1e-30);
     ~RandomVariable2DArray();
     void sampleAccToInvCDF(long*, long*);
     inline long idx_1d_to_2d_left(long);

@@ -1,30 +1,30 @@
 // Ver 1.1.1
 
-#include <vector>
+#include <iostream>
 #include <ostream>
 #include <string>
-#include <iostream>
+#include <vector>
+
 #include "Table.h"
 
 #ifndef TableFunction_h
 #define TableFunction_h
 
-
-class TableFunction
-{
+class TableFunction {
   private:
     Table* mappingTable;
+
   public:
-    int interpolation_model; // controls which model to use in interpolation
+    int interpolation_model;  // controls which model to use in interpolation
     TableFunction();
-    TableFunction(string filename);
+    TableFunction(std::string filename);
     TableFunction(Table&);
     ~TableFunction();
     bool isMappingTableLoaded();
     void deleteMappingTable();
-    void loadMappingTableFromFile(string);
+    void loadMappingTableFromFile(std::string);
     void setMappingTable(long, double, double);
-    void resetMappingTable(long, double defaultValue=0.0);
+    void resetMappingTable(long, double defaultValue = 0.0);
     double map(double);
     double invert(double);
     std::vector<double>* getX();
@@ -34,7 +34,7 @@ class TableFunction
     double getYMin();
     double getYMax();
     long getNumberOfRows();
-    void printFunction(std::ostream& os=std::cout);
+    void printFunction(std::ostream& os = std::cout);
 };
 
 #endif

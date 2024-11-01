@@ -1,21 +1,21 @@
 #ifndef ISS_H
 #define ISS_H
 
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
-#include "data_struct.h"
-#include "ParameterReader.h"
-#include "readindata.h"
-#include "emissionfunction.h"
-#include "Random.h"
-#include "pretty_ostream.h"
 #include "FSSW.h"
+#include "ParameterReader.h"
+#include "Random.h"
+#include "data_struct.h"
+#include "emissionfunction.h"
+#include "pretty_ostream.h"
+#include "readindata.h"
 #include "spin_polarization.h"
 
 class iSS {
- private:
+  private:
     const std::string path_;
     const std::string table_path_;
     const std::string particle_table_path_;
@@ -41,11 +41,11 @@ class iSS {
 
     pretty_ostream messager;
 
- public:
-    iSS(std::string path, std::string table_path="iSS_tables",
-        std::string particle_table_path="iSS_tables",
-        std::string inputfile="iSS_parameters.dat",
-        std::string surface_filename="surface.dat");
+  public:
+    iSS(std::string path, std::string table_path = "iSS_tables",
+        std::string particle_table_path = "iSS_tables",
+        std::string inputfile = "iSS_parameters.dat",
+        std::string surface_filename = "surface.dat");
     ~iSS();
 
     ParameterReader *paraRdr_ptr;
@@ -63,33 +63,33 @@ class iSS {
 
     int get_number_of_sampled_events() {
         if (paraRdr_ptr->getVal("MC_sampling") == 4) {
-            return(spectra_sampler_->get_number_of_sampled_events());
+            return (spectra_sampler_->get_number_of_sampled_events());
         } else {
-            return(efa_->get_number_of_sampled_events());
+            return (efa_->get_number_of_sampled_events());
         }
     };
 
     int get_number_of_particles(int iev) {
         if (paraRdr_ptr->getVal("MC_sampling") == 4) {
-            return(spectra_sampler_->get_number_of_particles(iev));
+            return (spectra_sampler_->get_number_of_particles(iev));
         } else {
-            return(efa_->get_number_of_particles(iev));
+            return (efa_->get_number_of_particles(iev));
         }
     };
 
     iSS_Hadron get_hadron(int iev, int ipart) {
         if (paraRdr_ptr->getVal("MC_sampling") == 4) {
-            return(spectra_sampler_->get_hadron(iev, ipart));
+            return (spectra_sampler_->get_hadron(iev, ipart));
         } else {
-            return(efa_->get_hadron(iev, ipart));
+            return (efa_->get_hadron(iev, ipart));
         }
     };
 
-    std::vector<iSS_Hadron>* get_hadron_list_iev(const int iev) {
+    std::vector<iSS_Hadron> *get_hadron_list_iev(const int iev) {
         if (paraRdr_ptr->getVal("MC_sampling") == 4) {
-            return(spectra_sampler_->get_hadron_list_iev(iev));
+            return (spectra_sampler_->get_hadron_list_iev(iev));
         } else {
-            return(efa_->get_hadron_list_iev(iev));
+            return (efa_->get_hadron_list_iev(iev));
         }
     }
 
@@ -98,11 +98,10 @@ class iSS {
     // this function transform all the variables to local rest frame of the
     // fluid cell and trasform them to the t-z coordinate
     void transform_to_local_rest_frame(
-                std::vector<FO_surf> &FOsurf_ptr,
-                std::vector<FO_surf_LRF> &FOsurf_LRF_ptr);
+        std::vector<FO_surf> &FOsurf_ptr,
+        std::vector<FO_surf_LRF> &FOsurf_LRF_ptr);
     void computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr);
     void getParticleQuantumNumbers(long monval, std::array<int, 3> &Qarr);
 };
-
 
 #endif  // ISS_H

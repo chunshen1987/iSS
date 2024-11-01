@@ -1,8 +1,8 @@
 // Copyright @ Chun Shen 2021
 
-#include "doctest.h"
 #include "Spectators.h"
 
+#include "doctest.h"
 
 TEST_CASE("Test readInSpectatorsFromFile") {
     Spectators testReader(1);

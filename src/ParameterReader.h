@@ -1,18 +1,18 @@
 /***********************************************************************
-ParameterReader class is used to simplify the process of reading parameters from an input file and/or from the command line.
-Version 1.02 (03-14-2012) Zhi Qiu
+ParameterReader class is used to simplify the process of reading parameters from
+an input file and/or from the command line. Version 1.02 (03-14-2012) Zhi Qiu
 ***********************************************************************/
 
 #ifndef _ParameterReaderHeader
 #define _ParameterReaderHeader
 
-#include <vector>
 #include <string>
+#include <vector>
 
 using std::string;
 
 class ParameterReader {
- private:
+  private:
     std::vector<string>* names;
     std::vector<double>* values;  // store all parameter names and values
 
@@ -24,23 +24,24 @@ class ParameterReader {
 
     // give the index of parameter with "name", or -1 if it does not exist
     long _find(std::string name);
- public:
+
+  public:
     ParameterReader();
     ~ParameterReader();
 
     // read and phrase one setting string like "x=1"
-    void phraseOneLine(string str,
-                       string commentSymbol=static_cast<string>("#"));
+    void phraseOneLine(
+        string str, string commentSymbol = static_cast<string>("#"));
 
     // read in parameters from a file
-    void readFromFile(string filename,
-                      string commentSymbol=static_cast<string>("#"));
+    void readFromFile(
+        string filename, string commentSymbol = static_cast<string>("#"));
 
     // read in parameter from argument list.
     // The process starts with index="start_from".
-    void readFromArguments(long argc, char * argv[],
-                           string commentSymbol=static_cast<string>("#"),
-                           long start_from=1);
+    void readFromArguments(
+        long argc, char* argv[],
+        string commentSymbol = static_cast<string>("#"), long start_from = 1);
 
     // check if parameter with "name" exists
     bool exist(string name);
@@ -56,9 +57,7 @@ class ParameterReader {
     void echo();
 };
 
-
 #endif
-
 
 /***********************************************************************
 Changelog:

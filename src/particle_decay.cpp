@@ -1,19 +1,21 @@
 // Copyright Chun Shen @ 2016
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
+#include "particle_decay.h"
+
 #include <cmath>
 #include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+
 #include "data_struct.h"
-#include "particle_decay.h"
 
 using namespace std;
 
-particle_decay::particle_decay(shared_ptr<RandomUtil::Random> ran_gen,
-                               AfterburnerType afterburner_type,
-                               string table_path) :
-        table_path_(table_path), afterburner_type_(afterburner_type) {
+particle_decay::particle_decay(
+    shared_ptr<RandomUtil::Random> ran_gen, AfterburnerType afterburner_type,
+    string table_path)
+    : table_path_(table_path), afterburner_type_(afterburner_type) {
     ran_gen_ptr = ran_gen;
     resonance_table.clear();
     read_resonances_list();
@@ -57,12 +59,12 @@ int particle_decay::read_resonances_list() {
         resofile >> temp_resonance->name;
         resofile >> temp_resonance->mass;
         resofile >> temp_resonance->width;
-        resofile >> temp_resonance->gspin;        // spin degeneracy
+        resofile >> temp_resonance->gspin;  // spin degeneracy
         resofile >> temp_resonance->baryon;
         resofile >> temp_resonance->strange;
         resofile >> temp_resonance->charm;
         resofile >> temp_resonance->bottom;
-        resofile >> temp_resonance->gisospin;     // isospin degeneracy
+        resofile >> temp_resonance->gisospin;  // isospin degeneracy
         resofile >> temp_resonance->charge;
         resofile >> temp_resonance->decays;
         for (int j = 0; j < temp_resonance->decays; j++) {
@@ -107,15 +109,15 @@ int particle_decay::read_resonances_list() {
             temp_anti_resonance->stable = temp_resonance->stable;
             for (int j = 0; j < temp_resonance->decays; j++) {
                 // add anti-particle decay channels
-                decay_channel_info *temp_anti_decay_channel = (
-                                                    new decay_channel_info);
+                decay_channel_info *temp_anti_decay_channel =
+                    (new decay_channel_info);
                 temp_anti_decay_channel->decay_Npart =
-                        temp_resonance->decay_channels[j]->decay_Npart;
+                    temp_resonance->decay_channels[j]->decay_Npart;
                 temp_anti_decay_channel->branching_ratio =
-                        temp_resonance->decay_channels[j]->branching_ratio;
+                    temp_resonance->decay_channels[j]->branching_ratio;
                 for (int k = 0; k < 5; k++) {
                     int decay_part_monval =
-                            temp_resonance->decay_channels[j]->decay_part[k];
+                        temp_resonance->decay_channels[j]->decay_part[k];
                     if (decay_part_monval == 0) {
                         // a null entry
                         temp_anti_decay_channel->decay_part[k] = 0;
@@ -136,23 +138,23 @@ int particle_decay::read_resonances_list() {
                             && temp_resonance->stable == 0 && temp_br > eps) {
                             cout << "Error: can not find decay particle index "
                                  << "for anti-baryon!" << endl;
-                            cout << "particle monval : " 
-                                 << decay_part_monval << endl;
+                            cout << "particle monval : " << decay_part_monval
+                                 << endl;
                             exit(1);
                         }
                         if (resonance_table[idx]->baryon == 0
-                            && resonance_table[idx]->charge == 0 
+                            && resonance_table[idx]->charge == 0
                             && resonance_table[idx]->strange == 0) {
-                            temp_anti_decay_channel->decay_part[k] = (
-                                                        decay_part_monval);
+                            temp_anti_decay_channel->decay_part[k] =
+                                (decay_part_monval);
                         } else {
-                            temp_anti_decay_channel->decay_part[k] = (
-                                                        - decay_part_monval);
+                            temp_anti_decay_channel->decay_part[k] =
+                                (-decay_part_monval);
                         }
                     }
                 }
                 temp_anti_resonance->decay_channels.push_back(
-                                                    temp_anti_decay_channel);
+                    temp_anti_decay_channel);
             }
             resonance_table.push_back(temp_anti_resonance);
         }
@@ -168,9 +170,8 @@ int particle_decay::read_resonances_list() {
             resonance_table[i]->sign = 1;
         }
     }
-    return(Nparticle);
+    return (Nparticle);
 }
-
 
 //! This is a test function to check whether the resonance table is read in
 //! correctly
@@ -189,10 +190,9 @@ void particle_decay::check_resonance_table() {
                  << endl;
             cout << j << ": decay part: ";
             for (int k = 0;
-                 k < resonance_table[i]->decay_channels[j]->decay_Npart;
-                 k++) {
-                 cout << resonance_table[i]->decay_channels[j]->decay_part[k]
-                      << "  ";
+                 k < resonance_table[i]->decay_channels[j]->decay_Npart; k++) {
+                cout << resonance_table[i]->decay_channels[j]->decay_part[k]
+                     << "  ";
             }
             cout << endl;
         }
@@ -208,7 +208,7 @@ double particle_decay::get_particle_width(iSS_Hadron *part) {
             break;
         }
     }
-    return(width);
+    return (width);
 }
 
 //! This function checks whether the particle is stable
@@ -220,9 +220,8 @@ int particle_decay::check_particle_stable(iSS_Hadron *part) {
             break;
         }
     }
-    return(stable);
+    return (stable);
 }
-
 
 //! This function returns the electric charge of particle
 int particle_decay::get_particle_charge(int monval) {
@@ -233,7 +232,7 @@ int particle_decay::get_particle_charge(int monval) {
             break;
         }
     }
-    return(charge);
+    return (charge);
 }
 
 //! This function returns the baryon number of particle
@@ -245,7 +244,7 @@ int particle_decay::get_particle_baryon_number(int monval) {
             break;
         }
     }
-    return(baryon);
+    return (baryon);
 }
 
 //! This function returns the strange number of particle
@@ -257,14 +256,13 @@ int particle_decay::get_particle_strange_number(int monval) {
             break;
         }
     }
-    return(strange);
+    return (strange);
 }
-
 
 //! This is a shell function to perform resonance decays
 void particle_decay::perform_decays(
-            iSS_Hadron *mother, vector<iSS_Hadron>* daughter_list) {
-    particle_info* mother_decay_info = NULL;
+    iSS_Hadron *mother, vector<iSS_Hadron> *daughter_list) {
+    particle_info *mother_decay_info = NULL;
     for (unsigned int i = 0; i < resonance_table.size(); i++) {
         if (mother->pid == resonance_table[i]->monval) {
             mother_decay_info = resonance_table[i];
@@ -279,10 +277,10 @@ void particle_decay::perform_decays(
     int N_decay_channel = mother_decay_info->decays;
     double random_local = ran_gen_ptr->rand_uniform();
     double cumulated_branching_ratio = 0.0;
-    decay_channel_info* picked_channel = NULL;
+    decay_channel_info *picked_channel = NULL;
     for (int i_channel = 0; i_channel < N_decay_channel; i_channel++) {
-        cumulated_branching_ratio += (
-            mother_decay_info->decay_channels[i_channel]->branching_ratio);
+        cumulated_branching_ratio +=
+            (mother_decay_info->decay_channels[i_channel]->branching_ratio);
         if (cumulated_branching_ratio > random_local) {
             picked_channel = mother_decay_info->decay_channels[i_channel];
             break;
@@ -338,17 +336,15 @@ double particle_decay::get_particle_mass(int POI_monval) {
     }
     if (ipart == resonance_table.size() && mass < 1e-10) {
         cout << "[Error]:particle_decay::get_particle_mass(): "
-             << "Can not find particle with monval = " << POI_monval
-             << endl;
+             << "Can not find particle with monval = " << POI_monval << endl;
         exit(1);
     }
-    return(mass);
+    return (mass);
 }
 
 //! This function perform two body decay
-void particle_decay::perform_two_body_decay(iSS_Hadron *mother,
-                                            iSS_Hadron *daughter1,
-                                            iSS_Hadron *daughter2) {
+void particle_decay::perform_two_body_decay(
+    iSS_Hadron *mother, iSS_Hadron *daughter1, iSS_Hadron *daughter2) {
     double M_pole = mother->mass;
     double M_width = get_particle_width(mother);
     double m1 = daughter1->mass;
@@ -360,71 +356,70 @@ void particle_decay::perform_two_body_decay(iSS_Hadron *mother,
         cout << "M = " << M_pole << ", m1 = " << m1 << ", m2 = " << m2 << endl;
         exit(1);
     }
-    //double M_sampled = sample_breit_wigner(M_pole, M_width, M_min);
+    // double M_sampled = sample_breit_wigner(M_pole, M_width, M_min);
     double M_sampled = M_pole;
-    double temp = M_sampled*M_sampled - m1*m1 - m2*m2;
-    double p_lrf = sqrt(temp*temp - 4*m1*m1*m2*m2)/(2*M_sampled);
+    double temp = M_sampled * M_sampled - m1 * m1 - m2 * m2;
+    double p_lrf = sqrt(temp * temp - 4 * m1 * m1 * m2 * m2) / (2 * M_sampled);
 
     // randomly pick emission angle
-    double phi = ran_gen_ptr->rand_uniform()*2*M_PI;
-    double cos_theta = 2.*(ran_gen_ptr->rand_uniform() - 0.5);
-    double sin_theta = sqrt(1. - cos_theta*cos_theta);
+    double phi = ran_gen_ptr->rand_uniform() * 2 * M_PI;
+    double cos_theta = 2. * (ran_gen_ptr->rand_uniform() - 0.5);
+    double sin_theta = sqrt(1. - cos_theta * cos_theta);
 
     // compute daughter particles' energy and momentum in the rest frame
-    double E1_lrf = sqrt(p_lrf*p_lrf + m1*m1);
-    double p1_lrf_x = p_lrf*sin_theta*cos(phi);
-    double p1_lrf_y = p_lrf*sin_theta*sin(phi);
-    double p1_lrf_z = p_lrf*cos_theta;
-    double E2_lrf = sqrt(p_lrf*p_lrf + m2*m2);
+    double E1_lrf = sqrt(p_lrf * p_lrf + m1 * m1);
+    double p1_lrf_x = p_lrf * sin_theta * cos(phi);
+    double p1_lrf_y = p_lrf * sin_theta * sin(phi);
+    double p1_lrf_z = p_lrf * cos_theta;
+    double E2_lrf = sqrt(p_lrf * p_lrf + m2 * m2);
     double p2_lrf_x = -p1_lrf_x;
     double p2_lrf_y = -p1_lrf_y;
     double p2_lrf_z = -p1_lrf_z;
-    
+
     // compute mother velocity
-    double vx = mother->px/mother->E;
-    double vy = mother->py/mother->E;
-    double vz = mother->pz/mother->E;
+    double vx = mother->px / mother->E;
+    double vy = mother->py / mother->E;
+    double vz = mother->pz / mother->E;
 
     // perform the boost
-    double v2 = vx*vx + vy*vy + vz*vz;
-    double gamma = 1./sqrt(1. - v2);
+    double v2 = vx * vx + vy * vy + vz * vz;
+    double gamma = 1. / sqrt(1. - v2);
     double gamma_m_1 = gamma - 1.;
-    double vp1 = vx*p1_lrf_x + vy*p1_lrf_y + vz*p1_lrf_z;
-    double vp2 = vx*p2_lrf_x + vy*p2_lrf_y + vz*p2_lrf_z;
-    daughter1->E = gamma*(E1_lrf + vp1);
-    daughter1->px = p1_lrf_x + (gamma_m_1*vp1/v2 + gamma*E1_lrf)*vx;
-    daughter1->py = p1_lrf_y + (gamma_m_1*vp1/v2 + gamma*E1_lrf)*vy;
-    daughter1->pz = p1_lrf_z + (gamma_m_1*vp1/v2 + gamma*E1_lrf)*vz;
-    daughter2->E = gamma*(E2_lrf + vp2);
-    daughter2->px = p2_lrf_x + (gamma_m_1*vp2/v2 + gamma*E2_lrf)*vx;
-    daughter2->py = p2_lrf_y + (gamma_m_1*vp2/v2 + gamma*E2_lrf)*vy;
-    daughter2->pz = p2_lrf_z + (gamma_m_1*vp2/v2 + gamma*E2_lrf)*vz;
+    double vp1 = vx * p1_lrf_x + vy * p1_lrf_y + vz * p1_lrf_z;
+    double vp2 = vx * p2_lrf_x + vy * p2_lrf_y + vz * p2_lrf_z;
+    daughter1->E = gamma * (E1_lrf + vp1);
+    daughter1->px = p1_lrf_x + (gamma_m_1 * vp1 / v2 + gamma * E1_lrf) * vx;
+    daughter1->py = p1_lrf_y + (gamma_m_1 * vp1 / v2 + gamma * E1_lrf) * vy;
+    daughter1->pz = p1_lrf_z + (gamma_m_1 * vp1 / v2 + gamma * E1_lrf) * vz;
+    daughter2->E = gamma * (E2_lrf + vp2);
+    daughter2->px = p2_lrf_x + (gamma_m_1 * vp2 / v2 + gamma * E2_lrf) * vx;
+    daughter2->py = p2_lrf_y + (gamma_m_1 * vp2 / v2 + gamma * E2_lrf) * vy;
+    daughter2->pz = p2_lrf_z + (gamma_m_1 * vp2 / v2 + gamma * E2_lrf) * vz;
 
     double life_time = 1e10;
     if (M_width > 1e-10) {
         // compute life-time = gamma*1/\Gamma
-        double tau0 = mother->E/(M_sampled)*1./(M_width);
-        life_time = -tau0*log(ran_gen_ptr->rand_uniform())*0.19733;  // convert to fm
+        double tau0 = mother->E / (M_sampled) * 1. / (M_width);
+        life_time = -tau0 * log(ran_gen_ptr->rand_uniform())
+                    * 0.19733;  // convert to fm
     }
 
     daughter1->t = mother->t + life_time;
-    daughter1->x = mother->x + mother->px/mother->E*life_time;
-    daughter1->y = mother->y + mother->py/mother->E*life_time;
-    daughter1->z = mother->z + mother->pz/mother->E*life_time;
+    daughter1->x = mother->x + mother->px / mother->E * life_time;
+    daughter1->y = mother->y + mother->py / mother->E * life_time;
+    daughter1->z = mother->z + mother->pz / mother->E * life_time;
     daughter2->t = mother->t + life_time;
-    daughter2->x = mother->x + mother->px/mother->E*life_time;
-    daughter2->y = mother->y + mother->py/mother->E*life_time;
-    daughter2->z = mother->z + mother->pz/mother->E*life_time;
+    daughter2->x = mother->x + mother->px / mother->E * life_time;
+    daughter2->y = mother->y + mother->py / mother->E * life_time;
+    daughter2->z = mother->z + mother->pz / mother->E * life_time;
 
     return;
 }
 
-
 //! This function perform 3 body decays
-void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
-                                              iSS_Hadron *daughter1,
-                                              iSS_Hadron *daughter2,
-                                              iSS_Hadron *daughter3) {
+void particle_decay::perform_three_body_decay(
+    iSS_Hadron *mother, iSS_Hadron *daughter1, iSS_Hadron *daughter2,
+    iSS_Hadron *daughter3) {
     double M_pole = mother->mass;
     double M_width = get_particle_width(mother);
     double m1 = daughter1->mass;
@@ -441,102 +436,113 @@ void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
              << endl;
         exit(1);
     }
-    //double M_sampled = sample_breit_wigner(M_pole, M_width, M_min);
+    // double M_sampled = sample_breit_wigner(M_pole, M_width, M_min);
     double M_sampled = M_pole;
     // generate lrf E1, E2, and theta12 using accept and reject method
     double E1_lrf, E2_lrf, E3_lrf, p1_lrf, p2_lrf, cos12_lrf;
     do {
         do {
-            E1_lrf = ran_gen_ptr->rand_uniform()*(M_sampled - m1 - m2 - m3) + m1;
-            E2_lrf = ran_gen_ptr->rand_uniform()*(M_sampled - m1 - m2 - m3) + m2;
+            E1_lrf =
+                ran_gen_ptr->rand_uniform() * (M_sampled - m1 - m2 - m3) + m1;
+            E2_lrf =
+                ran_gen_ptr->rand_uniform() * (M_sampled - m1 - m2 - m3) + m2;
         } while (E1_lrf + E2_lrf > M_sampled);
-        p1_lrf = sqrt(E1_lrf*E1_lrf - m1*m1);
-        p2_lrf = sqrt(E2_lrf*E2_lrf - m2*m2);
+        p1_lrf = sqrt(E1_lrf * E1_lrf - m1 * m1);
+        p2_lrf = sqrt(E2_lrf * E2_lrf - m2 * m2);
         E3_lrf = M_sampled - E1_lrf - E2_lrf;
-        cos12_lrf = (E3_lrf*E3_lrf - p1_lrf*p1_lrf - p2_lrf*p2_lrf - m3*m3)
-                     /(2.*p1_lrf*p2_lrf);
-    } while (cos12_lrf < - 1.0 || cos12_lrf > 1.0);
+        cos12_lrf =
+            (E3_lrf * E3_lrf - p1_lrf * p1_lrf - p2_lrf * p2_lrf - m3 * m3)
+            / (2. * p1_lrf * p2_lrf);
+    } while (cos12_lrf < -1.0 || cos12_lrf > 1.0);
     // now we get the a good sample
 
     // sample the lifetime
     double life_time = 1e10;
     if (M_width > 1e-10) {
-        double tau = mother->E/(M_sampled)*1./M_width;
-        life_time = -tau*log(ran_gen_ptr->rand_uniform())*0.19733;  // convert unit to fm
+        double tau = mother->E / (M_sampled) * 1. / M_width;
+        life_time = -tau * log(ran_gen_ptr->rand_uniform())
+                    * 0.19733;  // convert unit to fm
     }
     // compute the decay position
     double decay_time = mother->t + life_time;
-    double decay_x = mother->x + mother->px/mother->E*life_time;
-    double decay_y = mother->y + mother->py/mother->E*life_time;
-    double decay_z = mother->z + mother->pz/mother->E*life_time;
+    double decay_x = mother->x + mother->px / mother->E * life_time;
+    double decay_y = mother->y + mother->py / mother->E * life_time;
+    double decay_z = mother->z + mother->pz / mother->E * life_time;
 
     // compute the momentum of decay daughters
-    double tp2_lrf_x = p2_lrf*sqrt(1. - cos12_lrf*cos12_lrf);
-    double tp2_lrf_z = p2_lrf*cos12_lrf;
-    double tp3_lrf_x = - tp2_lrf_x;
-    double tp3_lrf_z = - (p1_lrf + tp2_lrf_z); 
-    double phi = 2.*M_PI*ran_gen_ptr->rand_uniform();
-    double ksi = 2.*M_PI*ran_gen_ptr->rand_uniform();
-    double cos_theta = 2.*ran_gen_ptr->rand_uniform() - 1.0;
+    double tp2_lrf_x = p2_lrf * sqrt(1. - cos12_lrf * cos12_lrf);
+    double tp2_lrf_z = p2_lrf * cos12_lrf;
+    double tp3_lrf_x = -tp2_lrf_x;
+    double tp3_lrf_z = -(p1_lrf + tp2_lrf_z);
+    double phi = 2. * M_PI * ran_gen_ptr->rand_uniform();
+    double ksi = 2. * M_PI * ran_gen_ptr->rand_uniform();
+    double cos_theta = 2. * ran_gen_ptr->rand_uniform() - 1.0;
 
     double sin_phi = sin(phi);
     double cos_phi = cos(phi);
     double sin_ksi = sin(ksi);
     double cos_ksi = cos(ksi);
-    double sin_theta = sqrt(1. - cos_theta*cos_theta);
+    double sin_theta = sqrt(1. - cos_theta * cos_theta);
 
-    double p1_lrf_x = - p1_lrf*sin_theta*cos_ksi;
-    double p1_lrf_y = p1_lrf*sin_theta*sin_ksi;
-    double p1_lrf_z = p1_lrf*cos_theta;
-    E1_lrf = sqrt(m1*m1 + p1_lrf_x*p1_lrf_x
-                  + p1_lrf_y*p1_lrf_y + p1_lrf_z*p1_lrf_z);
-    double p2_lrf_x = (tp2_lrf_x*(cos_phi*cos_theta*cos_ksi - sin_phi*sin_ksi)
-                       - tp2_lrf_z*sin_theta*cos_ksi);
-    double p2_lrf_y = (tp2_lrf_x*(-cos_phi*cos_theta*sin_ksi - sin_phi*cos_ksi)
-                       + tp2_lrf_z*sin_theta*sin_ksi);
-    double p2_lrf_z = tp2_lrf_x*(cos_phi*sin_theta) + tp2_lrf_z*cos_theta;
-    E2_lrf = sqrt(m2*m2 + p2_lrf_x*p2_lrf_x
-                  + p2_lrf_y*p2_lrf_y + p2_lrf_z*p2_lrf_z);
-    double p3_lrf_x = (tp3_lrf_x*(cos_phi*cos_theta*cos_ksi - sin_phi*sin_ksi)
-                       - tp3_lrf_z*sin_theta*cos_ksi);
-    double p3_lrf_y = (tp3_lrf_x*(-cos_phi*cos_theta*sin_ksi - sin_phi*cos_ksi)
-                       + tp3_lrf_z*(sin_theta*sin_ksi));
-    double p3_lrf_z = tp3_lrf_x*cos_phi*sin_theta + tp3_lrf_z*cos_theta;
-    E3_lrf = sqrt(m3*m3 + p3_lrf_x*p3_lrf_x
-                  + p3_lrf_y*p3_lrf_y + p3_lrf_z*p3_lrf_z);
+    double p1_lrf_x = -p1_lrf * sin_theta * cos_ksi;
+    double p1_lrf_y = p1_lrf * sin_theta * sin_ksi;
+    double p1_lrf_z = p1_lrf * cos_theta;
+    E1_lrf = sqrt(
+        m1 * m1 + p1_lrf_x * p1_lrf_x + p1_lrf_y * p1_lrf_y
+        + p1_lrf_z * p1_lrf_z);
+    double p2_lrf_x =
+        (tp2_lrf_x * (cos_phi * cos_theta * cos_ksi - sin_phi * sin_ksi)
+         - tp2_lrf_z * sin_theta * cos_ksi);
+    double p2_lrf_y =
+        (tp2_lrf_x * (-cos_phi * cos_theta * sin_ksi - sin_phi * cos_ksi)
+         + tp2_lrf_z * sin_theta * sin_ksi);
+    double p2_lrf_z = tp2_lrf_x * (cos_phi * sin_theta) + tp2_lrf_z * cos_theta;
+    E2_lrf = sqrt(
+        m2 * m2 + p2_lrf_x * p2_lrf_x + p2_lrf_y * p2_lrf_y
+        + p2_lrf_z * p2_lrf_z);
+    double p3_lrf_x =
+        (tp3_lrf_x * (cos_phi * cos_theta * cos_ksi - sin_phi * sin_ksi)
+         - tp3_lrf_z * sin_theta * cos_ksi);
+    double p3_lrf_y =
+        (tp3_lrf_x * (-cos_phi * cos_theta * sin_ksi - sin_phi * cos_ksi)
+         + tp3_lrf_z * (sin_theta * sin_ksi));
+    double p3_lrf_z = tp3_lrf_x * cos_phi * sin_theta + tp3_lrf_z * cos_theta;
+    E3_lrf = sqrt(
+        m3 * m3 + p3_lrf_x * p3_lrf_x + p3_lrf_y * p3_lrf_y
+        + p3_lrf_z * p3_lrf_z);
 
-    double vx = mother->px/mother->E;
-    double vy = mother->py/mother->E;
-    double vz = mother->pz/mother->E;
-    double v2 = vx*vx + vy*vy + vz*vz;
-    double gamma = 1./sqrt(1. - v2);
+    double vx = mother->px / mother->E;
+    double vy = mother->py / mother->E;
+    double vz = mother->pz / mother->E;
+    double v2 = vx * vx + vy * vy + vz * vz;
+    double gamma = 1. / sqrt(1. - v2);
     double gamma_m_1 = gamma - 1.;
-    double vp1 = vx*p1_lrf_x + vy*p1_lrf_y + vz*p1_lrf_z;
-    double vp2 = vx*p2_lrf_x + vy*p2_lrf_y + vz*p2_lrf_z;
-    double vp3 = vx*p3_lrf_x + vy*p3_lrf_y + vz*p3_lrf_z;
+    double vp1 = vx * p1_lrf_x + vy * p1_lrf_y + vz * p1_lrf_z;
+    double vp2 = vx * p2_lrf_x + vy * p2_lrf_y + vz * p2_lrf_z;
+    double vp3 = vx * p3_lrf_x + vy * p3_lrf_y + vz * p3_lrf_z;
 
-    daughter1->E = gamma*(E1_lrf + vp1);
-    daughter1->px = p1_lrf_x + (gamma_m_1*vp1/v2 + gamma*E1_lrf)*vx;
-    daughter1->py = p1_lrf_y + (gamma_m_1*vp1/v2 + gamma*E1_lrf)*vy;
-    daughter1->pz = p1_lrf_z + (gamma_m_1*vp1/v2 + gamma*E1_lrf)*vz;
+    daughter1->E = gamma * (E1_lrf + vp1);
+    daughter1->px = p1_lrf_x + (gamma_m_1 * vp1 / v2 + gamma * E1_lrf) * vx;
+    daughter1->py = p1_lrf_y + (gamma_m_1 * vp1 / v2 + gamma * E1_lrf) * vy;
+    daughter1->pz = p1_lrf_z + (gamma_m_1 * vp1 / v2 + gamma * E1_lrf) * vz;
     daughter1->t = decay_time;
     daughter1->x = decay_x;
     daughter1->y = decay_y;
     daughter1->z = decay_z;
 
-    daughter2->E = gamma*(E2_lrf + vp2);
-    daughter2->px = p2_lrf_x + (gamma_m_1*vp2/v2 + gamma*E2_lrf)*vx;
-    daughter2->py = p2_lrf_y + (gamma_m_1*vp2/v2 + gamma*E2_lrf)*vy;
-    daughter2->pz = p2_lrf_z + (gamma_m_1*vp2/v2 + gamma*E2_lrf)*vz;
+    daughter2->E = gamma * (E2_lrf + vp2);
+    daughter2->px = p2_lrf_x + (gamma_m_1 * vp2 / v2 + gamma * E2_lrf) * vx;
+    daughter2->py = p2_lrf_y + (gamma_m_1 * vp2 / v2 + gamma * E2_lrf) * vy;
+    daughter2->pz = p2_lrf_z + (gamma_m_1 * vp2 / v2 + gamma * E2_lrf) * vz;
     daughter2->t = decay_time;
     daughter2->x = decay_x;
     daughter2->y = decay_y;
     daughter2->z = decay_z;
 
-    daughter3->E = gamma*(E3_lrf + vp3);
-    daughter3->px = p3_lrf_x + (gamma_m_1*vp3/v2 + gamma*E3_lrf)*vx;
-    daughter3->py = p3_lrf_y + (gamma_m_1*vp3/v2 + gamma*E3_lrf)*vy;
-    daughter3->pz = p3_lrf_z + (gamma_m_1*vp3/v2 + gamma*E3_lrf)*vz;
+    daughter3->E = gamma * (E3_lrf + vp3);
+    daughter3->px = p3_lrf_x + (gamma_m_1 * vp3 / v2 + gamma * E3_lrf) * vx;
+    daughter3->py = p3_lrf_y + (gamma_m_1 * vp3 / v2 + gamma * E3_lrf) * vy;
+    daughter3->pz = p3_lrf_z + (gamma_m_1 * vp3 / v2 + gamma * E3_lrf) * vz;
     daughter3->t = decay_time;
     daughter3->x = decay_x;
     daughter3->y = decay_y;
@@ -547,21 +553,21 @@ void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
 
 //! This function sample mother particle mass according to breit-wigner
 //! distribution
-double particle_decay::sample_breit_wigner(double mass, double width,
-                                           double M_min) {
+double particle_decay::sample_breit_wigner(
+    double mass, double width, double M_min) {
     // this function sample the Breit Wigner distribution for the mass
     // particle mass sampled is >= M_min
     // From Wiki: https://en.wikipedia.org/wiki/Cauchy_distribution
     // The CDF of BreitWigner (or Cauchy) distribution is
     // y = 1/pi arctan((x-x0)/gamma) + 1/2
-    // The inverse CDF is 
+    // The inverse CDF is
     // x = x0 + gamma*tan(pi*(y - 1/2))
 
     // compute the minimum probability given by M_min
-    double p_min = atan2((M_min - mass), width/2.)/M_PI + 0.5;
+    double p_min = atan2((M_min - mass), width / 2.) / M_PI + 0.5;
     // generate a random number from p_min to 1
-    double y = (1. - p_min)*ran_gen_ptr->rand_uniform() + p_min;
+    double y = (1. - p_min) * ran_gen_ptr->rand_uniform() + p_min;
     // compute the corresponding sampled mass
-    double mass_sampled = mass + width/2.*tan(M_PI*(y - 0.5));
-    return(mass_sampled);
+    double mass_sampled = mass + width / 2. * tan(M_PI * (y - 0.5));
+    return (mass_sampled);
 }

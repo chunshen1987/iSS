@@ -5,9 +5,7 @@
 #ifndef RandomVariable_h
 #define RandomVariable_h
 
-
-class RandomVariable
-{
+class RandomVariable {
   public:
     RandomVariable();
     ~RandomVariable();
@@ -22,11 +20,11 @@ class RandomVariable
     double sampleUsingPDFDirect(double, double, double);
     double sampleUsingPDFDirect(double);
     double sampleUsingPDFAndEnvelopFunc(double, double, double);
-    double sampleUsingPDFAndEnvelopFunc(double factor=1);
+    double sampleUsingPDFAndEnvelopFunc(double factor = 1);
     double calculateMoments(long, double, double);
     void constructEnvelopTab(double, double, int, int);
-    void calculateInvCDFFromPdf(double, double, long number_of_points=30);
-    void calculateInvCDFFromPdf(long number_of_points=30);
+    void calculateInvCDFFromPdf(double, double, long number_of_points = 30);
+    void calculateInvCDFFromPdf(long number_of_points = 30);
 };
 
 #endif

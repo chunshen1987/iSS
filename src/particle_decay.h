@@ -2,24 +2,25 @@
 #ifndef SRC_particle_decay_h_
 #define SRC_particle_decay_h_
 
-#include <vector>
-#include <string>
 #include <memory>
+#include <string>
+#include <vector>
 
-#include "data_struct.h"
 #include "Random.h"
+#include "data_struct.h"
 
 class particle_decay {
- private:
+  private:
     const std::string table_path_;
     const AfterburnerType afterburner_type_;
-    std::vector<particle_info*> resonance_table;
+    std::vector<particle_info *> resonance_table;
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
 
- public:
-    particle_decay(std::shared_ptr<RandomUtil::Random> ran_gen,
-                   AfterburnerType afterburner_type,
-                   std::string table_path="iSS_tables");
+  public:
+    particle_decay(
+        std::shared_ptr<RandomUtil::Random> ran_gen,
+        AfterburnerType afterburner_type,
+        std::string table_path = "iSS_tables");
     ~particle_decay();
 
     //! This function reads in resonance decay table
@@ -48,20 +49,17 @@ class particle_decay {
     double get_particle_mass(int POI_monval);
 
     //! This is a shell function to perform resonance decays
-    void perform_decays(iSS_Hadron *mother,
-                        std::vector<iSS_Hadron>* daughter_list);
-
+    void perform_decays(
+        iSS_Hadron *mother, std::vector<iSS_Hadron> *daughter_list);
 
     //! This function perform two body decay
-    void perform_two_body_decay(iSS_Hadron *mother,
-                                iSS_Hadron *daughter1,
-                                iSS_Hadron *daughter2);
+    void perform_two_body_decay(
+        iSS_Hadron *mother, iSS_Hadron *daughter1, iSS_Hadron *daughter2);
 
     //! This function perform 3 body decays
-    void perform_three_body_decay(iSS_Hadron *mother,
-                                  iSS_Hadron *daughter1,
-                                  iSS_Hadron *daughter2,
-                                  iSS_Hadron *daughter3);
+    void perform_three_body_decay(
+        iSS_Hadron *mother, iSS_Hadron *daughter1, iSS_Hadron *daughter2,
+        iSS_Hadron *daughter3);
 
     //! This function sample mother particle mass according to breit-wigner
     //! distribution

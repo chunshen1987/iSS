@@ -10,20 +10,23 @@
 // The rule is that if a random number is between F(x_n) and F(x_(n+1)),
 // the associated sample point is x_n.
 
-#include <iostream>
-#include <stdlib.h>
-#include "arsenal.h"
 #include "RandomVariable1DArray.h"
 
-using namespace std;
+#include <stdlib.h>
 
+#include <iostream>
+
+#include "arsenal.h"
+
+using namespace std;
 
 //----------------------------------------------------------------------
 // Constructors:
 //----------------------------------------------------------------------
 //----------------------------------------------------------------------
-RandomVariable1DArray::RandomVariable1DArray(vector<double> *data_in,
-                std::shared_ptr<RandomUtil::Random> ran_gen, double zero) {
+RandomVariable1DArray::RandomVariable1DArray(
+    vector<double> *data_in, std::shared_ptr<RandomUtil::Random> ran_gen,
+    double zero) {
     // Initilize from a given double* array data_in.
     // Values smaller than "zero" will be set to "zero".
     // get data info
@@ -32,44 +35,39 @@ RandomVariable1DArray::RandomVariable1DArray(vector<double> *data_in,
     ran_gen_ptr = ran_gen;
 
     // allocate memory
-    invCDF = new vector<double>(data_size+1, zero);
+    invCDF = new vector<double>(data_size + 1, zero);
 
     // generate inverse CDF
     data_sum = 0.0;
     (*invCDF)[0] = 0.0;
     for (long l = 0; l < data_size; l++) {
         double val = (*data_in)[l];
-      
+
         // enforce positiveness
-        if (val<zero) val = zero;
+        if (val < zero) val = zero;
 
         data_sum += val;
 
         // copy to inverse CDF
-        (*invCDF)[l+1] = data_sum;
+        (*invCDF)[l + 1] = data_sum;
     }
-
 }
-
 
 //----------------------------------------------------------------------
-RandomVariable1DArray::~RandomVariable1DArray()
-{
-  delete invCDF;
-}
-
+RandomVariable1DArray::~RandomVariable1DArray() { delete invCDF; }
 
 //----------------------------------------------------------------------
 long RandomVariable1DArray::rand() {
-// Sample according to inverse CDF, which gives a (left, right) pair.
-    return binarySearch(invCDF,
-                        (*invCDF)[0]+(data_sum-(*invCDF)[0]-1e-15)*ran_gen_ptr.lock()->rand_uniform());
+    // Sample according to inverse CDF, which gives a (left, right) pair.
+    return binarySearch(
+        invCDF, (*invCDF)[0]
+                    + (data_sum - (*invCDF)[0] - 1e-15)
+                          * ran_gen_ptr.lock()->rand_uniform());
 }
 
 //----------------------------------------------------------------------
 double RandomVariable1DArray::return_sum()
 // Return the maximum value in the inverse CDF.
 {
-  return data_sum;
+    return data_sum;
 }
-

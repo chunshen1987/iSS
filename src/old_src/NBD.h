@@ -2,22 +2,23 @@
 
 #include <string>
 #include <vector>
+
 #include "RandomVariable.h"
 
 #ifndef NBD_h
 #define NBD_h
 
-
-class NBD: public RandomVariable
-{
+class NBD : public RandomVariable {
   private:
-    double bridge_p, bridge_r; // used to transfer parameters to pdf function
+    double bridge_p, bridge_r;  // used to transfer parameters to pdf function
   public:
-    NBD(double p=0.5, double r=2);
-    double mode, maximum; // maximum corresponding to the "mode". Refreshed by recalculateMode call
-    double mean, std; // standard deviation. Refreshed by recalculateMode call
+    NBD(double p = 0.5, double r = 2);
+    double mode, maximum;  // maximum corresponding to the "mode". Refreshed by
+                           // recalculateMode call
+    double mean, std;  // standard deviation. Refreshed by recalculateMode call
     double pdf(double);
-    void recalculateMode(double p, double r); // here "mode" is in statistical language
+    void recalculateMode(
+        double p, double r);  // here "mode" is in statistical language
     long rand();
     long rand(double p, double r);
 };

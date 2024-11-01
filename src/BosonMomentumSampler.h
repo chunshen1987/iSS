@@ -6,13 +6,14 @@
 #include "MomentumSamplerBase.h"
 
 class BosonMomentumSampler : public MomentumSamplerBase {
- private:
+  private:
     double m0_;
     int trunc_order_;
 
- public:
-    BosonMomentumSampler(std::shared_ptr<RandomUtil::Random> ran_gen,
-                         double m0, int trunc_order);
+  public:
+    BosonMomentumSampler(
+        std::shared_ptr<RandomUtil::Random> ran_gen, double m0,
+        int trunc_order);
     ~BosonMomentumSampler() {};
 
     double CDF_0(const double Etilde) const;

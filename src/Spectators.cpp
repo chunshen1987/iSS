@@ -2,15 +2,13 @@
 
 #include "Spectators.h"
 
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <cmath>
 #include <vector>
 
-Spectators::Spectators(int mode) {
-    mode_ = mode;
-}
+Spectators::Spectators(int mode) { mode_ = mode; }
 
 Spectators::~Spectators() {}
 
@@ -42,16 +40,15 @@ void Spectators::readInSpectatorsFromFile(std::string filename) {
         hadron.x = x;
         hadron.y = y;
         hadron.z = z;
-        double mT = sqrt(mass*mass + px*px + py*py);
-        hadron.E = mT*cosh(rap);
+        double mT = sqrt(mass * mass + px * px + py * py);
+        hadron.E = mT * cosh(rap);
         hadron.px = px;
         hadron.py = py;
-        hadron.pz = mT*sinh(rap);
+        hadron.pz = mT * sinh(rap);
         spectator_list_.push_back(hadron);
     }
 }
 
-
 std::vector<iSS_Hadron> Spectators::getSpectatorList() const {
-    return(spectator_list_);
+    return (spectator_list_);
 }

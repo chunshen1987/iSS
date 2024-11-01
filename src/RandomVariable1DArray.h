@@ -4,20 +4,21 @@
 #define RandomVariable1DArray_h
 
 #include <memory>
+
 #include "Random.h"
 
 class RandomVariable1DArray {
- private:
+  private:
     std::vector<double>* invCDF;
     long data_size;
-    //double data_zero;
-    double data_sum; // "tolerance zero value", max and sum
+    // double data_zero;
+    double data_sum;  // "tolerance zero value", max and sum
     std::weak_ptr<RandomUtil::Random> ran_gen_ptr;
 
- public:
-    RandomVariable1DArray(std::vector<double>*,
-                          std::shared_ptr<RandomUtil::Random> ran_gen,
-                          double=1e-30);
+  public:
+    RandomVariable1DArray(
+        std::vector<double>*, std::shared_ptr<RandomUtil::Random> ran_gen,
+        double = 1e-30);
     ~RandomVariable1DArray();
     long rand();
     double return_sum();
@@ -31,7 +32,7 @@ class RandomVariable1DArray {
  04-11-2012:
  -- Ver 1.0:
     First version.
- 04-16-2012:   
+ 04-16-2012:
  -- Ver 1.0.1:
     Bug fix: The sampling should use a random number between the
     smallest (first) and largest (last) element of the inverse CDF, instead

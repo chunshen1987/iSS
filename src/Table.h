@@ -1,44 +1,46 @@
 // Ver 1.6.0
 
-#include <string>
-#include <ostream>
 #include <iostream>
+#include <ostream>
+#include <string>
 #include <vector>
 
 #ifndef Table_h
 #define Table_h
 
 double zq_global_invert_hook(double);
-class Table
-{
+class Table {
   private:
-    std::vector< std::vector<double>* >* data;
+    std::vector<std::vector<double>*>* data;
     long numberOfCols, numberOfRows;
+
   public:
     Table();
     Table(std::string);
     Table(Table&);
-    Table(long,long,double defaultValue=0.0);
+    Table(long, long, double defaultValue = 0.0);
     Table(double**, long, long);
     ~Table();
     void deleteTable();
     void loadTableFromFile(std::string);
     void loadTableFromDoubleArray(double**, long, long);
-    void extendTable(long, long, double defaultValue=0);
+    void extendTable(long, long, double defaultValue = 0);
     double get(long, long);
-    void set(long, long, double, double defaultValue=0);
+    void set(long, long, double, double defaultValue = 0);
     std::vector<double>* getColumn(long);
-    void setAll(double defaultValue=0.0);
+    void setAll(double defaultValue = 0.0);
     long getNumberOfRows();
     long getNumberOfCols();
-    long getSizeDim1() {return getNumberOfCols();};
-    long getSizeDim2() {return getNumberOfRows();};
-    void printTable(std::ostream& os=std::cout);
+    long getSizeDim1() { return getNumberOfCols(); };
+    long getSizeDim2() { return getNumberOfRows(); };
+    void printTable(std::ostream& os = std::cout);
     double getFirst(long);
     double getLast(long);
-    double interp(long, long, double, int mode=6, bool allowExtrapolation=false);
-    double invert(long, long, double, int mode=6, bool allowExtrapolation=false);
-    double interp2(double, double, int mode=1);
+    double interp(
+        long, long, double, int mode = 6, bool allowExtrapolation = false);
+    double invert(
+        long, long, double, int mode = 6, bool allowExtrapolation = false);
+    double interp2(double, double, int mode = 1);
 };
 
 #endif
@@ -76,12 +78,15 @@ class Table
     Functions added: interp2.
  07-30-2012:
  -- Ver 1.4.1:
-    Bug fix: in interp2 the error criteria should be (col_idx_int>=numberOfCols || col_idx_int<1 || row_idx_int>=numberOfRows || row_idx_int<1) instead of (col_idx_int>numberOfCols || col_idx_int<1 || row_idx_int>numberOfRows || row_idx_int<1). Also boundary safty control added.
- 08-01-2012:
+    Bug fix: in interp2 the error criteria should be (col_idx_int>=numberOfCols
+|| col_idx_int<1 || row_idx_int>=numberOfRows || row_idx_int<1) instead of
+(col_idx_int>numberOfCols || col_idx_int<1 || row_idx_int>numberOfRows ||
+row_idx_int<1). Also boundary safty control added. 08-01-2012:
  -- Ver 1.5.0:
     A bilinear extroplation method is added to the interp2 function.
  08-02-2012:
  -- Ver 1.6.0:
     Extrapolations for interp and invert are now supported.
-    A cubic interpolation / extroplation method is added to the interp2 function.
+    A cubic interpolation / extroplation method is added to the interp2
+function.
 -----------------------------------------------------------------------*/

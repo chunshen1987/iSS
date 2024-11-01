@@ -1,21 +1,20 @@
 #ifndef DATA_STRUCT_H_
 #define DATA_STRUCT_H_
 
-#include <string>
 #include <array>
+#include <string>
 #include <vector>
 
 namespace iSS_data {
-    const double hbarC=0.197327053;  //GeV*fm
+const double hbarC = 0.197327053;  // GeV*fm
 
-    typedef std::array<float, 4> Vec4;
-    typedef std::array<double, 4> VecD4;
-    typedef std::array<double, 10> ViscousVec;
+typedef std::array<float, 4> Vec4;
+typedef std::array<double, 4> VecD4;
+typedef std::array<double, 10> ViscousVec;
 
-    const int NUMBER_OF_LINES_TO_WRITE = 100000;
-    const int AMOUNT_OF_OUTPUT = 0;
-}
-
+const int NUMBER_OF_LINES_TO_WRITE = 100000;
+const int AMOUNT_OF_OUTPUT = 0;
+}  // namespace iSS_data
 
 enum class AfterburnerType {
     UrQMD,
@@ -24,32 +23,29 @@ enum class AfterburnerType {
     PDG_Decay,
 };
 
-
 typedef struct {
     int decay_Npart;
     double branching_ratio;
     int decay_part[5];
 } decay_channel_info;
 
-
 typedef struct {
-    int monval;     // Monte Carlo number according PDG
+    int monval;  // Monte Carlo number according PDG
     std::string name;
     double mass;
     double width;
-    int gspin;      // spin degeneracy
+    int gspin;  // spin degeneracy
     int baryon;
     int strange;
     int charm;
     int bottom;
-    int gisospin;   // isospin degeneracy
+    int gisospin;  // isospin degeneracy
     int charge;
-    int decays;     // amount of decays listed for this resonance
-    int stable;     // defines whether this particle is considered as stable
-    std::vector<decay_channel_info*> decay_channels;
-    int sign;                   // Bose-Einstein or Dirac-Fermi statistics
+    int decays;  // amount of decays listed for this resonance
+    int stable;  // defines whether this particle is considered as stable
+    std::vector<decay_channel_info *> decay_channels;
+    int sign;  // Bose-Einstein or Dirac-Fermi statistics
 } particle_info;
-
 
 typedef struct {
     float tau, xpt, ypt, eta;
@@ -65,7 +61,6 @@ typedef struct {
     std::vector<float> vorticity_arr;
 } FO_surf;
 
-
 typedef struct {
     float tau, xpt, ypt, eta;
     iSS_data::Vec4 da_mu_LRF;
@@ -78,12 +73,11 @@ typedef struct {
     std::vector<float> particle_mu_PCE;
 } FO_surf_LRF;
 
-
 struct iSS_Hadron {
-     int pid;
-     float mass;
-     float E, px, py, pz;
-     float t, x, y, z;
+    int pid;
+    float mass;
+    float E, px, py, pz;
+    float t, x, y, z;
 };
 
 #endif  // DATA_STRUCT_H_
