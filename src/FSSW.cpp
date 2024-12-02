@@ -1410,10 +1410,10 @@ void FSSW::load_deltaf_table_newRTA(std::string filepath) {
 
         std::vector<double> beta_pi(tableLength, 0);
         for (int j = 0; j < tableLength; j++) {
-            shearTable >> dummy >> beta_pi[j];
+            shearTable >> dummy >> beta_pi[j];  // (GeV fm)^-3
             double Tlocal = deltaf_newRTA_T0_ + j * deltaf_newRTA_dT_;
-            beta_pi[j] = beta_pi[j] * Tlocal * Tlocal * Tlocal * Tlocal
-                         / (hbarC * hbarC * hbarC);
+            beta_pi[j] =
+                beta_pi[j] * Tlocal * Tlocal * Tlocal * Tlocal;  // GeV/fm^3
         }
         deltaf_coeff_newRTA_shear_.push_back(beta_pi);
         shearTable.close();
@@ -1423,7 +1423,7 @@ void FSSW::load_deltaf_table_newRTA(std::string filepath) {
     std::string bulkFolderPath = filepath + "/bulk";
     for (int i = 0; i < nTables; i++) {
         std::string bulkFileName1 =
-            (bulkFolderPath + "/beta_PI_gam=" + gammaList[i]
+            (bulkFolderPath + "/beta_PI-gam=" + gammaList[i]
              + "-weights-quant.dat");
         ifstream bulkTable1(bulkFileName1.c_str());
         if (!bulkTable1) {
@@ -1450,11 +1450,11 @@ void FSSW::load_deltaf_table_newRTA(std::string filepath) {
         std::vector<double> beta_PI(tableLength, 0);
         std::vector<double> varphi(tableLength, 0);
         for (int j = 0; j < tableLength; j++) {
-            bulkTable1 >> dummy >> beta_PI[j];
+            bulkTable1 >> dummy >> beta_PI[j];  // (GeV fm)^-3
             bulkTable2 >> dummy >> varphi[j];
             double Tlocal = deltaf_newRTA_T0_ + j * deltaf_newRTA_dT_;
-            beta_PI[j] = beta_PI[j] * Tlocal * Tlocal * Tlocal * Tlocal
-                         / (hbarC * hbarC * hbarC);
+            beta_PI[j] =
+                beta_PI[j] * Tlocal * Tlocal * Tlocal * Tlocal;  // GeV/fm^3
         }
         deltaf_coeff_newRTA_bulk_betaPi_.push_back(beta_PI);
         deltaf_coeff_newRTA_bulk_phi_.push_back(varphi);
