@@ -1380,20 +1380,24 @@ void FSSW::load_22mom_deltaf_NEOSBQS_table(string filepath) {
 
 void FSSW::load_deltaf_table_newRTA(std::string filepath) {
     deltaf_coeff_newRTA_shear_.clear();
+    deltaf_coeff_newRTA_bulk_betaPi_.clear();
+    deltaf_coeff_newRTA_bulk_phi_.clear();
 
     deltaf_newRTA_gamma0_ = 0.0;
     deltaf_newRTA_dgamma_ = 0.5;
-    deltaf_newRTA_T0_ = 0.1;
-    deltaf_newRTA_dT_ = 0.005;
+    deltaf_newRTA_T0_ = 0.01;
+    deltaf_newRTA_dT_ = 0.0025;
+
+    const int nTables = 4;
+    const int tableLength = 76;
+    std::string gammaList[nTables] = {"0,0", "0,5", "1,0", "1,5"};
+
     // read in shear tables
     std::string shearFolderPath = filepath + "/shear";
-    const int nTables = 4;
-    const int tableLength = 21;
-    std::string gammaList[nTables] = {"0,0", "0,5", "1,0", "1,5"};
     for (int i = 0; i < nTables; i++) {
         std::string shearFileName =
             (shearFolderPath + "/beta_pi_gam-EQ-" + gammaList[i]
-             + "-v7-weights-quant.dat");
+             + "-weights-quant.dat");
         ifstream shearTable(shearFileName.c_str());
         if (!shearTable) {
             messager_ << "Can not found file: " << shearFileName;
@@ -1413,6 +1417,49 @@ void FSSW::load_deltaf_table_newRTA(std::string filepath) {
         }
         deltaf_coeff_newRTA_shear_.push_back(beta_pi);
         shearTable.close();
+    }
+
+    // read in bulk tables
+    std::string bulkFolderPath = filepath + "/bulk";
+    for (int i = 0; i < nTables; i++) {
+        std::string bulkFileName1 =
+            (bulkFolderPath + "/beta_PI_gam=" + gammaList[i]
+             + "-weights-quant.dat");
+        ifstream bulkTable1(bulkFileName1.c_str());
+        if (!bulkTable1) {
+            messager_ << "Can not found file: " << bulkFileName1;
+            messager_.flush("error");
+            exit(1);
+        }
+
+        std::string bulkFileName2 =
+            (bulkFolderPath + "/varphi-gam=" + gammaList[i]
+             + "-weights-quant.dat");
+        ifstream bulkTable2(bulkFileName2.c_str());
+        if (!bulkTable2) {
+            messager_ << "Can not found file: " << bulkFileName2;
+            messager_.flush("error");
+            exit(1);
+        }
+
+        std::string dummy;
+        // read header
+        std::getline(bulkTable1, dummy);
+        std::getline(bulkTable2, dummy);
+
+        std::vector<double> beta_PI(tableLength, 0);
+        std::vector<double> varphi(tableLength, 0);
+        for (int j = 0; j < tableLength; j++) {
+            bulkTable1 >> dummy >> beta_PI[j];
+            bulkTable2 >> dummy >> varphi[j];
+            double Tlocal = deltaf_newRTA_T0_ + j * deltaf_newRTA_dT_;
+            beta_PI[j] = beta_PI[j] * Tlocal * Tlocal * Tlocal * Tlocal
+                         / (hbarC * hbarC * hbarC);
+        }
+        deltaf_coeff_newRTA_bulk_betaPi_.push_back(beta_PI);
+        deltaf_coeff_newRTA_bulk_phi_.push_back(varphi);
+        bulkTable1.close();
+        bulkTable2.close();
     }
 }
 
@@ -1592,10 +1639,11 @@ void FSSW::get22momNEOSBQSCoefficients(
 
 void FSSW::getNewRTACoefficients(
     const double Tdec, std::vector<double> &visCoefficients) {
-    visCoefficients.resize(4, 0.);  // beta_pi, bulk coefficients
+    visCoefficients.resize(3, 0.);  // beta_pi, bulk coefficients
     int idx_T =
         static_cast<int>((Tdec - deltaf_newRTA_T0_) / deltaf_newRTA_dT_);
-    idx_T = std::max(0, std::min(19, idx_T));
+    const int TtableLength = deltaf_coeff_newRTA_shear_[0].size();
+    idx_T = std::max(0, std::min(TtableLength - 2, idx_T));
     double frac_T = (Tdec - deltaf_newRTA_T0_) / deltaf_newRTA_dT_ - idx_T;
     frac_T = std::max(0., std::min(1., frac_T));
 
@@ -1607,17 +1655,29 @@ void FSSW::getNewRTACoefficients(
         - idx_gamma;
     frac_gamma = std::max(0., std::min(1., frac_gamma));
 
-    for (int i = 0; i < 1; i++) {
-        double temp1 =
-            deltaf_coeff_newRTA_shear_[idx_gamma][idx_T] * (1. - frac_T)
-            + deltaf_coeff_newRTA_shear_[idx_gamma][idx_T + 1] * frac_T;
+    // shear sector beta_pi
+    double temp1 = deltaf_coeff_newRTA_shear_[idx_gamma][idx_T] * (1. - frac_T)
+                   + deltaf_coeff_newRTA_shear_[idx_gamma][idx_T + 1] * frac_T;
 
-        double temp2 =
-            deltaf_coeff_newRTA_shear_[idx_gamma + 1][idx_T] * (1. - frac_T)
-            + deltaf_coeff_newRTA_shear_[idx_gamma + 1][idx_T + 1] * frac_T;
+    double temp2 =
+        deltaf_coeff_newRTA_shear_[idx_gamma + 1][idx_T] * (1. - frac_T)
+        + deltaf_coeff_newRTA_shear_[idx_gamma + 1][idx_T + 1] * frac_T;
 
-        visCoefficients[i] = temp1 * (1. - frac_gamma) + temp2 * frac_gamma;
-    }
+    visCoefficients[0] = temp1 * (1. - frac_gamma) + temp2 * frac_gamma;
+
+    // bulk sector beta_PI and varphi
+    temp1 = deltaf_coeff_newRTA_bulk_betaPi_[idx_gamma][idx_T] * (1. - frac_T)
+            + deltaf_coeff_newRTA_bulk_betaPi_[idx_gamma][idx_T + 1] * frac_T;
+    temp2 =
+        deltaf_coeff_newRTA_bulk_betaPi_[idx_gamma + 1][idx_T] * (1. - frac_T)
+        + deltaf_coeff_newRTA_bulk_betaPi_[idx_gamma + 1][idx_T + 1] * frac_T;
+    visCoefficients[1] = temp1 * (1. - frac_gamma) + temp2 * frac_gamma;
+
+    temp1 = deltaf_coeff_newRTA_bulk_phi_[idx_gamma][idx_T] * (1. - frac_T)
+            + deltaf_coeff_newRTA_bulk_phi_[idx_gamma][idx_T + 1] * frac_T;
+    temp2 = deltaf_coeff_newRTA_bulk_phi_[idx_gamma + 1][idx_T] * (1. - frac_T)
+            + deltaf_coeff_newRTA_bulk_phi_[idx_gamma + 1][idx_T + 1] * frac_T;
+    visCoefficients[2] = temp1 * (1. - frac_gamma) + temp2 * frac_gamma;
 }
 
 void FSSW::load_deltaf_qmu_coeff_table(string filename) {
@@ -1925,6 +1985,16 @@ double FSSW::get_deltaf_bulk(
              * (mass_over_T * mass_over_T / (3. * E_over_T)
                 - bulkvisCoefficients[1] * E_over_T)
              * bulkPi);
+    } else if (deltaf_kind_ == 31) {
+        double E_over_T = pdotu / Tdec;
+        double mass_over_T = mass / Tdec;
+        double cs2 = 0.15;
+        delta_f_bulk =
+            (1. - sign * f0) * bulkPi / bulkvisCoefficients[1]
+            * (bulkvisCoefficients[2] * E_over_T
+               - mass_over_T * mass_over_T / 3.
+                     * pow(E_over_T, deltaf_newRTA_gamma_ - 1.)
+               + (1. / 3. - cs2) * pow(E_over_T, deltaf_newRTA_gamma_ + 1.));
     }
     return (delta_f_bulk);
 }
