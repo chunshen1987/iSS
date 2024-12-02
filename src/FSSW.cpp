@@ -1462,7 +1462,8 @@ void FSSW::load_deltaf_table_newRTA(std::string filepath) {
         bulkTable1.close();
         bulkTable2.close();
     }
-    std::string bulkFileName_cs2 = bulkFolderPath + "cs2-cfv-weights-quant.dat";
+    std::string bulkFileName_cs2 =
+        bulkFolderPath + "/cs2-cfv-weights-quant.dat";
     ifstream bulkTable_cs2(bulkFileName_cs2.c_str());
     if (!bulkTable_cs2) {
         messager_ << "Can not found file: " << bulkFileName_cs2;
