@@ -1382,6 +1382,7 @@ void FSSW::load_deltaf_table_newRTA(std::string filepath) {
     deltaf_coeff_newRTA_shear_.clear();
     deltaf_coeff_newRTA_bulk_betaPi_.clear();
     deltaf_coeff_newRTA_bulk_phi_.clear();
+    deltaf_coeff_newRTA_bulk_cs2_.clear();
 
     deltaf_newRTA_gamma0_ = 0.0;
     deltaf_newRTA_dgamma_ = 0.5;
@@ -1461,6 +1462,21 @@ void FSSW::load_deltaf_table_newRTA(std::string filepath) {
         bulkTable1.close();
         bulkTable2.close();
     }
+    std::string bulkFileName_cs2 = bulkFolderPath + "cs2-cfv-weights-quant.dat";
+    ifstream bulkTable_cs2(bulkFileName_cs2.c_str());
+    if (!bulkTable_cs2) {
+        messager_ << "Can not found file: " << bulkFileName_cs2;
+        messager_.flush("error");
+        exit(1);
+    }
+    std::string dummy;
+    // read header
+    std::getline(bulkTable_cs2, dummy);
+    deltaf_coeff_newRTA_bulk_cs2_.resize(tableLength, 0);
+    for (int j = 0; j < tableLength; j++) {
+        bulkTable_cs2 >> dummy >> deltaf_coeff_newRTA_bulk_cs2_[j];
+    }
+    bulkTable_cs2.close();
 }
 
 void FSSW::getbulkvisCoefficients(
@@ -1639,7 +1655,7 @@ void FSSW::get22momNEOSBQSCoefficients(
 
 void FSSW::getNewRTACoefficients(
     const double Tdec, std::vector<double> &visCoefficients) {
-    visCoefficients.resize(3, 0.);  // beta_pi, bulk coefficients
+    visCoefficients.resize(4, 0.);  // beta_pi, bulk coefficients
     int idx_T =
         static_cast<int>((Tdec - deltaf_newRTA_T0_) / deltaf_newRTA_dT_);
     const int TtableLength = deltaf_coeff_newRTA_shear_[0].size();
@@ -1678,6 +1694,9 @@ void FSSW::getNewRTACoefficients(
     temp2 = deltaf_coeff_newRTA_bulk_phi_[idx_gamma + 1][idx_T] * (1. - frac_T)
             + deltaf_coeff_newRTA_bulk_phi_[idx_gamma + 1][idx_T + 1] * frac_T;
     visCoefficients[2] = temp1 * (1. - frac_gamma) + temp2 * frac_gamma;
+
+    visCoefficients[3] = deltaf_coeff_newRTA_bulk_cs2_[idx_T] * (1. - frac_T)
+                         + deltaf_coeff_newRTA_bulk_cs2_[idx_T + 1] * frac_T;
 }
 
 void FSSW::load_deltaf_qmu_coeff_table(string filename) {
@@ -1988,13 +2007,12 @@ double FSSW::get_deltaf_bulk(
     } else if (deltaf_kind_ == 31) {
         double E_over_T = pdotu / Tdec;
         double mass_over_T = mass / Tdec;
-        double cs2 = 0.15;
-        delta_f_bulk =
-            (1. - sign * f0) * bulkPi / bulkvisCoefficients[1]
-            * (bulkvisCoefficients[2] * E_over_T
-               - mass_over_T * mass_over_T / 3.
-                     * pow(E_over_T, deltaf_newRTA_gamma_ - 1.)
-               + (1. / 3. - cs2) * pow(E_over_T, deltaf_newRTA_gamma_ + 1.));
+        delta_f_bulk = (1. - sign * f0) * bulkPi / bulkvisCoefficients[1]
+                       * (bulkvisCoefficients[2] * E_over_T
+                          - mass_over_T * mass_over_T / 3.
+                                * pow(E_over_T, deltaf_newRTA_gamma_ - 1.)
+                          + bulkvisCoefficients[3]
+                                * pow(E_over_T, deltaf_newRTA_gamma_ + 1.));
     }
     return (delta_f_bulk);
 }

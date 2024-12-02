@@ -110,6 +110,7 @@ class FSSW {
     std::vector<std::vector<double>> deltaf_coeff_newRTA_shear_;
     std::vector<std::vector<double>> deltaf_coeff_newRTA_bulk_betaPi_;
     std::vector<std::vector<double>> deltaf_coeff_newRTA_bulk_phi_;
+    std::vector<double> deltaf_coeff_newRTA_bulk_cs2_;
 
     // arrays to speed up computing particle yield
     double sf_dx, sf_x_min, sf_x_max;
