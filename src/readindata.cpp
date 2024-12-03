@@ -103,6 +103,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
         if (include_vorticity_)
             messager.info("the hyper-surface includes vorticity arrays.");
     }
+    paraRdr->setVal("iEOS_MUSIC", iEOS_MUSIC_);
 
     if (paraRdr->getVal("calculate_polarization", 0) == 1
             && !include_vorticity_) {

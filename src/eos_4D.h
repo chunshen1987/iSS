@@ -36,9 +36,12 @@ class EOS_4D {
     std::vector<float> muq_vec;
     std::vector<float> mus_vec;
 
+    std::vector<std::vector<float>> dfCoeffs_;
+
     // method to read/mainupalate header info and data
     void read_eos_binary(std::string filepath,
                          std::vector<float> &out, int header_size=12);
+    void read_dfCoeffs_binary(std::string filepath, const int dfType);
 
     void get_eos_max_values();
 
@@ -60,6 +63,7 @@ class EOS_4D {
     ~EOS_4D();
 
     void initialize_eos();
+    void initialize_dfCoeffs(const int dfType=0);
 
     double get_temperature(double e, double rhob, double rhoq=0.0, double rhos=0.0) const;
     double get_muB        (double e, double rhob, double rhoq=0.0, double rhos=0.0) const;
@@ -70,6 +74,9 @@ class EOS_4D {
     void getThermalVariables(const double epsilon, const double rhob,
                              const double rhoq, const double rhos,
                              std::vector<float> &thermalVec) const;
+    void getDeltafCoeffs(const double epsilon, const double rhob,
+                         const double rhoq, const double rhos,
+                         std::vector<double> &deltafVec) const;
 };
 
 #endif  // SRC_EOS_4D_H_

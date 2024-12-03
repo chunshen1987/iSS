@@ -64,6 +64,33 @@ void EOS_4D::read_eos_binary(std::string filepath,
     }
 }
 
+
+void EOS_4D::read_dfCoeffs_binary(std::string filepath, const int dfType) {
+    dfCoeffs_.clear();
+    std::ifstream df_binary_file(filepath, std::ios::in | std::ios::binary);
+
+    if (!df_binary_file.is_open()) {
+        messenger << "Can not open deltaf coeffs file: "<< filepath;
+        messenger.flush("error");
+        exit(1);
+    }
+
+    int numCoeffs = 5;
+    if (dfType == 1) {
+        numCoeffs = 3;
+    }
+    dfCoeffs_.resize(numCoeffs);
+    int counter = 0;
+    float number;
+    while (df_binary_file.read(reinterpret_cast<char*>(&number),
+                               sizeof(float))) {
+        dfCoeffs_[counter%numCoeffs].push_back(number);
+        counter++;
+    }
+    df_binary_file.close();
+}
+
+
 int EOS_4D::index(int i_T, int i_mub, int i_muq, int i_mus) const {
     int idx = ((i_T*N_mus + i_mus)*N_muq + i_muq)*N_mub + i_mub;
     return(idx);
@@ -323,6 +350,23 @@ void EOS_4D::initialize_eos() {
 }
 
 
+void EOS_4D::initialize_dfCoeffs(const int dfType) {
+    messenger.info("Read in deltaf Coeffs for EoS 4D");
+    std::string EOSPath = "./iSS_tables/EOS_tables/HRG4D/";
+    // Header info
+    read_header_binary(EOSPath + "HRG_t_b.dat");
+
+    std::string dfCoeffsPath = "./iSS_tables/deltaf_tables/urqmd/";
+    std::string dfFileName = "NEoS4D_22mom_deltafCoeff.bin";
+    if (dfType == 1) {
+        dfFileName = "NEoS4D_CE_deltafCoeff.bin";
+    }
+    // read deltaf Coeffs
+    read_dfCoeffs_binary(dfCoeffsPath + dfFileName, dfType);
+    messenger.info("Done reading deltaf Coeffs.");
+}
+
+
 //! This function returns the local temperature in [1/fm]
 //! input local energy density eps [1/fm^4] and rhob [1/fm^3]
 double EOS_4D::get_temperature(double e, double rhob,
@@ -356,6 +400,20 @@ void EOS_4D::getThermalVariables(const double epsilon, const double rhob,
     thermalVec[2] = get_muB(epsilon, rhob, rhoq, rhos);
     thermalVec[3] = get_muS(epsilon, rhob, rhoq, rhos);
     thermalVec[4] = get_muQ(epsilon, rhob, rhoq, rhos);
+}
+
+
+void EOS_4D::getDeltafCoeffs(const double epsilon, const double rhob,
+                             const double rhoq, const double rhos,
+                             std::vector<double> &deltafVec) const {
+    deltafVec.resize(dfCoeffs_.size());
+    std::array<float, 4> TildeVar{};
+    get_tilde_variables(epsilon, rhob, rhoq, rhos, TildeVar);
+    std::array<float, 5> ResArr{};
+    for (unsigned int i = 0; i < dfCoeffs_.size(); ++i) {
+        FourDLInterp(dfCoeffs_[i], TildeVar, ResArr);
+        deltafVec[i] = static_cast<double>(ResArr[0]);
+    }
 }
 
 
