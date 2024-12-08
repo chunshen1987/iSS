@@ -603,21 +603,22 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
             get22momNEOSBQSCoefficients(surf->Edec, surf->Bn, visCoefficients);
         }
 
+        if (deltaf_kind_ == 31) {
+            getNewRTACoefficients(temp, visCoefficients);
+        }
+
         // bulk delta f contribution
         double bulkPi = 0.0;
         if (INCLUDE_BULK_DELTAF) {
-            if (deltaf_kind_ == 21 || deltaf_kind_ == 20) {
-                bulkPi = surf->bulkPi;  // GeV/fm^3
-            } else if (deltaf_kind_ == 11) {
-                bulkPi = surf->bulkPi;  // GeV/fm^3
-                getbulkvisCoefficients(temp, mu_B, visCoefficients);
-            } else {
-                if (deltaf_kind_ == 0) {
-                    bulkPi = surf->bulkPi;  // unit in GeV/fm^3
-                } else {
-                    bulkPi = surf->bulkPi / hbarC;  // unit in fm^-4
-                }
+            bulkPi = surf->bulkPi;  // GeV/fm^3
+            if (deltaf_kind_ > 0 && deltaf_kind_ < 10) {
+                bulkPi = surf->bulkPi / hbarC;  // unit in fm^-4
+            }
+            if (deltaf_kind_ < 10) {
                 getbulkvisCoefficients(temp, visCoefficients);
+            }
+            if (deltaf_kind_ == 11) {
+                getbulkvisCoefficients(temp, mu_B, visCoefficients);
             }
         }
 
@@ -695,6 +696,12 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
                                  + charge * visCoefficients[5])
                         + results_ptr[3]
                               * (visCoefficients[1] - visCoefficients[2])));
+            } else if (deltaf_kind_ == 31) {
+                deltaN_bulk =
+                    (unit_factor * prefactor * dsigma_dot_u * bulkPi
+                     / visCoefficients[1]
+                     * (visCoefficients[2] * results_ptr[3] + results_ptr[1]
+                        + visCoefficients[3] * results_ptr[2]));
             }
         }
 
@@ -831,6 +838,19 @@ void FSSW::calculate_dN_analytic(
             deltaN_bulk_term2 = mass * mass / (beta * beta) * deltaN_bulk_term2;
             deltaN_bulk_term3 =
                 mass * mass * mass / (beta * beta) * deltaN_bulk_term3;
+        } else if (deltaf_kind_ == 31) {
+            std::vector<double> thermoCoeffs;
+            if (sign == -1) {
+                getNewRTAThermoCoefficients(Temperature, thermoCoeffs, true);
+            } else {
+                getNewRTAThermoCoefficients(Temperature, thermoCoeffs, false);
+            }
+            deltaN_bulk_term1 =
+                -Temperature * mass * mass / 3. * thermoCoeffs[0];
+            deltaN_bulk_term2 =
+                Temperature * Temperature * Temperature * thermoCoeffs[1];
+            deltaN_bulk_term3 =
+                Temperature * Temperature * Temperature * thermoCoeffs[2];
         }
     } else {
         deltaN_bulk_term1 = 0.0;
@@ -1478,6 +1498,59 @@ void FSSW::load_deltaf_table_newRTA(std::string filepath) {
         bulkTable_cs2 >> dummy >> deltaf_coeff_newRTA_bulk_cs2_[j];
     }
     bulkTable_cs2.close();
+
+    sf_J_dgamma_ = deltaf_newRTA_dgamma_;
+    sf_J_gammaMin_ = deltaf_newRTA_gamma0_;
+    sf_J_dm_ = -1.;
+    sf_J_mMin_ = 0.;
+
+    std::string thermFileName = filepath + "/thermoIntegral.dat/J_gamma_BE.dat";
+    loadThermoIntegrals(thermFileName, 4, sf_logJgamma_BE_);
+    thermFileName = filepath + "/thermoIntegral.dat/J_gamma_FD.dat";
+    loadThermoIntegrals(thermFileName, 4, sf_logJgamma_FD_);
+    thermFileName = filepath + "/thermoIntegral.dat/J_gammaplus2_BE.dat";
+    loadThermoIntegrals(thermFileName, 4, sf_logJgammaplus2_BE_);
+    thermFileName = filepath + "/thermoIntegral.dat/J_gammaplus2_FD.dat";
+    loadThermoIntegrals(thermFileName, 4, sf_logJgammaplus2_FD_);
+    thermFileName = filepath + "/thermoIntegral.dat/J_2_BE.dat";
+    loadThermoIntegrals(thermFileName, 1, sf_logJ2_BE_);
+    thermFileName = filepath + "/thermoIntegral.dat/J_2_FD.dat";
+    loadThermoIntegrals(thermFileName, 1, sf_logJ2_FD_);
+}
+
+void FSSW::loadThermoIntegrals(
+    std::string thermoFileName, const int ncol,
+    std::vector<std::vector<double>> &data) {
+    data.clear();
+    // read in thermoIntegral tables
+    ifstream thermoTable(thermoFileName.c_str());
+    if (!thermoTable) {
+        messager_ << "Can not found file: " << thermoFileName;
+        messager_.flush("error");
+        exit(1);
+    }
+    double dummy_d;
+    std::string dummy;
+    // read header
+    std::getline(thermoTable, dummy);
+    std::vector<double> temp(ncol, 0.);
+    thermoTable >> sf_J_mMin_;
+    for (int i = 0; i < ncol; i++) {
+        thermoTable >> temp[i];
+    }
+    while (!thermoTable.eof()) {
+        for (unsigned int i = 0; i < temp.size(); i++) {
+            temp[i] = log(temp[i]);
+        }
+        data.push_back(temp);
+        thermoTable >> dummy_d;
+        for (int i = 0; i < ncol; i++) {
+            thermoTable >> temp[i];
+        }
+        if (sf_J_dm_ < 0.) {
+            sf_J_dm_ = dummy_d - sf_J_mMin_;
+        }
+    }
 }
 
 void FSSW::getbulkvisCoefficients(
@@ -1698,6 +1771,67 @@ void FSSW::getNewRTACoefficients(
 
     visCoefficients[3] = deltaf_coeff_newRTA_bulk_cs2_[idx_T] * (1. - frac_T)
                          + deltaf_coeff_newRTA_bulk_cs2_[idx_T + 1] * frac_T;
+}
+
+void FSSW::getNewRTAThermoCoefficients(
+    const double m, std::vector<double> &thermoCoefficients,
+    const bool bosonFlag) {
+    thermoCoefficients.resize(3, 0.);  // J_gamma, J_gamma+2, J_2
+    int idx_m = static_cast<int>((m - sf_J_mMin_) / sf_J_dm_);
+    const int mtableLength = sf_logJgamma_BE_.size();
+    idx_m = std::max(0, std::min(mtableLength - 2, idx_m));
+    double frac_m = (m - sf_J_mMin_) / sf_J_dm_ - idx_m;
+    frac_m = std::max(0., frac_m);  // allow frac_m > 1 for extrapolation
+
+    int idx_gamma = static_cast<int>(
+        (deltaf_newRTA_gamma_ - sf_J_gammaMin_) / sf_J_dgamma_);
+    const int gammatableLength = sf_logJgamma_BE_[0].size();
+    idx_gamma = std::max(0, std::min(gammatableLength - 2, idx_gamma));
+    double frac_gamma =
+        (deltaf_newRTA_gamma_ - sf_J_gammaMin_) / sf_J_dgamma_ - idx_gamma;
+    frac_gamma = std::max(0., std::min(1., frac_gamma));
+
+    double temp1, temp2;
+    // J_gamma
+    if (bosonFlag) {
+        temp1 = sf_logJgamma_BE_[idx_m][idx_gamma] * (1. - frac_m)
+                + sf_logJgamma_BE_[idx_m + 1][idx_gamma] * frac_m;
+        temp2 = sf_logJgamma_BE_[idx_m][idx_gamma + 1] * (1. - frac_m)
+                + sf_logJgamma_BE_[idx_m + 1][idx_gamma + 1] * frac_m;
+    } else {
+        temp1 = sf_logJgamma_FD_[idx_m][idx_gamma] * (1. - frac_m)
+                + sf_logJgamma_FD_[idx_m + 1][idx_gamma] * frac_m;
+        temp2 = sf_logJgamma_FD_[idx_m][idx_gamma + 1] * (1. - frac_m)
+                + sf_logJgamma_FD_[idx_m + 1][idx_gamma + 1] * frac_m;
+    }
+    thermoCoefficients[0] = temp1 * (1. - frac_gamma) + temp2 * frac_gamma;
+
+    // J_gamma + 2
+    if (bosonFlag) {
+        temp1 = sf_logJgammaplus2_BE_[idx_m][idx_gamma] * (1. - frac_m)
+                + sf_logJgammaplus2_BE_[idx_m + 1][idx_gamma] * frac_m;
+        temp2 = sf_logJgammaplus2_BE_[idx_m][idx_gamma + 1] * (1. - frac_m)
+                + sf_logJgammaplus2_BE_[idx_m + 1][idx_gamma + 1] * frac_m;
+    } else {
+        temp1 = sf_logJgammaplus2_FD_[idx_m][idx_gamma] * (1. - frac_m)
+                + sf_logJgammaplus2_FD_[idx_m + 1][idx_gamma] * frac_m;
+        temp2 = sf_logJgammaplus2_FD_[idx_m][idx_gamma + 1] * (1. - frac_m)
+                + sf_logJgammaplus2_FD_[idx_m + 1][idx_gamma + 1] * frac_m;
+    }
+    thermoCoefficients[1] = temp1 * (1. - frac_gamma) + temp2 * frac_gamma;
+
+    // J_2
+    if (bosonFlag) {
+        temp1 = sf_logJ2_BE_[idx_m][0] * (1. - frac_m)
+                + sf_logJ2_BE_[idx_m + 1][0] * frac_m;
+    } else {
+        temp1 = sf_logJ2_FD_[idx_m][0] * (1. - frac_m)
+                + sf_logJ2_FD_[idx_m + 1][0] * frac_m;
+    }
+    thermoCoefficients[2] = temp1;
+    for (auto &coeff : thermoCoefficients) {
+        coeff = std::exp(coeff);
+    }
 }
 
 void FSSW::load_deltaf_qmu_coeff_table(string filename) {

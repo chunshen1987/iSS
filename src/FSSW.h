@@ -118,6 +118,14 @@ class FSSW {
     int sf_expint_truncate_order;
     double **sf_bessel_Kn;
     double **sf_expint_En;
+    double sf_J_mMin_, sf_J_dm_;
+    double sf_J_gammaMin_, sf_J_dgamma_;
+    std::vector<std::vector<double>> sf_logJgamma_BE_;
+    std::vector<std::vector<double>> sf_logJgamma_FD_;
+    std::vector<std::vector<double>> sf_logJgammaplus2_BE_;
+    std::vector<std::vector<double>> sf_logJgammaplus2_FD_;
+    std::vector<std::vector<double>> sf_logJ2_BE_;
+    std::vector<std::vector<double>> sf_logJ2_FD_;
 
     int flag_output_samples_into_files;
     int flag_store_samples_in_memory;
@@ -178,6 +186,10 @@ class FSSW {
     void getNewRTACoefficients(
         const double Tdec, std::vector<double> &visCoefficients);
 
+    void getNewRTAThermoCoefficients(
+        const double m, std::vector<double> &thermoCoefficients,
+        const bool bosonFlag);
+
     void load_bulk_deltaf_14mom_table(string filepath);
     void load_CE_deltaf_NEOSBQS_table(string filepath);
     void load_22mom_deltaf_NEOSBQS_table(string filepath);
@@ -185,6 +197,9 @@ class FSSW {
     double get_deltaf_qmu_coeff(double T, double muB);
 
     void load_deltaf_table_newRTA(std::string filepath);
+    void loadThermoIntegrals(
+        std::string thermoFileName, const int ncol,
+        std::vector<std::vector<double>> &data);
 
     void check_samples_in_memory();
     int get_number_of_sampled_events() { return (Hadron_list->size()); };
