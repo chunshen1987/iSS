@@ -30,6 +30,9 @@ jobs:
           cmake ..
           make -j2
           make install
+          cd $GITHUB_WORKSPACE/iSS_tables/deltaf_tables
+          bash download_newRTA.sh
+          cd $GITHUB_WORKSPACE
       - name: Sampling Test static ideal
         run: |
           python3 -m venv venv
