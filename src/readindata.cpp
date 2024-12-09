@@ -842,16 +842,16 @@ void read_FOdata::read_FOsurfdat_MUSIC(
                + surf_elem.u3 * surf_elem.da3 / surf_elem.tau);
         if (u_dot_dsigma < 0) continue;
 
-        // if (!surfdat.eof()) {
-        if (surf_elem.Tdec > 0.01) {
-            surf_ptr.push_back(surf_elem);
-        } else {
-            cout << "Discard surf elem: T = " << surf_elem.Tdec << " GeV, "
-                 << "Edec = " << surf_elem.Edec << " GeV/fm^3, "
-                 << "rhoB = " << surf_elem.Bn << " 1/fm^3, "
-                 << "muB = " << surf_elem.muB << " GeV. " << endl;
+        if (!surfdat.eof()) {
+            if (surf_elem.Tdec > 0.01) {
+                surf_ptr.push_back(surf_elem);
+            } else {
+                cout << "Discard surf elem: T = " << surf_elem.Tdec << " GeV, "
+                     << "Edec = " << surf_elem.Edec << " GeV/fm^3, "
+                     << "rhoB = " << surf_elem.Bn << " 1/fm^3, "
+                     << "muB = " << surf_elem.muB << " GeV. " << endl;
+            }
         }
-        //}
     }
     surfdat.close();
     cout << "done" << endl;

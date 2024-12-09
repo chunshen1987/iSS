@@ -1830,7 +1830,10 @@ void FSSW::getNewRTAThermoCoefficients(
     }
     thermoCoefficients[2] = temp1;
     for (auto &coeff : thermoCoefficients) {
-        coeff = std::exp(coeff);
+        if (coeff > -100)
+            coeff = std::exp(coeff);
+        else
+            coeff = 0.0;
     }
 }
 
