@@ -839,18 +839,18 @@ void FSSW::calculate_dN_analytic(
             deltaN_bulk_term3 =
                 mass * mass * mass / (beta * beta) * deltaN_bulk_term3;
         } else if (deltaf_kind_ == 31) {
+            double mtilde = mass * beta;
+            double Tcubed = Temperature * Temperature * Temperature;
             std::vector<double> thermoCoeffs;
             if (sign == -1) {
-                getNewRTAThermoCoefficients(Temperature, thermoCoeffs, true);
+                getNewRTAThermoCoefficients(mtilde, thermoCoeffs, true);
             } else {
-                getNewRTAThermoCoefficients(Temperature, thermoCoeffs, false);
+                getNewRTAThermoCoefficients(mtilde, thermoCoeffs, false);
             }
             deltaN_bulk_term1 =
                 -Temperature * mass * mass / 3. * thermoCoeffs[0];
-            deltaN_bulk_term2 =
-                Temperature * Temperature * Temperature * thermoCoeffs[1];
-            deltaN_bulk_term3 =
-                Temperature * Temperature * Temperature * thermoCoeffs[2];
+            deltaN_bulk_term2 = Tcubed * thermoCoeffs[1];
+            deltaN_bulk_term3 = Tcubed * thermoCoeffs[2];
         }
     } else {
         deltaN_bulk_term1 = 0.0;
@@ -1504,17 +1504,17 @@ void FSSW::load_deltaf_table_newRTA(std::string filepath) {
     sf_J_dm_ = -1.;
     sf_J_mMin_ = 0.;
 
-    std::string thermFileName = filepath + "/thermoIntegral.dat/J_gamma_BE.dat";
+    std::string thermFileName = filepath + "/thermoIntegrals/J_gamma_BE.dat";
     loadThermoIntegrals(thermFileName, 4, sf_logJgamma_BE_);
-    thermFileName = filepath + "/thermoIntegral.dat/J_gamma_FD.dat";
+    thermFileName = filepath + "/thermoIntegrals/J_gamma_FD.dat";
     loadThermoIntegrals(thermFileName, 4, sf_logJgamma_FD_);
-    thermFileName = filepath + "/thermoIntegral.dat/J_gammaplus2_BE.dat";
+    thermFileName = filepath + "/thermoIntegrals/J_gammaplus2_BE.dat";
     loadThermoIntegrals(thermFileName, 4, sf_logJgammaplus2_BE_);
-    thermFileName = filepath + "/thermoIntegral.dat/J_gammaplus2_FD.dat";
+    thermFileName = filepath + "/thermoIntegrals/J_gammaplus2_FD.dat";
     loadThermoIntegrals(thermFileName, 4, sf_logJgammaplus2_FD_);
-    thermFileName = filepath + "/thermoIntegral.dat/J_2_BE.dat";
+    thermFileName = filepath + "/thermoIntegrals/J_2_BE.dat";
     loadThermoIntegrals(thermFileName, 1, sf_logJ2_BE_);
-    thermFileName = filepath + "/thermoIntegral.dat/J_2_FD.dat";
+    thermFileName = filepath + "/thermoIntegrals/J_2_FD.dat";
     loadThermoIntegrals(thermFileName, 1, sf_logJ2_FD_);
 }
 
