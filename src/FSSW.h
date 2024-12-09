@@ -49,6 +49,7 @@ class FSSW {
     bool bINCLUDE_SHEAR_DELTAF, bINCLUDE_BULK_DELTAF, bINCLUDE_DIFFUSION_DELTAF;
     int NEoS_deltaf_kind_;        // 0: 14-mom, 1: CE
     int bulk_deltaf_kind_;
+    int iEoS_MUSIC_;
 
     // dN/(dxt dy) for one particle species
     std::vector<double> dN_dxtdy_for_one_particle_species;

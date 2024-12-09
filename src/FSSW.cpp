@@ -56,6 +56,8 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     // get info
     flag_PCE_ = flag_PCE;
 
+    iEoS_MUSIC_ = paraRdr_in->getVal("iEoS_MUSIC");
+
     particles = particles_in;
     int Nparticles = particles.size();
 
@@ -212,7 +214,7 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
         }
     }
 
-    if (paraRdr->getVal("iEoS_MUSIC") == 20) {
+    if (iEoS_MUSIC_ == 20) {
         eos_4d_.initialize_dfCoeffs(NEoS_deltaf_kind_);
     } else {
         if (NEoS_deltaf_kind_ == 1) {
@@ -695,7 +697,7 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
 
         // bulk delta f contribution
         double bulkPi = 0.0;
-        if (paraRdr->getVal("iEoS_MUSIC") == 20) {
+        if (iEoS_MUSIC_ == 20) {
             //eos_4d_.getDeltafCoeffs(surf->Edec, surf->Bn, surf->Qn, surf->Sn,
             //                        visCoefficients);
             visCoefficients = surf->visCoeffs;
@@ -1083,7 +1085,7 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 long FO_idx = rand1D.rand();
                 const FO_surf_LRF *surf = &FOsurf_ptr[FO_idx];
 
-                if (paraRdr->getVal("iEoS_MUSIC") == 20) {
+                if (iEoS_MUSIC_ == 20) {
                     //eos_4d_.getDeltafCoeffs(surf->Edec, surf->Bn, surf->Qn,
                     //                        surf->Sn, visCoefficients);
                     visCoefficients = surf->visCoeffs;
