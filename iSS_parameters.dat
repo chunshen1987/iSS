@@ -12,12 +12,12 @@ turn_on_bulk = 0         # read in bulk viscous pressure
 turn_on_rhob = 0         # read in net baryon chemical potential
 turn_on_diff = 0         # read in baryon diffusion current
 
-regulateEOS = 0          # flag to regulate T and mu with pure HRG EOS
-include_deltaf_shear = 1      # include delta f contribution from shear
-include_deltaf_bulk = 1       # include delta f contribution from bulk
+regulateEOS = 1          # flag to regulate T and mu with pure HRG EOS
+include_deltaf_shear = 0      # include delta f contribution from shear
+include_deltaf_bulk = 0       # include delta f contribution from bulk
 include_deltaf_diffusion = 0  # include delta f contribution from diffusion
 
-bulk_deltaf_kind = 1     # 0 : 14-moment approximation (s95p-v0-PCE)
+bulk_deltaf_kind = 20    # 0 : 14-moment approximation (s95p-v0-PCE)
                          # 1 : relaxation time approximation [default]
                          # 11: OSU 14-moment
                          # 20: WSU 22-moment (NEoS-BQS) shear and bulk
@@ -31,18 +31,18 @@ quantum_statistics = 1   # include quantum statistics or not (1: yes, 0: no)
 output_samples_into_files = 0  # output particle samples into individual files
                                # for individual particle species
 store_samples_in_memory = 1  # flag to store particle samples in memory
-use_OSCAR_format = 1         # output results in OSCAR format
-use_OSCAR2013 = 1            # output results in OSCAR 2013 format (need use_OSCAR_format == 1)
+use_OSCAR_format = 0         # output results in OSCAR format
+use_OSCAR2013 = 0            # output results in OSCAR 2013 format (need use_OSCAR_format == 1)
 use_gzip_format = 0          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
-use_binary_format = 0        # output results in binary format
+use_binary_format = 1        # output results in binary format
 perform_decays = 0           # flag to perform resonance decay
 perform_checks = 0           # perform tests for particle samples
 include_spectators = 0       # include spectators (filename: spectators.dat)
 
 local_charge_conservation = 0  # flag to impose local charge conservation
 
-calculate_polarization = 1     # 1/0: whether to compute spin polarization for Lambda/anti-Lambda
+calculate_polarization = 0     # 1/0: whether to compute spin polarization for Lambda/anti-Lambda
 polarizationRapType = 1        # 0: rapidity; 1: pseudorapidity; 2: both
 
 calculate_vn = 0         # 1/0: whether to calculate the

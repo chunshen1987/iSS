@@ -136,6 +136,12 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
         regulateEOS_ = true;
         if (iEOS_MUSIC_ == 20) {
             eos_4d_.initialize_eos();
+            int deltaf_kind = paraRdr->getVal("bulk_deltaf_kind");
+            if (deltaf_kind == 21) {
+                eos_4d_.initialize_dfCoeffs(1);
+            } else if (deltaf_kind == 20) {
+                eos_4d_.initialize_dfCoeffs(0);
+            }
             //read_in_HRG_EOS_binary();
         } else {
             read_in_HRG_EOS();
@@ -867,12 +873,15 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
     for (auto &surf_i: surf_ptr) {
         if (regulateEOS_) {
             std::vector<float> eosVar;    // {P, T, muB, muS, muQ}
+            std::vector<double> visCoefficients;
             int status = -1;
             if (iEOS_MUSIC_ == 20) {
                 //status = getValuesFromHRGEOS3D(surf_i.Edec, surf_i.Bn,
                 //                               surf_i.Qn, eosVar);
                 eos_4d_.getThermalVariables(surf_i.Edec, surf_i.Bn,
                                             surf_i.Qn, surf_i.Sn, eosVar);
+                eos_4d_.getDeltafCoeffs(surf_i.Edec, surf_i.Bn, surf_i.Qn,
+                                         surf_i.Sn, visCoefficients);
                 status = 0;
             } else {
                 status = getValuesFromHRGEOS(surf_i.Edec, surf_i.Bn, eosVar);
@@ -893,6 +902,7 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
                 // the trace of Tmunu is continuious here.
                 //surf_i.bulkPi = surf_i.bulkPi + surf_i.Pdec - eosVar[0];
                 surf_i.Pdec = eosVar[0];
+                surf_i.visCoeffs = visCoefficients;
             }
         }
         surf_i.u0 = sqrt(1. + surf_i.u1*surf_i.u1

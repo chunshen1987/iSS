@@ -696,8 +696,9 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         // bulk delta f contribution
         double bulkPi = 0.0;
         if (paraRdr->getVal("iEoS_MUSIC") == 20) {
-            eos_4d_.getDeltafCoeffs(surf->Edec, surf->Bn, surf->Qn, surf->Sn,
-                                    visCoefficients);
+            //eos_4d_.getDeltafCoeffs(surf->Edec, surf->Bn, surf->Qn, surf->Sn,
+            //                        visCoefficients);
+            visCoefficients = surf->visCoeffs;
         } else {
             if (NEoS_deltaf_kind_ == 1) {
                 getCENEOSBQSCoefficients(surf->Edec, surf->Bn,
@@ -745,9 +746,7 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         double total_N = 0;
         const particle_info *particle = &particles[real_particle_idx];
 
-        //int sign = particle->sign;
         const int degen = particle->gspin;
-        //double mass = particle->mass;
         const int baryon  = particle->baryon;
         const int strange = particle->strange;
         const int charge  = particle->charge;
@@ -1085,8 +1084,9 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 const FO_surf_LRF *surf = &FOsurf_ptr[FO_idx];
 
                 if (paraRdr->getVal("iEoS_MUSIC") == 20) {
-                    eos_4d_.getDeltafCoeffs(surf->Edec, surf->Bn, surf->Qn,
-                                            surf->Sn, visCoefficients);
+                    //eos_4d_.getDeltafCoeffs(surf->Edec, surf->Bn, surf->Qn,
+                    //                        surf->Sn, visCoefficients);
+                    visCoefficients = surf->visCoeffs;
                 } else {
                     if (NEoS_deltaf_kind_ == 1) {
                         getCENEOSBQSCoefficients(surf->Edec, surf->Bn,

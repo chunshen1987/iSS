@@ -63,6 +63,7 @@ typedef struct {
     float qmu0, qmu1, qmu2, qmu3;
     std::vector<float> particle_mu_PCE;
     std::vector<float> vorticity_arr;
+    std::vector<double> visCoeffs;
 } FO_surf;
 
 
@@ -76,6 +77,7 @@ typedef struct {
     float piLRF_xx, piLRF_xy, piLRF_xz, piLRF_yy, piLRF_yz;
     float qmuLRF_x, qmuLRF_y, qmuLRF_z;
     std::vector<float> particle_mu_PCE;
+    std::vector<double> visCoeffs;
 } FO_surf_LRF;
 
 
