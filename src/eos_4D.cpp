@@ -75,7 +75,7 @@ void EOS_4D::read_dfCoeffs_binary(std::string filepath, const int dfType) {
         exit(1);
     }
 
-    int numCoeffs = 5;
+    int numCoeffs = 6;
     if (dfType == 1) {
         numCoeffs = 3;
     }
