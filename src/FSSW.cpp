@@ -703,10 +703,10 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
             visCoefficients = surf->visCoeffs;
         } else {
             if (NEoS_deltaf_kind_ == 1) {
-                getCENEOSBQSCoefficients(surf->Edec, surf->Bn,
+                getCENEOSBQSCoefficients(surf->Edec, std::abs(surf->Bn),
                                          visCoefficients);
             } else if (NEoS_deltaf_kind_ == 0) {
-                get22momNEOSBQSCoefficients(surf->Edec, surf->Bn,
+                get22momNEOSBQSCoefficients(surf->Edec, std::abs(surf->Bn),
                                             visCoefficients);
             }
         }
@@ -1091,10 +1091,10 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                     visCoefficients = surf->visCoeffs;
                 } else {
                     if (NEoS_deltaf_kind_ == 1) {
-                        getCENEOSBQSCoefficients(surf->Edec, surf->Bn,
+                        getCENEOSBQSCoefficients(surf->Edec, std::abs(surf->Bn),
                                                  visCoefficients);
                     } else if (NEoS_deltaf_kind_ == 0) {
-                        get22momNEOSBQSCoefficients(surf->Edec, surf->Bn,
+                        get22momNEOSBQSCoefficients(surf->Edec, std::abs(surf->Bn),
                                                     visCoefficients);
                     }
                 }
