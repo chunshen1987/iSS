@@ -884,7 +884,13 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
                                          surf_i.Sn, visCoefficients);
                 status = 0;
             } else {
-                status = getValuesFromHRGEOS(surf_i.Edec, surf_i.Bn, eosVar);
+                status = getValuesFromHRGEOS(
+                        surf_i.Edec, std::abs(surf_i.Bn), eosVar);
+                if (surf_i.Bn < 0.) {
+                    eosVar[2] = - eosVar[2];
+                    eosVar[3] = - eosVar[3];
+                    eosVar[4] = - eosVar[4];
+                }
             }
             if (status == 0) {      // success
                 //cout << "check: Tdec = " << surf_i.Tdec << " GeV, "
