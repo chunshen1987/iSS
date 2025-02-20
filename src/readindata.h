@@ -19,6 +19,7 @@ class read_FOdata {
     const std::string table_path_;
     const std::string particle_table_path_;
 
+    int echoLevel_;
     int mode;
     bool surface_in_binary_;
     bool include_vorticity_;
@@ -49,11 +50,9 @@ class read_FOdata {
 
     ~read_FOdata() {};
 
-    int get_number_of_freezeout_cells(std::string surface_filename);
     int get_IEOS_music() const {return(iEOS_MUSIC_);}
 
     AfterburnerType get_afterburner_type() const {return(afterburner_type_);}
-    int get_number_of_lines_of_binary_surface_file(string filename);
     int get_flag_PCE() {return(flag_PCE_);}
     void read_in_HRG_EOS();
     void read_in_HRG_EOS_binary();
@@ -87,6 +86,8 @@ class read_FOdata {
                             std::vector<float> &eos);
     int getValuesFromHRGEOS3D(const double ed, const double nB,
                               const double nQ, std::vector<float> &eos);
+    int get_number_of_freezeout_cells(std::string surfaceFilename);
+    int get_number_of_lines_of_binary_surface_file(string filename);
 };
 
 #endif  // SRC_READINDATA_H_

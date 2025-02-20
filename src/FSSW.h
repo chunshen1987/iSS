@@ -27,6 +27,7 @@ class FSSW {
  private:
     int hydro_mode;   // switch for (2+1)-d or (3+1)-d hypersurface
     int flag_PCE_;
+    int echoLevel_;
 
     pretty_ostream messager_;
 
@@ -50,6 +51,7 @@ class FSSW {
     int NEoS_deltaf_kind_;        // 0: 14-mom, 1: CE
     int bulk_deltaf_kind_;
     int iEoS_MUSIC_;
+    bool flagRegVisYield_;
 
     // dN/(dxt dy) for one particle species
     std::vector<double> dN_dxtdy_for_one_particle_species;

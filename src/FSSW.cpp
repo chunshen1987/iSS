@@ -65,6 +65,7 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     FO_length = FOsurf_ptr.size();
 
     paraRdr = paraRdr_in;
+    echoLevel_ = paraRdr->getVal("JSechoLevel", 1);
 
     hydro_mode = paraRdr->getVal("hydro_mode");
 
@@ -83,10 +84,17 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     } else {
         bUSE_GZIP_FORMAT = true;
     }
+
     if (paraRdr->getVal("use_binary_format") == 0) {
         bUSE_BINARY_FORMAT = false;
     } else {
         bUSE_BINARY_FORMAT = true;
+    }
+
+    if (paraRdr->getVal("RegVisYield", 0) == 1) {
+        flagRegVisYield_ = true;
+    } else {
+        flagRegVisYield_ = false;
     }
 
     if (paraRdr->getVal("include_deltaf_shear") == 0) {
@@ -808,6 +816,9 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         }
 
         total_N = N_eq + deltaN_bulk + deltaN_qmu;
+        if (flagRegVisYield_) {
+            total_N = std::min(2.*N_eq, total_N);
+        }
 
         dN_dxtdy_for_one_particle_species[l] = std::max(0., total_N);
     }
@@ -983,7 +994,10 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
 */
     Stopwatch sw_total;
     sw_total.tic();
-    messager_.info(" Function sample_using_dN_dxtdy_4all_particles started...");
+    if (echoLevel_ > 0) {
+        messager_.info(
+                " Function sample_using_dN_dxtdy_4all_particles started...");
+    }
 
     std::vector<double> visCoefficients;
 
@@ -1018,11 +1032,14 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
     // reusable variables
     // dN_dxtdy for 1 particle
     //vector<double> dN_dxtdy_single_particle(FO_length, 0);
-    messager_ << "Sampling using dN/dy with "
-             << "sample_using_dN_dxtdy_4all_particles function.";
-    messager_.flush("info");
-    messager_<< "number of repeated sampling = " << number_of_repeated_sampling;
-    messager_.flush("info");
+    if (echoLevel_ > 0) {
+        messager_ << "Sampling using dN/dy with "
+                  << "sample_using_dN_dxtdy_4all_particles function.";
+        messager_.flush("info");
+        messager_ << "number of repeated sampling = "
+                  << number_of_repeated_sampling;
+        messager_.flush("info");
+    }
     for (int n = 0; n < number_of_chosen_particles; n++) {
         int real_particle_idx = chosen_particles_sampling_table[n];
         const particle_info *particle = &particles[real_particle_idx];
@@ -1031,14 +1048,18 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
         const int baryon  = particle->baryon;
         const int strange = particle->strange;
         const int charge  = particle->charge;
-        messager_ << "Index: " << n << ", Name: " << particle->name
+        if (echoLevel_ > 0) {
+            messager_ << "Index: " << n << ", Name: " << particle->name
                  << ", Monte-carlo index: " << particle->monval;
-        messager_.flush("info");
+            messager_.flush("info");
+        }
         if (local_charge_conservation == 1) {
             if (particle->charge < 0) {
-                cout << "local charge conservation is turn on~ "
-                     << "Skip the negative charge particles."
-                     << endl;
+                if (echoLevel_ > 0) {
+                    messager_ << "local charge conservation is turn on~ "
+                              << "Skip the negative charge particles.";
+                    messager_.flush("info");
+                }
                 continue;
             }
         }
@@ -1062,9 +1083,11 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
             // for (3+1)-d case, dN_dy is total N (summing over all etas)
             dN = dN_dy;
         }
-        messager_ << " -- Sampling using dN_dy=" << dN_dy << ", "
-                  << "dN=" << dN << "...";
-        messager_.flush("info");
+        if (echoLevel_ > 0) {
+            messager_ << " -- Sampling using dN_dy=" << dN_dy << ", "
+                      << "dN=" << dN << "...";
+            messager_.flush("info");
+        }
 
         Stopwatch sw;
         sw.tic();
@@ -1177,9 +1200,11 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
     }   // n; particle loop
 
     sw_total.toc();
-    cout << endl 
-         << "sample_using_dN_dxtdy_4all_particles finished in " 
-         << sw_total.takeTime() << " seconds." << endl;
+    if (echoLevel_ > 0) {
+        cout << endl 
+             << "sample_using_dN_dxtdy_4all_particles finished in " 
+             << sw_total.takeTime() << " seconds." << endl;
+    }
 }
 
 
@@ -1719,7 +1744,9 @@ double FSSW::get_deltaf_qmu_coeff(double T, double muB) {
 
 
 void FSSW::initialize_special_function_arrays() {
-    messager_.info("Initializing special function arrays ... ");
+    if (echoLevel_ > 0) {
+        messager_.info("Initializing special function arrays ... ");
+    }
     sf_expint_truncate_order = 10;
     sf_x_min = 0.5;
     sf_x_max = 400;
@@ -1857,7 +1884,9 @@ void FSSW::check_samples_in_memory() {
 
 void FSSW::perform_resonance_feed_down(
                     vector< vector<iSS_Hadron>* >* input_particle_list) {
-    cout << "perform resonance decays... " << endl;
+    if (echoLevel_ > 0) {
+        cout << "perform resonance decays... " << endl;
+    }
     // loop over events
     unsigned int nev = input_particle_list->size();
     for (unsigned int ievent = 0; ievent < nev; ievent++) {
@@ -2162,26 +2191,17 @@ void FSSW::computeAvgTotalEnergyMomentum() {
     std::vector<double> Pmu_err(4, 0);
     std::vector<double> nQ_avg(3, 0);
     std::vector<double> nQ_err(3, 0);
-    for (auto const &Pmu_i : PmuList) {
-        for (int j = 0; j < 4; j++) {
-            Pmu_avg[j] += Pmu_i[j];
-            Pmu_err[j] += Pmu_i[j]*Pmu_i[j];
-        }
-        nev++;
+    if (echoLevel_ > 0) {
+        messager_.info("Averaged total energy and momentum:");
     }
-    for (auto const &nQ_i : ChargesList) {
-        for (int j = 0; j < 3; j++) {
-            nQ_avg[j] += nQ_i[j];
-            nQ_err[j] += nQ_i[j]*nQ_i[j];
-        }
-    }
-    messager_.info("Averaged total energy and momentum:");
     for (int i = 0; i < 4; i++) {
         Pmu_avg[i] = Pmu_avg[i]/nev;
         Pmu_err[i] = sqrt((Pmu_err[i]/nev - Pmu_avg[i]*Pmu_avg[i])/nev);
-        messager_ << "<P[" << i << "]> = " << Pmu_avg[i] << " +/- "
-                  << Pmu_err[i] << " GeV.";
-        messager_.flush("info");
+        if (echoLevel_ > 0) {
+            messager_ << "<P[" << i << "]> = " << Pmu_avg[i] << " +/- "
+                      << Pmu_err[i] << " GeV.";
+            messager_.flush("info");
+        }
     }
     messager_.info("Averaged total conserved charges:");
     for (int i = 0; i < 3; i++) {

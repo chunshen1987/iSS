@@ -27,6 +27,8 @@ class iSS {
     std::vector<float> FOsurf_Q_;
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr_;
 
+    int echoLevel_;
+
     int flag_PCE_;
     AfterburnerType afterburner_type_;
 
@@ -58,6 +60,7 @@ class iSS {
 
     int shell();
     int read_in_FO_surface();
+    void getSurfaceCellFromJETSCAPE(std::vector<FO_surf> &FOsurf_arr);
     int generate_samples();
     void compute_spin_polarization();
 

@@ -21,6 +21,7 @@ iSS::iSS(std::string path, std::string table_path,
     flag_PCE_ = 0;
     paraRdr_ptr = new ParameterReader;
     paraRdr_ptr->readFromFile(inputfile);
+    echoLevel_ = paraRdr_ptr->getVal("JSechoLevel", 1);
 }
 
 
@@ -91,14 +92,46 @@ void iSS::perform_checks() {
 }
 
 
+void iSS::getSurfaceCellFromJETSCAPE(std::vector<FO_surf> &FOsurf_arr) {
+    FOsurf_array_.clear();
+    FOsurf_LRF_array_.clear();
+
+    echoLevel_ = paraRdr_ptr->getVal("JSechoLevel", 1);
+    read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
+                                particle_table_path_);
+    messager << "total number of cells: " <<  FOsurf_arr.size();
+    messager.flush("info");
+    if (FOsurf_arr.size() == 0) {
+        messager << "No freeze-out fluid cell, exit now ...";
+        messager.flush("Warning");
+    }
+
+    afterburner_type_ = freeze_out_data.get_afterburner_type();
+    freeze_out_data.read_in_chemical_potentials(FOsurf_arr, particle_);
+    flag_PCE_ = freeze_out_data.get_flag_PCE();
+
+    computeFOSurfTmunu(FOsurf_arr);
+    if (paraRdr_ptr->getVal("MC_sampling") == 4) {
+        transform_to_local_rest_frame(FOsurf_arr, FOsurf_LRF_array_);
+    } else {
+        FOsurf_array_ = FOsurf_arr;
+    }
+    if (echoLevel_ > 0) {
+        messager.info(" -- Read in data finished!");
+    }
+}
+
+
 int iSS::read_in_FO_surface() {
+    echoLevel_ = paraRdr_ptr->getVal("JSechoLevel", 1);
     std::vector<FO_surf> FOsurf_temp;
     read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
                                 particle_table_path_);
-    //freeze_out_data.read_in_freeze_out_data(FOsurf_array_);
     freeze_out_data.read_in_freeze_out_data(FOsurf_temp, surface_filename_);
-    messager << "total number of cells: " <<  FOsurf_temp.size();
-    messager.flush("info");
+    if (echoLevel_ > 0) {
+        messager << "total number of cells: " <<  FOsurf_temp.size();
+        messager.flush("info");
+    }
     if (FOsurf_temp.size() == 0) {
         messager << "No freeze-out fluid cell, exit now ...";
         messager.flush("Warning");
@@ -117,7 +150,9 @@ int iSS::read_in_FO_surface() {
     } else {
         FOsurf_array_ = FOsurf_temp;
     }
-    messager.info(" -- Read in data finished!");
+    if (echoLevel_ > 0) {
+        messager.info(" -- Read in data finished!");
+    }
     FOsurf_temp.clear();
     return(0);
 }
@@ -151,7 +186,9 @@ int iSS::generate_samples() {
                                            + "/chosen_particles_s95p-v1.dat");
     }
 
-    messager.info("Start computation and generating samples ...");
+    if (echoLevel_ > 0) {
+        messager.info("Start computation and generating samples ...");
+    }
     if (paraRdr_ptr->getVal("MC_sampling") == 4) {
         spectra_sampler_ = std::unique_ptr<FSSW> (new FSSW(
                     ran_gen_ptr_, &chosen_particles,
@@ -180,7 +217,9 @@ int iSS::generate_samples() {
 void iSS::transform_to_local_rest_frame(
         std::vector<FO_surf> &FOsurf_ptr,
         std::vector<FO_surf_LRF> &FOsurf_LRF_ptr) {
-    messager.info("Transforming fluid cells to their local rest frame ...");
+    if (echoLevel_ > 0) {
+        messager.info("Transforming fluid cells to their local rest frame ...");
+    }
     for (auto &surf_i: FOsurf_ptr) {
         FO_surf_LRF surf_LRF_i;
         surf_LRF_i.tau = surf_i.tau;
@@ -456,22 +495,24 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
             }
         }
     }
-    //messager << "The total energy-momentum tensor from the surface:";
-    //messager.flush("info");
-    //for (int i = 0; i < 4; i++) {
-    //    for (int j = 0; j < 4; j++) {
-    //        messager << "T[" << i << "][" << j << "] = "
-    //                 << std::scientific << std::setprecision(6)
-    //                 << FOsurf_Tmunu_[4*i+j] << " GeV/fm^3.";
-    //        messager.flush("info");
-    //    }
-    //}
-    messager << "The total charges from the surface (B, Q, S):";
-    messager.flush("info");
-    for (int i = 0; i < 3; i++) {
-        messager << "nQ[" << i << "] = "
-                 << std::scientific << std::setprecision(6)
-                 << FOsurf_Q_[i];
+    if (echoLevel_ > 0) {
+        messager << "The total energy-momentum tensor from the surface:";
         messager.flush("info");
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                messager << "T[" << i << "][" << j << "] = "
+                         << std::scientific << std::setprecision(6)
+                         << FOsurf_Tmunu_[4*i+j] << " GeV/fm^3.";
+                messager.flush("info");
+            }
+        }
+        messager << "The total charges from the surface (B, Q, S):";
+        messager.flush("info");
+        for (int i = 0; i < 3; i++) {
+            messager << "nQ[" << i << "] = "
+                     << std::scientific << std::setprecision(6)
+                     << FOsurf_Q_[i];
+            messager.flush("info");
+        }
     }
 }

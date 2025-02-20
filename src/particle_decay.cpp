@@ -32,7 +32,7 @@ particle_decay::~particle_decay() {
 //! This function reads in resonance decay table
 int particle_decay::read_resonances_list() {
     double eps = 1e-15;
-    cout << " -- Read in particle resonance decay table..." << endl;
+    //cout << " -- Read in particle resonance decay table..." << endl;
     std::string reso_filename;
     if (afterburner_type_ == AfterburnerType::SMASH) {
         reso_filename = table_path_ + "/pdg-SMASH.dat";
