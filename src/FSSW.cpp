@@ -1955,27 +1955,8 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
             // assigned to the return variables
             pT = sqrt(pLab[1]*pLab[1] + pLab[2]*pLab[2]);
             phi = atan2(pLab[2], pLab[1]);
-            double y = 0.5*log((pLab[0] + pLab[3])/(pLab[0] - pLab[3]));
-            if (std::isnan(y) || std::isinf(y)) {
-                // pLab[0] and pLab[3] are too close
-                // recompute pLab[3] with E, pT, and mass
-                pLab[3] = sqrt(pLab[0]*pLab[0] - pT*pT - mass*mass);
-                y = 0.5*log((pLab[0] + pLab[3])/(pLab[0] - pLab[3]));
-                if (std::isnan(y) || std::isinf(y)) {
-                    std::cout << "[Error]: sampled y is " << y << "!"
-                              << std::endl;
-                    std::cout << "umu = "
-                              << umu[0] << ", " << umu[1] << ", " << umu[2]
-                              << ", " << umu[3] << std::endl;
-                    std::cout << "pLRF = "
-                              << pLRF[0] << ", " << pLRF[1] << ", "
-                              << pLRF[2] << ", " << pLRF[3] << std::endl;
-                    std::cout << "pLab = "
-                              << pLab[0] << ", " << pLab[1] << ", "
-                              << pLab[2] << ", " << pLab[3] << std::endl;
-                    exit(1);
-                }
-            }
+            double mT = sqrt(pT*pT + mass*mass);
+            double y = asinh(pLab[3]/mT);
             y_minus_eta_s = y - surf->eta;
             return(1);
         }
