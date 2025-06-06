@@ -1972,10 +1972,11 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
 
             // assigned to the return variables
             // if E and p^z are too close, resample one
-            double y = 0.5*log((pLab[0] + pLab[3])/(pLab[0] - pLab[3]));
+            pT = sqrt(pLab[1]*pLab[1] + pLab[2]*pLab[2]);
+            phi = atan2(pLab[2], pLab[1]);
+            double mT = sqrt(mass*mass + pT*pT);
+            double y = asinh(pLab[3]/mT);
             if (!std::isnan(y) && !std::isinf(y)) {
-                pT = sqrt(pLab[1]*pLab[1] + pLab[2]*pLab[2]);
-                phi = atan2(pLab[2], pLab[1]);
                 y_minus_eta_s = y - surf->eta;
                 return(1);
             }
