@@ -10,13 +10,13 @@
 using std::stringstream;
 using std::string;
 
-EOS_4D::EOS_4D() {}
+EOS_4D_foriSS::EOS_4D_foriSS() {}
 
 
-EOS_4D::~EOS_4D() {}
+EOS_4D_foriSS::~EOS_4D_foriSS() {}
 
 
-void EOS_4D::get_eos_max_values() {
+void EOS_4D_foriSS::get_eos_max_values() {
     T_tilde_max = Ttilde0 + (N_T - 1)*dTtilde;
     mub_tilde_max = mubtilde0 + (N_mub - 1)*dmubtilde;
     muq_tilde_max = muqtilde0 + (N_muq - 1)*dmuqtilde;
@@ -24,7 +24,7 @@ void EOS_4D::get_eos_max_values() {
 }
 
 
-void EOS_4D::read_header_binary(std::string filepath, int header_size) {
+void EOS_4D_foriSS::read_header_binary(std::string filepath, int header_size) {
     std::ifstream ifs(filepath, std::ios::in | std::ios::binary);
     if (!ifs.is_open()) {
         messenger << "Can not open EOS files: "<< filepath;
@@ -42,7 +42,7 @@ void EOS_4D::read_header_binary(std::string filepath, int header_size) {
 }
 
 
-void EOS_4D::read_eos_binary(std::string filepath,
+void EOS_4D_foriSS::read_eos_binary(std::string filepath,
                              std::vector<float> &out, int header_size) {
     std::ifstream eos_binary_file(filepath, std::ios::in | std::ios::binary);
 
@@ -65,7 +65,7 @@ void EOS_4D::read_eos_binary(std::string filepath,
 }
 
 
-void EOS_4D::read_dfCoeffs_binary(std::string filepath, const int dfType) {
+void EOS_4D_foriSS::read_dfCoeffs_binary(std::string filepath, const int dfType) {
     dfCoeffs_.clear();
     std::ifstream df_binary_file(filepath, std::ios::in | std::ios::binary);
 
@@ -91,12 +91,12 @@ void EOS_4D::read_dfCoeffs_binary(std::string filepath, const int dfType) {
 }
 
 
-int EOS_4D::index(int i_T, int i_mub, int i_muq, int i_mus) const {
+int EOS_4D_foriSS::index(int i_T, int i_mub, int i_muq, int i_mus) const {
     int idx = ((i_T*N_mus + i_mus)*N_muq + i_muq)*N_mub + i_mub;
     return(idx);
 }
 
-void EOS_4D::FourDLInterp(const std::vector<float> &data,
+void EOS_4D_foriSS::FourDLInterp(const std::vector<float> &data,
                           const std::array<float, 4> &TildeVar,
                           std::array<float, 5> &ResArr,
                           bool compute_derivatives) const {
@@ -299,7 +299,7 @@ void EOS_4D::FourDLInterp(const std::vector<float> &data,
 }
 
 
-void EOS_4D::get_tilde_variables(
+void EOS_4D_foriSS::get_tilde_variables(
         double e, double rhob, double rhoq, double rhos,
         std::array<float, 4> &TildeVar) const {
     // Input e, n in GeV/fm3 and 1/fm3
@@ -324,7 +324,7 @@ void EOS_4D::get_tilde_variables(
 }
 
 
-void EOS_4D::initialize_eos() {
+void EOS_4D_foriSS::initialize_eos() {
     messenger.info("Read in 4D EOS");
 
     std::stringstream spath;
@@ -350,7 +350,7 @@ void EOS_4D::initialize_eos() {
 }
 
 
-void EOS_4D::initialize_dfCoeffs(const int dfType) {
+void EOS_4D_foriSS::initialize_dfCoeffs(const int dfType) {
     messenger.info("Read in deltaf Coeffs for EoS 4D");
     std::string EOSPath = "./iSS_tables/EOS_tables/HRG4D/";
     // Header info
@@ -369,7 +369,7 @@ void EOS_4D::initialize_dfCoeffs(const int dfType) {
 
 //! This function returns the local temperature in [1/fm]
 //! input local energy density eps [1/fm^4] and rhob [1/fm^3]
-double EOS_4D::get_temperature(double e, double rhob,
+double EOS_4D_foriSS::get_temperature(double e, double rhob,
                                double rhoq, double rhos) const {
     std::array<float, 4> TildeVar{};
     get_tilde_variables(e, rhob, rhoq, rhos, TildeVar);
@@ -381,7 +381,7 @@ double EOS_4D::get_temperature(double e, double rhob,
 
 //! This function returns the local pressure in [1/fm^4]
 //! the input local energy density [1/fm^4], rhob [1/fm^3]
-double EOS_4D::get_pressure(double e, double rhob,
+double EOS_4D_foriSS::get_pressure(double e, double rhob,
                             double rhoq, double rhos) const {
     std::array<float, 4> TildeVar{};
     get_tilde_variables(e, rhob, rhoq, rhos, TildeVar);
@@ -391,7 +391,7 @@ double EOS_4D::get_pressure(double e, double rhob,
 }
 
 
-void EOS_4D::getThermalVariables(const double epsilon, const double rhob,
+void EOS_4D_foriSS::getThermalVariables(const double epsilon, const double rhob,
                                  const double rhoq, const double rhos,
                                  std::vector<float> &thermalVec) const {
     thermalVec.resize(5);
@@ -403,7 +403,7 @@ void EOS_4D::getThermalVariables(const double epsilon, const double rhob,
 }
 
 
-void EOS_4D::getDeltafCoeffs(const double epsilon, const double rhob,
+void EOS_4D_foriSS::getDeltafCoeffs(const double epsilon, const double rhob,
                              const double rhoq, const double rhos,
                              std::vector<double> &deltafVec) const {
     deltafVec.resize(dfCoeffs_.size());
@@ -419,7 +419,7 @@ void EOS_4D::getDeltafCoeffs(const double epsilon, const double rhob,
 
 //! This function returns the local baryon chemical potential  mu_B in [1/fm]
 //! input local energy density eps [1/fm^4] and rhob [1/fm^3]
-double EOS_4D::get_muB(double e, double rhob, double rhoq, double rhos) const {
+double EOS_4D_foriSS::get_muB(double e, double rhob, double rhoq, double rhos) const {
     std::array<float, 4> TildeVar{};
     get_tilde_variables(e, rhob, rhoq, rhos, TildeVar);
     std::array<float, 5> ResArr{};
@@ -430,7 +430,7 @@ double EOS_4D::get_muB(double e, double rhob, double rhoq, double rhos) const {
 
 //! This function returns the local baryon chemical potential  mu_B in [1/fm]
 //! input local energy density eps [1/fm^4] and rhob [1/fm^3]
-double EOS_4D::get_muS(double e, double rhob, double rhoq, double rhos) const {
+double EOS_4D_foriSS::get_muS(double e, double rhob, double rhoq, double rhos) const {
     std::array<float, 4> TildeVar{};
     get_tilde_variables(e, rhob, rhoq, rhos, TildeVar);
     std::array<float, 5> ResArr{};
@@ -441,7 +441,7 @@ double EOS_4D::get_muS(double e, double rhob, double rhoq, double rhos) const {
 
 //! This function returns the local baryon chemical potential  mu_B in [1/fm]
 //! input local energy density eps [1/fm^4] and rhob [1/fm^3]
-double EOS_4D::get_muQ(double e, double rhob, double rhoq, double rhos) const {
+double EOS_4D_foriSS::get_muQ(double e, double rhob, double rhoq, double rhos) const {
     std::array<float, 4> TildeVar{};
     get_tilde_variables(e, rhob, rhoq, rhos, TildeVar);
     std::array<float, 5> ResArr{};

@@ -26,7 +26,7 @@ class read_FOdata {
     bool quantum_statistics_;
     bool regulateEOS_;
 
-    EOS_4D eos_4d_;
+    EOS_4D_foriSS eos_4d_;
 
     // flag to determine whether the EoS is partial chemical equilibrium or not
     int flag_PCE_;

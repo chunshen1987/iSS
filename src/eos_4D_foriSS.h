@@ -1,7 +1,7 @@
 // Copyright 2018 @ Chun Shen
 
-#ifndef SRC_EOS_4D_H_
-#define SRC_EOS_4D_H_
+#ifndef SRC_EOS_4D_foriSS_H_
+#define SRC_EOS_4D_foriSS_H_
 
 #include <cmath>
 #include <array>
@@ -9,7 +9,7 @@
 
 #include "pretty_ostream.h"
 
-class EOS_4D {
+class EOS_4D_foriSS {
  private:
     // variables for header infos.
     float mubtilde0, muqtilde0, mustilde0, Ttilde0;
@@ -59,8 +59,8 @@ class EOS_4D {
     pretty_ostream messenger;
 
  public:
-    EOS_4D();
-    ~EOS_4D();
+    EOS_4D_foriSS();
+    ~EOS_4D_foriSS();
 
     void initialize_eos();
     void initialize_dfCoeffs(const int dfType=0);
@@ -79,4 +79,4 @@ class EOS_4D {
                          std::vector<double> &deltafVec) const;
 };
 
-#endif  // SRC_EOS_4D_H_
+#endif  // SRC_EOS_4D_foriSS_H_
