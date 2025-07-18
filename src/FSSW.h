@@ -21,7 +21,7 @@
 #include "Random.h"
 #include "pretty_ostream.h"
 #include "MomentumSamplerShell.h"
-#include "eos_4D.h"
+#include "eos_4D_foriSS.h"
 
 class FSSW {
  private:

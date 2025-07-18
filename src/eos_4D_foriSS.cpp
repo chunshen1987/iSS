@@ -1,6 +1,6 @@
 // Copyright 2018 @ Chun Shen
 
-#include "eos_4D.h"
+#include "eos_4D_foriSS.h"
 #include "data_struct.h"
 
 #include <sstream>
