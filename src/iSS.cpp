@@ -112,6 +112,7 @@ void iSS::getSurfaceCellFromJETSCAPE(std::vector<FO_surf> &FOsurf_arr) {
 
     computeFOSurfTmunu(FOsurf_arr);
     if (paraRdr_ptr->getVal("MC_sampling") == 4) {
+        freeze_out_data.regulate_surface_cells(FOsurf_arr);
         transform_to_local_rest_frame(FOsurf_arr, FOsurf_LRF_array_);
     } else {
         FOsurf_array_ = FOsurf_arr;
