@@ -393,7 +393,7 @@ void FSSW::shell() {
     if (flag_spectators_)
         addSpectatorsToHadronList();
 
-    computeAvgTotalEnergyMomentum();
+    //computeAvgTotalEnergyMomentum();
 
     if (bUSE_OSCAR_FORMAT) {
         if (bUSE_OSCAR2013 == 1) {
@@ -2191,17 +2191,13 @@ void FSSW::computeAvgTotalEnergyMomentum() {
     std::vector<double> Pmu_err(4, 0);
     std::vector<double> nQ_avg(3, 0);
     std::vector<double> nQ_err(3, 0);
-    if (echoLevel_ > 0) {
-        messager_.info("Averaged total energy and momentum:");
-    }
+    messager_.info("Averaged total energy and momentum:");
     for (int i = 0; i < 4; i++) {
         Pmu_avg[i] = Pmu_avg[i]/nev;
         Pmu_err[i] = sqrt((Pmu_err[i]/nev - Pmu_avg[i]*Pmu_avg[i])/nev);
-        if (echoLevel_ > 0) {
-            messager_ << "<P[" << i << "]> = " << Pmu_avg[i] << " +/- "
-                      << Pmu_err[i] << " GeV.";
-            messager_.flush("info");
-        }
+        messager_ << "<P[" << i << "]> = " << Pmu_avg[i] << " +/- "
+                  << Pmu_err[i] << " GeV.";
+        messager_.flush("info");
     }
     messager_.info("Averaged total conserved charges:");
     for (int i = 0; i < 3; i++) {
