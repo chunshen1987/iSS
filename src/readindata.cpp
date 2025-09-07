@@ -601,7 +601,7 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
     if (!surfdat.good()) {
         cout << "[Error] Surface file is not found! " << surfdat_stream.str()
              << endl;
-        exit(1);
+        return;
     }
     while (!surfdat.eof()) {
         FO_surf surf_elem;

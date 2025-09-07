@@ -127,7 +127,7 @@ int iSS::read_in_FO_surface() {
     if (FOsurf_temp.size() == 0) {
         messager << "No freeze-out fluid cell, exit now ...";
         messager.flush("Warning");
-        exit(1);
+        return(-1);
     }
 
     afterburner_type_ = freeze_out_data.get_afterburner_type();
