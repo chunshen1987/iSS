@@ -22,6 +22,7 @@ iSS::iSS(std::string path, std::string table_path,
     paraRdr_ptr = new ParameterReader;
     paraRdr_ptr->readFromFile(inputfile);
     echoLevel_ = paraRdr_ptr->getVal("JSechoLevel", 1);
+    hydro_Cartesian = paraRdr_ptr->getVal("hydro_Cartesian", 0);
 }
 
 
@@ -214,7 +215,7 @@ int iSS::generate_samples() {
 
 
 // this function transform all the variables to local rest frame of the fluid
-// cell and trasform them to the t-z coordinate
+// cell and transform them to the t-z coordinate
 void iSS::transform_to_local_rest_frame(
         std::vector<FO_surf> &FOsurf_ptr,
         std::vector<FO_surf_LRF> &FOsurf_LRF_ptr) {
@@ -239,6 +240,10 @@ void iSS::transform_to_local_rest_frame(
         surf_LRF_i.visCoeffs = surf_i.visCoeffs;
         float cosh_eta = cosh(surf_i.eta);
         float sinh_eta = sinh(surf_i.eta);
+        if (hydro_Cartesian) {
+            cosh_eta = 1.;
+            sinh_eta = 0.;
+        }
         float ut = surf_i.u0*cosh_eta + surf_i.u3*sinh_eta;
         float uz = surf_i.u3*cosh_eta + surf_i.u0*sinh_eta;
         float ux = surf_i.u1;
@@ -253,11 +258,17 @@ void iSS::transform_to_local_rest_frame(
             {-uy, ux*uy/(ut + 1.), 1. + uy*uy/(ut + 1.), uy*uz/(ut + 1.)},
             {-uz, ux*uz/(ut + 1.), uy*uz/(ut + 1.), 1. + uz*uz/(ut + 1.)}
         };
+        
         Vec4 da_upper = {
             surf_i.tau*surf_i.da0*cosh_eta - surf_i.da3*sinh_eta,
             -surf_i.tau*surf_i.da1,
             -surf_i.tau*surf_i.da2,
             -surf_i.da3*cosh_eta + surf_i.tau*surf_i.da0*sinh_eta};
+        if (hydro_Cartesian) {
+            da_upper[0] = da_upper[0] / surf_i.tau;
+            da_upper[1] = da_upper[1] / surf_i.tau;
+            da_upper[2] = da_upper[2] / surf_i.tau;
+        }
         Vec4 da_LRF = {0., 0., 0., 0.};
         //double udotdsimga = surf_i.tau*(
         //    surf_i.u0*surf_i.da0 + surf_i.u1*surf_i.da1 + surf_i.u2*surf_i.da2
@@ -455,11 +466,18 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
         float udotsigma = surf_i.tau*(
                 surf_i.u0*surf_i.da0 + surf_i.u1*surf_i.da1
                 + surf_i.u2*surf_i.da2 + surf_i.u3*surf_i.da3/surf_i.tau);
+        if (hydro_Cartesian) {
+            udotsigma /= surf_i.tau;
+        }
         FOsurf_Q_[0] += surf_i.Bn*udotsigma;
         FOsurf_Q_[1] += surf_i.Qn*udotsigma;
         FOsurf_Q_[2] += surf_i.Sn*udotsigma;
         float cosh_eta = cosh(surf_i.eta);
         float sinh_eta = sinh(surf_i.eta);
+        if (hydro_Cartesian) {
+            cosh_eta = 1.;
+            sinh_eta = 0.;
+        }
         u[0] = surf_i.u0*cosh_eta + surf_i.u3*sinh_eta;
         u[1] = surf_i.u1;
         u[2] = surf_i.u2;

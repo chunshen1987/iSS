@@ -20,6 +20,7 @@ class iSS {
     const std::string table_path_;
     const std::string particle_table_path_;
     const std::string surface_filename_;
+    bool hydro_Cartesian;
 
     std::vector<FO_surf> FOsurf_array_;
     std::vector<FO_surf_LRF> FOsurf_LRF_array_;
