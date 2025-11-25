@@ -156,7 +156,7 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     number_of_chosen_particles = chosen_particles_in->getNumberOfRows();
     chosen_particles_sampling_table.resize(number_of_chosen_particles, 0);
     std::vector<int> unidentifiedPid_table;
-    // first copy the chosen_particles table, but now using indecies 
+    // first copy the chosen_particles table, but now using indices
     // instead of monval
     int current_idx = 0;
     for (int m = 0; m < number_of_chosen_particles; m++) {
@@ -241,6 +241,8 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     // create arrays for special functions who are needed to compute 
     // particle yields
     initialize_special_function_arrays();
+
+    hydro_Cartesian = paraRdr->getVal("hydro_Cartesian", 0);
 
 }
 //***************************************************************************
@@ -2120,8 +2122,12 @@ void FSSW::add_one_sampled_particle(
     const double mT = sqrt(mass*mass + pT*pT);
     const double p_z = mT*sinh(rapidity_y);
     const double E = mT*cosh(rapidity_y);
-    const double z = surf->tau*sinh(eta_s);
-    const double t = surf->tau*cosh(eta_s);
+    double z = surf->tau*sinh(eta_s);
+    double t = surf->tau*cosh(eta_s);
+    if (hydro_Cartesian) {
+        z = eta_s;
+        t = surf->tau;
+    }
 
     iSS_Hadron *temp_hadron = new iSS_Hadron;
     temp_hadron->pid        = particle_monval;

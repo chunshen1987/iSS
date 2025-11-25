@@ -904,6 +904,7 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
         messager.info("Regulate local temperature with pure HRG EoS.");
     }
 
+    bool hydro_Cartesian = paraRdr->getVal("hydro_Cartesian", 0);
     for (auto &surf_i: surf_ptr) {
         if (regulateEOS_) {
             std::vector<float> eosVar;    // {P, T, muB, muS, muQ}
@@ -989,6 +990,10 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
             // sigma^{\mu\nu} is in Cartesian Coordinates
             double cosh_eta = cosh(surf_i.eta);
             double sinh_eta = sinh(surf_i.eta);
+            if (hydro_Cartesian) {
+                cosh_eta = 1.0;
+                sinh_eta = 0.0;
+            }
             u_flow[0] = surf_i.u0*cosh_eta + surf_i.u3*sinh_eta;
             u_flow[1] = surf_i.u1;
             u_flow[2] = surf_i.u2;

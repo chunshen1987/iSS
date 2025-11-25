@@ -55,3 +55,6 @@ jobs:
       - name: Sampling Test static with shear viscosity (finite mu_B, 22 mom.)
         run: |
           $GITHUB_WORKSPACE/tests/RunAutoTestViscous4.sh
+      - name: Cartesian Sampling Test
+        run: |
+          $GITHUB_WORKSPACE/tests/RunAutoTestCartesian.sh
