@@ -47,7 +47,9 @@ install(TARGETS ${exe_name} ${lib_name}
 if (unittest)
     add_executable (unittest_Spectators.e Spectators_UnitTest.cpp)
     target_link_libraries (unittest_Spectators.e ${lib_name} ${LIBS})
-    install(TARGETS unittest_Spectators.e ${lib_name}
+    add_executable (unittest_Random.e Random_UnitTest.cpp)
+    target_link_libraries (unittest_Random.e ${lib_name} ${LIBS})
+    install(TARGETS unittest_Spectators.e unittest_Random.e ${lib_name}
             RUNTIME DESTINATION ${CMAKE_HOME_DIRECTORY}/tests
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib/static)
