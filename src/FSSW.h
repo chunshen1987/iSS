@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <cstdint>
 #include <memory>
 
 #include "Table.h"
@@ -56,6 +57,25 @@ class FSSW {
 
     // dN/(dxt dy) for one particle species
     std::vector<double> dN_dxtdy_for_one_particle_species;
+
+    // delta f coefficients of every cell, computed once per surface: they
+    // depend on the cell only, not on the species or the sampled hadron.
+    // cellVisCoeffs_[l*kMaxVisCoeffs_ + i], cellVisCoeffsSize_[l] of them.
+    static const int kMaxVisCoeffs_ = 8;
+    bool cellVisCoeffsReady_ = false;
+    std::vector<double> cellVisCoeffs_;
+    std::vector<unsigned char> cellVisCoeffsSize_;
+
+    // correlated sampling (correlated_sampling = 1): the random numbers are
+    // addressed by the physical cell, not by the order of the draws, so two
+    // surfaces that agree in a region give the same hadrons there. Cells are
+    // grouped into blocks of quantized (tau, x, y, eta); within a block they
+    // keep the surface's order.
+    bool correlated_sampling_ = false;
+    double corr_block_dtau_ = 0.5, corr_block_dx_ = 1.0, corr_block_deta_ = 0.5;
+    std::vector<long> block_order_;   // cell indices sorted by (block, index)
+    std::vector<long> block_start_;   // block b: block_order_[start[b], start[b+1])
+    std::vector<std::array<uint32_t, 2>> block_word_;  // block b's address
 
     int number_of_chosen_particles;
 
@@ -162,6 +182,17 @@ class FSSW {
     void calculate_dN_dxtdy_for_one_particle_species(const int particle_idx);
     void sample_using_dN_dxtdy_4all_particles_conventional();
 
+    void prepare_cell_blocks();
+    void release_cell_blocks();
+    void sample_one_species_correlated(const int real_particle_idx);
+    void decay_one_primary(const iSS_Hadron &primary,
+                           std::vector<iSS_Hadron> &sample);
+
+    void getCellVisCoefficients(const FO_surf_LRF *surf,
+                                std::vector<double> &visCoefficients);
+    void prepare_cell_visCoefficients();
+    void release_cell_visCoefficients();
+
     void getbulkvisCoefficients(const double Tdec,
                                 std::vector<double> &bulkvisCoefficients);
     void getbulkvisCoefficients(const double Tdec, const double mu_B,
@@ -202,14 +233,18 @@ class FSSW {
         const double mass, const double pdotu, const double bulkPi,
         const double Tdec, const int sign, const int baryon,
         const int strange, const int charge,
-        const double f0, const std::vector<double> bulkvisCoefficients);
+        const double f0, const std::vector<double> &bulkvisCoefficients);
     int sample_momemtum_from_a_fluid_cell(
         const double mass, const int sign,
         const int baryon, const int strange, const int charge,
         const FO_surf_LRF *surf,
-        const std::vector<double> visCoefficients,
+        const std::vector<double> &visCoefficients,
         const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s);
+    iSS_Hadron make_sampled_particle(
+        const FO_surf_LRF *surf, const int particle_monval, const double mass,
+        const double pT, const double phi,
+        const double y_minus_eta_s, const double eta_s) const;
     void add_one_sampled_particle(
         const int repeated_sampling_idx, const FO_surf_LRF *surf,
         const int particle_monval, const double mass,

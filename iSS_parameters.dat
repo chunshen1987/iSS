@@ -152,6 +152,17 @@ number_of_repeated_sampling = 10       # How many times should the sampling be
                                        # repeated.
 maximum_sampling_events = 10000
 
+correlated_sampling = 0                # 1: random numbers addressed by the cell
+                                       # (Philox), so two surfaces that agree in
+                                       # a region give the same hadrons there:
+                                       # far less noise in their difference
+                                       # (e.g. jet - background). Each hadron
+                                       # decays as it is sampled. Not with
+                                       # local_charge_conservation.
+correlated_block_dtau = 0.5            # block size [fm/c] in tau,
+correlated_block_dx = 1.0              # [fm] in x and y,
+correlated_block_deta = 0.5            # and in eta_s
+
 sample_pT_up_to = -1                   # Up to this value will pT be sampled;
                                        # if<0 then use the largest value in
                                        # the pT table.
