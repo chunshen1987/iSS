@@ -5,6 +5,7 @@
 #include <sstream>
 #include <cmath>
 #include <cstdlib>
+#include <algorithm>
 #include "data_struct.h"
 #include "particle_decay.h"
 
@@ -17,9 +18,20 @@ particle_decay::particle_decay(shared_ptr<RandomUtil::Random> ran_gen,
     ran_gen_ptr = ran_gen;
     resonance_table.clear();
     read_resonances_list();
+    prepare_channel_kinematics();
 }
 
 particle_decay::~particle_decay() {
+    if (n_unreachable_ > 0) {
+        cerr << "[Warning] particle_decay: " << n_unreachable_
+             << " resonances had no reachable decay channel and were kept"
+             << endl;
+    }
+    if (n_mass_fallback_ > 0) {
+        cerr << "[Warning] particle_decay: daughter masses of "
+             << n_mass_fallback_ << " decays were set without sampling"
+             << endl;
+    }
     for (unsigned int i = 0; i < resonance_table.size(); i++) {
         for (int j = 0; j < resonance_table[i]->decays; j++) {
             delete resonance_table[i]->decay_channels[j];
@@ -261,68 +273,381 @@ int particle_decay::get_particle_strange_number(int monval) {
 }
 
 
-//! This is a shell function to perform resonance decays
-void particle_decay::perform_decays(
-            iSS_Hadron *mother, vector<iSS_Hadron>* daughter_list) {
-    particle_info* mother_decay_info = NULL;
-    for (unsigned int i = 0; i < resonance_table.size(); i++) {
-        if (mother->pid == resonance_table[i]->monval) {
-            mother_decay_info = resonance_table[i];
-            break;
+namespace {
+
+//! a decay is reachable only above its threshold by at least this much [GeV]
+const double kMassMargin = 1e-5;
+
+//! widths above this [GeV] are strong decays (see is_broad())
+const double kBroadWidth = 1e-4;
+
+//! two-body breakup momentum of M -> m1 m2 (0 below threshold)
+double breakup_momentum(double M, double m1, double m2) {
+    double t = (M*M - (m1 + m2)*(m1 + m2))*(M*M - (m1 - m2)*(m1 - m2));
+    return t > 0. ? sqrt(t)/(2.*M) : 0.;
+}
+
+//! boost (E, px, py, pz) by the velocity (vx, vy, vz)
+void boost(double vx, double vy, double vz,
+           double &E, double &px, double &py, double &pz) {
+    double v2 = vx*vx + vy*vy + vz*vz;
+    if (v2 < 1e-30) return;
+    double gamma = 1./sqrt(1. - v2);
+    double vp = vx*px + vy*py + vz*pz;
+    double coef = (gamma - 1.)*vp/v2 + gamma*E;
+    E = gamma*(E + vp);
+    px += coef*vx;
+    py += coef*vy;
+    pz += coef*vz;
+}
+
+}  // namespace
+
+
+int particle_decay::find_index(int monval) const {
+    auto it = table_index_.find(monval);
+    return it == table_index_.end() ? -1 : it->second;
+}
+
+
+//! Decays through the strong interaction: its mass can be sampled when it
+//! is a daughter.  Widths below 0.1 MeV are electromagnetic or weak decays
+//! (pi0, eta, Sigma0: eV to keV), kept at their pole masses.
+bool particle_decay::is_broad(int idx) const {
+    return (resonance_table[idx]->stable == 0
+            && resonance_table[idx]->width > kBroadWidth);
+}
+
+
+//! The lowest mass a broad daughter may be given: the lowest at which every
+//! one of its own decay channels is still reachable, so that a daughter
+//! below its pole keeps the branching ratios of the table; never above its
+//! pole mass.  Narrow and stable particles: their pole masses.
+double particle_decay::compute_lowest_mass(int idx, vector<int> &state) {
+    if (state[idx] == 2) return lowest_mass_[idx];
+    const particle_info *info = resonance_table[idx];
+    const double pole = static_cast<float>(info->mass);
+    if (state[idx] == 1) return pole;  // a loop in the decay chains
+    if (!is_broad(idx)) {
+        lowest_mass_[idx] = pole;
+        state[idx] = 2;
+        return pole;
+    }
+    state[idx] = 1;
+    double lowest = 0.;
+    for (int j = 0; j < info->decays; j++) {
+        const decay_channel_info *ch = info->decay_channels[j];
+        int n = std::abs(ch->decay_Npart);
+        if (n < 2 || ch->branching_ratio <= 0.) continue;
+        double sum = 0.;
+        for (int k = 0; k < n; k++) {
+            int d = find_index(ch->decay_part[k]);
+            if (d < 0) continue;  // reported by prepare_channel_kinematics
+            sum += compute_lowest_mass(d, state);
+        }
+        lowest = std::max(lowest, sum);
+    }
+    lowest = std::min(lowest, pole);
+    lowest_mass_[idx] = lowest;
+    state[idx] = 2;
+    return lowest;
+}
+
+
+void particle_decay::prepare_channel_kinematics() {
+    const int ntable = resonance_table.size();
+    table_index_.clear();
+    for (int i = 0; i < ntable; i++) {
+        // the first entry wins, as in the linear searches
+        table_index_.emplace(resonance_table[i]->monval, i);
+    }
+    lowest_mass_.assign(resonance_table.size(), 0.);
+    vector<int> state(resonance_table.size(), 0);
+    for (int i = 0; i < ntable; i++) compute_lowest_mass(i, state);
+
+    channel_kinematics_.assign(resonance_table.size(),
+                               vector<ChannelKinematics>());
+    for (int i = 0; i < ntable; i++) {
+        const particle_info *info = resonance_table[i];
+        if (info->stable == 1) continue;
+        for (int j = 0; j < info->decays; j++) {
+            const decay_channel_info *ch = info->decay_channels[j];
+            ChannelKinematics kin;
+            kin.threshold_pole = 0.;
+            kin.threshold_min = 0.;
+            kin.has_broad_daughter = false;
+            int n = std::abs(ch->decay_Npart);
+            if (n > 5) {
+                cout << "[Error] particle_decay: " << info->monval
+                     << " has a channel with " << n << " daughters" << endl;
+                exit(1);
+            }
+            for (int k = 0; k < n; k++) {
+                int d = find_index(ch->decay_part[k]);
+                if (d < 0) {
+                    if (ch->branching_ratio > 0. && n > 1) {
+                        cout << "[Error] particle_decay: daughter "
+                             << ch->decay_part[k] << " of " << info->monval
+                             << " is not in the particle table" << endl;
+                        exit(1);
+                    }
+                    continue;
+                }
+                kin.daughter_index.push_back(d);
+                // float, as in iSS_Hadron and the decay routines
+                kin.threshold_pole += static_cast<float>(
+                                            resonance_table[d]->mass);
+                // as the lower limits in sample_daughter_masses()
+                kin.threshold_min += (is_broad(d)
+                    ? lowest_mass_[d] + kMassMargin
+                    : static_cast<float>(resonance_table[d]->mass));
+                if (is_broad(d)) kin.has_broad_daughter = true;
+            }
+            channel_kinematics_[i].push_back(kin);
         }
     }
+}
+
+
+//! Masses for the daughters of a channel that is closed at their pole
+//! masses: every broad daughter gets a mass from its (non-relativistic)
+//! Breit-Wigner distribution, truncated below at compute_lowest_mass(), and
+//! the set is accepted when the decay is open.  This is the Breit-Wigner
+//! tail through which the channel is reached; stable and narrow daughters
+//! keep their pole masses.
+void particle_decay::sample_daughter_masses(double M,
+        const ChannelKinematics &channel, vector<double> &masses) {
+    const int n = masses.size();
+    const double M_top = M - kMassMargin;
+    vector<double> lo(n), hi(n);
+    double sum_lo = 0.;
+    for (int k = 0; k < n; k++) {
+        int d = channel.daughter_index[k];
+        lo[k] = is_broad(d) ? lowest_mass_[d] + kMassMargin : masses[k];
+        sum_lo += lo[k];
+    }
+    for (int k = 0; k < n; k++) hi[k] = M_top - (sum_lo - lo[k]);
+    vector<double> trial(masses);
+    for (int itry = 0; itry < 100000; itry++) {
+        double sum = 0.;
+        for (int k = 0; k < n; k++) {
+            int d = channel.daughter_index[k];
+            if (is_broad(d)) {
+                double m0 = resonance_table[d]->mass;
+                double half_width = 0.5*resonance_table[d]->width;
+                double a = atan2(lo[k] - m0, half_width);
+                double b = atan2(hi[k] - m0, half_width);
+                double theta = a + (b - a)*ran_gen_ptr->rand_uniform();
+                trial[k] = std::min(std::max(m0 + half_width*tan(theta),
+                                             lo[k]), hi[k]);
+            }
+            sum += static_cast<float>(trial[k]);
+        }
+        if (sum < M_top) {
+            masses = trial;
+            return;
+        }
+    }
+    // the allowed region is far in the tails: share the energy above the
+    // lowest masses equally among the unstable daughters
+    n_mass_fallback_++;
+    int n_broad = 0;
+    for (int k = 0; k < n; k++)
+        if (is_broad(channel.daughter_index[k])) n_broad++;
+    for (int k = 0; k < n; k++) {
+        if (is_broad(channel.daughter_index[k])) {
+            masses[k] = lo[k] + 0.5*(M_top - sum_lo)/n_broad;
+        } else {
+            masses[k] = lo[k];
+        }
+    }
+}
+
+
+//! Decays a resonance into one of its channels.  The channel is drawn with
+//! the probabilities of the table's branching ratios, normalised over the
+//! channels the mother can reach: those open at the daughters' pole masses
+//! and those that open when its unstable daughters take masses below their
+//! poles (sample_daughter_masses()).  A channel that neither reaches is
+//! skipped, and its share goes to the others.  A negative number of
+//! daughters in the table (the UrQMD-derived lists use it to mark channels
+//! closed at the pole masses) is read as its absolute value.  Channels with
+//! two and three daughters use the original routines and random-number
+//! sequence; four and five use perform_n_body_decay().
+void particle_decay::perform_decays(
+            iSS_Hadron *mother, vector<iSS_Hadron>* daughter_list) {
+    const int idx = find_index(mother->pid);
+    if (idx < 0) {
+        cout << "[Error] particle_decay::perform_decays: particle "
+             << mother->pid << " is not in the particle table" << endl;
+        exit(1);
+    }
+    const particle_info *mother_decay_info = resonance_table[idx];
     if (mother_decay_info->stable == 1) {
         // the particle is a stable particle
         daughter_list->push_back(*mother);
         return;
     }
-    int N_decay_channel = mother_decay_info->decays;
-    double random_local = ran_gen_ptr->rand_uniform();
-    double cumulated_branching_ratio = 0.0;
-    decay_channel_info* picked_channel = NULL;
-    for (int i_channel = 0; i_channel < N_decay_channel; i_channel++) {
-        cumulated_branching_ratio += (
-            mother_decay_info->decay_channels[i_channel]->branching_ratio);
-        if (cumulated_branching_ratio > random_local) {
-            picked_channel = mother_decay_info->decay_channels[i_channel];
-            break;
+    const double M = mother->mass;
+    const vector<ChannelKinematics> &kin = channel_kinematics_[idx];
+    const int N_decay_channel = mother_decay_info->decays;
+    vector<double> weight(N_decay_channel, 0.);
+    double total = 0.;
+    for (int i = 0; i < N_decay_channel; i++) {
+        const decay_channel_info *ch = mother_decay_info->decay_channels[i];
+        if (std::abs(ch->decay_Npart) < 2) continue;
+        bool reachable = (M >= kin[i].threshold_pole
+                          || (kin[i].has_broad_daughter
+                              && M - kMassMargin > kin[i].threshold_min));
+        if (reachable) {
+            weight[i] = ch->branching_ratio;
+            total += weight[i];
         }
     }
-    int N_decay_part = picked_channel->decay_Npart;
+    if (total <= 0.) {
+        n_unreachable_++;
+        daughter_list->push_back(*mother);
+        return;
+    }
+    double target = ran_gen_ptr->rand_uniform();
+    if (std::abs(total - 1.) > 1e-12) target *= total;
+    int picked = -1;
+    double cumulated_branching_ratio = 0.;
+    for (int i = 0; i < N_decay_channel; i++) {
+        if (weight[i] <= 0.) continue;
+        picked = i;  // the last reachable channel takes rounding leftovers
+        cumulated_branching_ratio += weight[i];
+        if (cumulated_branching_ratio > target) break;
+    }
+    const decay_channel_info *picked_channel = (
+                                mother_decay_info->decay_channels[picked]);
+    const ChannelKinematics &channel = kin[picked];
+    const int N_decay_part = std::abs(picked_channel->decay_Npart);
+    vector<double> masses(N_decay_part);
+    for (int k = 0; k < N_decay_part; k++) {
+        masses[k] = static_cast<float>(
+                        resonance_table[channel.daughter_index[k]]->mass);
+    }
+    if (M < channel.threshold_pole) {
+        sample_daughter_masses(M, channel, masses);
+    }
+    vector<iSS_Hadron> daughters(N_decay_part);
+    for (int k = 0; k < N_decay_part; k++) {
+        daughters[k].pid = picked_channel->decay_part[k];
+        daughters[k].mass = masses[k];
+    }
     if (N_decay_part == 2) {
-        iSS_Hadron *daughter1 = new iSS_Hadron;
-        iSS_Hadron *daughter2 = new iSS_Hadron;
-        int decay_part1_monval = picked_channel->decay_part[0];
-        int decay_part2_monval = picked_channel->decay_part[1];
-        daughter1->pid = decay_part1_monval;
-        daughter2->pid = decay_part2_monval;
-        daughter1->mass = get_particle_mass(decay_part1_monval);
-        daughter2->mass = get_particle_mass(decay_part2_monval);
-        perform_two_body_decay(mother, daughter1, daughter2);
-        daughter_list->push_back(*daughter1);
-        daughter_list->push_back(*daughter2);
-        delete daughter1;
-        delete daughter2;
+        perform_two_body_decay(mother, &daughters[0], &daughters[1]);
     } else if (N_decay_part == 3) {
-        iSS_Hadron *daughter1 = new iSS_Hadron;
-        iSS_Hadron *daughter2 = new iSS_Hadron;
-        iSS_Hadron *daughter3 = new iSS_Hadron;
-        int decay_part1_monval = picked_channel->decay_part[0];
-        int decay_part2_monval = picked_channel->decay_part[1];
-        int decay_part3_monval = picked_channel->decay_part[2];
-        daughter1->pid = decay_part1_monval;
-        daughter2->pid = decay_part2_monval;
-        daughter3->pid = decay_part3_monval;
-        daughter1->mass = get_particle_mass(decay_part1_monval);
-        daughter2->mass = get_particle_mass(decay_part2_monval);
-        daughter3->mass = get_particle_mass(decay_part3_monval);
-        perform_three_body_decay(mother, daughter1, daughter2, daughter3);
-        daughter_list->push_back(*daughter1);
-        daughter_list->push_back(*daughter2);
-        daughter_list->push_back(*daughter3);
-        delete daughter1;
-        delete daughter2;
-        delete daughter3;
+        perform_three_body_decay(mother, &daughters[0], &daughters[1],
+                                 &daughters[2]);
+    } else {
+        perform_n_body_decay(mother, daughters);
+    }
+    for (int k = 0; k < N_decay_part; k++) {
+        daughter_list->push_back(daughters[k]);
+    }
+}
+
+
+//! Uniform n-body phase space by the Raubold-Lynch method (GENBOD, as in
+//! ROOT's TGenPhaseSpace): the invariant masses M_k of the first k
+//! daughters are drawn from ordered uniform numbers and accepted with
+//! probability prod_k p*(M_k -> M_{k-1} m_k) over its maximum; each step is
+//! a two-body decay isotropic in the rest frame of M_k.  The daughters
+//! share the mother's decay point, as in the two- and three-body routines.
+void particle_decay::perform_n_body_decay(iSS_Hadron *mother,
+                                          vector<iSS_Hadron> &daughters) {
+    const int n = daughters.size();
+    const double M = mother->mass;
+    vector<double> m(n);
+    double m_sum = 0.;
+    for (int k = 0; k < n; k++) {
+        m[k] = daughters[k].mass;
+        m_sum += m[k];
+    }
+    if (M <= m_sum) {
+        cout << "Error:particle_decay::perform_n_body_decay: "
+             << "the decay of " << mother->pid << " (M = " << M
+             << ") into " << n << " daughters of total mass " << m_sum
+             << " is closed" << endl;
+        exit(1);
+    }
+    const double T = M - m_sum;
+    // largest possible weight
+    double w_max = 1.;
+    double e_min = 0., e_max = T + m[0];
+    for (int k = 1; k < n; k++) {
+        e_min += m[k - 1];
+        e_max += m[k];
+        w_max *= breakup_momentum(e_max, e_min, m[k]);
+    }
+    vector<double> r(n), M_inv(n), p_star(n);
+    double w;
+    do {
+        r[0] = 0.;
+        r[n - 1] = 1.;
+        for (int k = 1; k < n - 1; k++) r[k] = ran_gen_ptr->rand_uniform();
+        std::sort(r.begin() + 1, r.end() - 1);
+        double sum = 0.;
+        for (int k = 0; k < n; k++) {
+            sum += m[k];
+            M_inv[k] = r[k]*T + sum;
+        }
+        w = 1.;
+        for (int k = 1; k < n; k++) {
+            p_star[k] = breakup_momentum(M_inv[k], M_inv[k - 1], m[k]);
+            w *= p_star[k];
+        }
+    } while (ran_gen_ptr->rand_uniform()*w_max > w);
+
+    // build up the daughters in the rest frame of the first k + 1 of them
+    vector<double> E(n), px(n), py(n), pz(n);
+    for (int k = 1; k < n; k++) {
+        double cos_theta = 2.*ran_gen_ptr->rand_uniform() - 1.;
+        double sin_theta = sqrt(1. - cos_theta*cos_theta);
+        double phi = 2.*M_PI*ran_gen_ptr->rand_uniform();
+        double ux = sin_theta*cos(phi);
+        double uy = sin_theta*sin(phi);
+        double uz = cos_theta;
+        double p = p_star[k];
+        if (k == 1) {
+            E[0] = sqrt(p*p + m[0]*m[0]);
+            px[0] = -p*ux;
+            py[0] = -p*uy;
+            pz[0] = -p*uz;
+        } else {
+            // daughters 0..k-1 move together against daughter k
+            double E_sub = sqrt(p*p + M_inv[k - 1]*M_inv[k - 1]);
+            double vx = -p*ux/E_sub, vy = -p*uy/E_sub, vz = -p*uz/E_sub;
+            for (int i = 0; i < k; i++) boost(vx, vy, vz, E[i], px[i], py[i],
+                                              pz[i]);
+        }
+        E[k] = sqrt(p*p + m[k]*m[k]);
+        px[k] = p*ux;
+        py[k] = p*uy;
+        pz[k] = p*uz;
+    }
+
+    double life_time = 1e10;
+    double M_width = get_particle_width(mother);
+    if (M_width > 1e-10) {
+        double tau = mother->E/M*1./M_width;
+        life_time = -tau*log(ran_gen_ptr->rand_uniform())*0.19733;  // fm
+    }
+    double vx = mother->px/mother->E;
+    double vy = mother->py/mother->E;
+    double vz = mother->pz/mother->E;
+    for (int k = 0; k < n; k++) {
+        boost(vx, vy, vz, E[k], px[k], py[k], pz[k]);
+        daughters[k].E = E[k];
+        daughters[k].px = px[k];
+        daughters[k].py = py[k];
+        daughters[k].pz = pz[k];
+        daughters[k].t = mother->t + life_time;
+        daughters[k].x = mother->x + vx*life_time;
+        daughters[k].y = mother->y + vy*life_time;
+        daughters[k].z = mother->z + vz*life_time;
     }
 }
 
