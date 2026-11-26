@@ -56,6 +56,7 @@ class FSSW {
     int iEoS_MUSIC_;
 
     double deltaf_max_ratio_;
+    double deltaf_envelope_;  // 1 + deltaf_max_ratio_, or 1 without delta f
     double bulk_pressure_for_deltaf(double bulk_pressure) const;
     double regulate_deltaf(double deltaf) const;
     double integrate_bulk_deltaf(const particle_info &particle, double mu,

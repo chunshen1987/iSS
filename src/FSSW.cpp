@@ -102,6 +102,12 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
         INCLUDE_BULK_DELTAF = false;
         INCLUDE_DIFFUSION_DELTAF = false;
     }
+    // bound on 1 + delta f used by the momentum rejection sampler
+    deltaf_envelope_ = 1.;
+    if (INCLUDE_SHEAR_DELTAF || INCLUDE_BULK_DELTAF
+            || INCLUDE_DIFFUSION_DELTAF) {
+        deltaf_envelope_ += deltaf_max_ratio_;
+    }
 
     NEoS_deltaf_kind_ = -1;
     if (INCLUDE_BULK_DELTAF || INCLUDE_SHEAR_DELTAF) {
@@ -2050,10 +2056,25 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
     const double deltaf_prefactor = (
                             1.0/(2.0*Tdec*Tdec*(surf->Edec + surf->Pdec)));
     const double prefactor_qmu = surf->Bn/(surf->Edec + surf->Pdec);
-    const double dsigam_fac = (std::abs(surf->da_mu_LRF[0])
-                            + sqrt(  surf->da_mu_LRF[1]*surf->da_mu_LRF[1]
-                                   + surf->da_mu_LRF[2]*surf->da_mu_LRF[2]
-                                   + surf->da_mu_LRF[3]*surf->da_mu_LRF[3]));
+
+    // Cooper-Frye weight p^mu dsigma_mu/p^0 = a + v b cos(theta) with
+    // a = dsigma^0, b = |dsigma^i| in the LRF and v = |p|/p^0; negative
+    // fluxes are cut. Its average over directions is
+    //   h(v) = a                       if v b <= a,
+    //   h(v) = (a + v b)^2/(4 v b)     otherwise,
+    // which grows with v up to h_max = h(1). Sample |p| from f0, keep it
+    // with probability h(v)/h_max (always for an LRF timelike cell), then
+    // draw the direction against the bound a + v b. This samples the cut
+    // Cooper-Frye weight exactly without redrawing |p| for each rejected
+    // direction.
+    const double dsig0 = surf->da_mu_LRF[0];
+    const double dsig_vec = sqrt(  surf->da_mu_LRF[1]*surf->da_mu_LRF[1]
+                                 + surf->da_mu_LRF[2]*surf->da_mu_LRF[2]
+                                 + surf->da_mu_LRF[3]*surf->da_mu_LRF[3]);
+    if (!(dsig0 + dsig_vec > 0.)) return(0);
+    const double h_max = (dsig_vec > dsig0
+        ? (dsig0 + dsig_vec)*(dsig0 + dsig_vec)/(4.*dsig_vec) : dsig0);
+
     int tries = 1;
     const int maximum_impatience = 5000;
     while (tries < maximum_impatience) {
@@ -2061,21 +2082,37 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         // the rate is calculated
         // Basically it is "just Cooper-Frye"
 
-        double p_mag = momentum_sampler_ptr_->Sample_a_momentum(mass, Tdec, mu,
-                                                                sign);
-        double phi_candidate = 2*M_PI*ran_gen_ptr->rand_uniform();
-        double cos_theta = 2.*ran_gen_ptr->rand_uniform() - 1.;
-        double sin_theta = sqrt(1. - cos_theta*cos_theta);
-        double pT_candidate = p_mag*sin_theta;
+        const double p_mag = momentum_sampler_ptr_->Sample_a_momentum(
+                                                    mass, Tdec, mu, sign);
+        if (!(p_mag >= 0.)) {
+            // rounding can make sqrt(E^2 - m^2) NaN; the direction loop
+            // below would never accept it
+            tries++;
+            continue;
+        }
+        const double p0 = sqrt(mass*mass + p_mag*p_mag);
+        const double v_p = p_mag/p0;
+        const double flux_average = (dsig_vec*v_p > dsig0
+            ? (dsig0 + v_p*dsig_vec)*(dsig0 + v_p*dsig_vec)/(4.*v_p*dsig_vec)
+            : dsig0);
+        if (flux_average < h_max
+                && !(ran_gen_ptr->rand_uniform()*h_max < flux_average)) {
+            tries++;
+            continue;
+        }
 
-        double px = pT_candidate*cos(phi_candidate);
-        double py = pT_candidate*sin(phi_candidate);
-
-        double p0 = sqrt(mass*mass + p_mag*p_mag);
-        double pz = p_mag*cos_theta;
-
-        double pdsigma = (  p0*surf->da_mu_LRF[0] + px*surf->da_mu_LRF[1]
-                          + py*surf->da_mu_LRF[2] + pz*surf->da_mu_LRF[3]);
+        const double flux_bound = dsig0 + v_p*dsig_vec;
+        double px, py, pz, flux;
+        do {
+            const double phi_candidate = 2*M_PI*ran_gen_ptr->rand_uniform();
+            const double cos_theta = 2.*ran_gen_ptr->rand_uniform() - 1.;
+            const double pT_candidate = p_mag*sqrt(1. - cos_theta*cos_theta);
+            px = pT_candidate*cos(phi_candidate);
+            py = pT_candidate*sin(phi_candidate);
+            pz = p_mag*cos_theta;
+            flux = (  p0*surf->da_mu_LRF[0] + px*surf->da_mu_LRF[1]
+                    + py*surf->da_mu_LRF[2] + pz*surf->da_mu_LRF[3])/p0;
+        } while (!(ran_gen_ptr->rand_uniform()*flux_bound < flux));
 
         double f0 = 1./(exp((p0 - mu)/Tdec) + sign);
 
@@ -2119,13 +2156,10 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         double deltaf_total = delta_f_shear + delta_f_bulk + delta_f_qmu;
         double deltaf_regulated = regulate_deltaf(deltaf_total);
 
-        double fact1 = pdsigma/p0/dsigam_fac;
-        double fact2 = (1. + deltaf_regulated)/(1. + deltaf_max_ratio_);
-        fact1 = std::max(0., std::min(1., fact1));
-        fact2 = std::max(0., std::min(1., fact2));
-        double accept_prob = fact1*fact2;
+        const double accept_prob = std::max(0., std::min(1.,
+            (1. + deltaf_regulated)/deltaf_envelope_));
 
-        if (ran_gen_ptr->rand_uniform() < accept_prob) {
+        if (accept_prob >= 1. || ran_gen_ptr->rand_uniform() < accept_prob) {
             // accept the sample
             // now we need to boost the momentum to the lab frame
             VecD4 pLRF = {p0, px, py, pz};
