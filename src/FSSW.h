@@ -73,6 +73,12 @@ class FSSW {
     long FO_length;
     const std::vector<FO_surf_LRF> &FOsurf_ptr;
 
+    struct CellFactors {
+        std::vector<double> visCoefficients;
+        double diffusionCoefficient = 1.;
+    };
+    std::vector<CellFactors> cellFactors_;
+
     inline long determine_number_to_sample(
                     double dN, int model=1, double para1=0);
 

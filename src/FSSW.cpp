@@ -232,6 +232,36 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
             table_path_ + "/deltaf_tables/Coefficients_RTA_diffusion.dat");
     }
 
+    // Yields and sampled momenta use the same coefficients for each cell.
+    cellFactors_.resize(FO_length);
+    for (long l = 0; l < FO_length; ++l) {
+        const auto &surf = FOsurf_ptr[l];
+        auto &factors = cellFactors_[l];
+        auto &visCoefficients = factors.visCoefficients;
+        if (iEoS_MUSIC_ == 20) {
+            if (NEoS_deltaf_kind_ >= 0) {
+                visCoefficients = surf.visCoeffs;
+            }
+        } else if (NEoS_deltaf_kind_ == 1) {
+            getCENEOSBQSCoefficients(surf.Edec, std::abs(surf.Bn),
+                                     visCoefficients);
+        } else if (NEoS_deltaf_kind_ == 0) {
+            get22momNEOSBQSCoefficients(surf.Edec, surf.Bn, visCoefficients);
+        }
+
+        if (INCLUDE_BULK_DELTAF && NEoS_deltaf_kind_ < 0) {
+            if (bulk_deltaf_kind_ == 11) {
+                getbulkvisCoefficients(surf.Tdec, surf.muB, visCoefficients);
+            } else {
+                getbulkvisCoefficients(surf.Tdec, visCoefficients);
+            }
+        }
+        if (INCLUDE_DIFFUSION_DELTAF) {
+            factors.diffusionCoefficient = get_deltaf_qmu_coeff(surf.Tdec,
+                                                                surf.muB);
+        }
+    }
+
     // create arrays for special functions who are needed to compute 
     // particle yields
     initialize_special_function_arrays();
@@ -641,8 +671,6 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
     Stopwatch sw;
     sw.tic();
 
-    std::vector<double> visCoefficients;
-
     // now loop over all freeze-out cells and particles
     const double unit_factor = 1.0/pow(hbarC, 3);  // unit: convert to unitless
     const bool use_bulk_quadrature = (bulk_deltaf_kind_ == 0
@@ -653,45 +681,23 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
     for (long l = 0; l < FO_length; l++) {
         const FO_surf_LRF* surf = &FOsurf_ptr[l];
         const double temp = surf->Tdec;
-        const double mu_B = surf->muB;
+        const auto &factors = cellFactors_[l];
+        const auto &visCoefficients = factors.visCoefficients;
 
         double dsigma_dot_u = surf->da_mu_LRF[0];
 
         // bulk delta f contribution
-        double bulkPi = 0.0;
-        if (iEoS_MUSIC_ == 20) {
-            if (NEoS_deltaf_kind_ >= 0) {
-                visCoefficients = surf->visCoeffs;
-            }
-        } else {
-            if (NEoS_deltaf_kind_ == 1) {
-                getCENEOSBQSCoefficients(surf->Edec, std::abs(surf->Bn),
-                                         visCoefficients);
-            } else if (NEoS_deltaf_kind_ == 0) {
-                get22momNEOSBQSCoefficients(surf->Edec, surf->Bn,
-                                            visCoefficients);
-            }
-        }
-
-        if (INCLUDE_BULK_DELTAF) {
-            bulkPi = bulk_pressure_for_deltaf(surf->bulkPi);
-            if (bulk_deltaf_kind_ == 11) {
-                getbulkvisCoefficients(temp, mu_B, visCoefficients);
-            } else if (NEoS_deltaf_kind_ < 0) {
-                getbulkvisCoefficients(temp, visCoefficients);
-            }
-        }
+        const double bulkPi = INCLUDE_BULK_DELTAF
+            ? bulk_pressure_for_deltaf(surf->bulkPi) : 0.;
 
         // diffusion delta f
         double dsigma_dot_q = 0.0;
-        double deltaf_qmu_coeff = 1.0;
+        const double deltaf_qmu_coeff = factors.diffusionCoefficient;
         double prefactor_qmu = 0.0;
         if (INCLUDE_DIFFUSION_DELTAF) {
             dsigma_dot_q = (  surf->qmuLRF_x*surf->da_mu_LRF[1]
                             + surf->qmuLRF_y*surf->da_mu_LRF[2]
                             + surf->qmuLRF_z*surf->da_mu_LRF[3]);
-
-            deltaf_qmu_coeff = get_deltaf_qmu_coeff(temp, mu_B);
 
             double rho_B = surf->Bn;
             double Edec = surf->Edec;
@@ -808,12 +814,13 @@ void FSSW::calculate_dN_analytic(
     } else {
         truncate_order = 1.;
     }
+    // Advance lambda^n and (-sign)^(n-1) together with the series.
+    double fugacity = lambda;
+    double theta = 1.;
     // compute the sum in the series
     for (int n = 1; n <= truncate_order; n++) {
         double arg = n*mass*beta;  // argument inside bessel functions
 
-        double theta = pow(-sign, n-1);
-        double fugacity = pow(lambda, n);
         double K_2 = get_special_function_K2(arg);
 
         N_eq += theta/n*fugacity*K_2;
@@ -871,6 +878,10 @@ void FSSW::calculate_dN_analytic(
             }
             I_1_n = -(mbeta*mbeta*mbeta)*I_1_n;
             deltaN_qmu_term2 += n*theta*fugacity*I_1_n;
+        }
+        if (n < truncate_order) {
+            fugacity *= lambda;
+            theta *= -sign;
         }
     }
 
@@ -945,8 +956,6 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
     Stopwatch sw_total;
     sw_total.tic();
     messager_.info(" Function sample_using_dN_dxtdy_4all_particles started...");
-
-    std::vector<double> visCoefficients;
 
     // control variables
     int sampling_model    = paraRdr->getVal("dN_dy_sampling_model");
@@ -1049,40 +1058,9 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 long FO_idx = rand1D.rand();
                 const FO_surf_LRF *surf = &FOsurf_ptr[FO_idx];
 
-                if (iEoS_MUSIC_ == 20) {
-                    if (NEoS_deltaf_kind_ >= 0) {
-                        visCoefficients = surf->visCoeffs;
-                    }
-                } else {
-                    if (NEoS_deltaf_kind_ == 1) {
-                        getCENEOSBQSCoefficients(surf->Edec, std::abs(surf->Bn),
-                                                 visCoefficients);
-                    } else if (NEoS_deltaf_kind_ == 0) {
-                        get22momNEOSBQSCoefficients(surf->Edec, surf->Bn,
-                                                    visCoefficients);
-                    }
-                }
-
-                if (INCLUDE_BULK_DELTAF) {
-                    if (NEoS_deltaf_kind_ == -1) {
-                        if (bulk_deltaf_kind_ == 11) {
-                            // OSU 14-moment
-                            getbulkvisCoefficients(surf->Tdec, surf->muB,
-                                                   visCoefficients);
-                        } else {
-                            // bulk delta f at mu_B = 0
-                            getbulkvisCoefficients(surf->Tdec,
-                                                   visCoefficients);
-                        }
-                    }
-                }
-
-                // diffusion delta f
-                double deltaf_qmu_coeff = 1.0;
-                if (INCLUDE_DIFFUSION_DELTAF) {
-                    deltaf_qmu_coeff = get_deltaf_qmu_coeff(surf->Tdec,
-                                                            surf->muB);
-                }
+                const auto &factors = cellFactors_[FO_idx];
+                const auto &visCoefficients = factors.visCoefficients;
+                const double deltaf_qmu_coeff = factors.diffusionCoefficient;
 
                 // next sample pt and phi
                 double pT, phi, y_minus_eta_s;
