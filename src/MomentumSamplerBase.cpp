@@ -27,8 +27,8 @@ double MomentumSamplerBase::Sample_a_momentum(double m, double T, double mu) {
                      + (mu_tilde*mu_tilde - m_tilde*m_tilde/2.)*CDF_0_mtilde_);
 
     const int idx_max = tb_len_ - 1;
-    double CDF_max = (CDF_2_[idx_max] + 2.*mu_tilde*CDF_1_[idx_max]
-        + (mu_tilde*mu_tilde - m_tilde*m_tilde/2.)*CDF_0_[idx_max] - m_term);
+    double CDF_max = (cdfTable_[idx_max][2] + 2.*mu_tilde*cdfTable_[idx_max][1]
+        + (mu_tilde*mu_tilde - m_tilde*m_tilde/2.)*cdfTable_[idx_max][0] - m_term);
 
     const int idx_min = static_cast<int>(
             (m_tilde - mu_tilde - Etilde_[0])/(Etilde_[1] - Etilde_[0]));
@@ -65,14 +65,14 @@ double MomentumSamplerBase::inverse_CDF(
     int idx_min = idx_0;
     int idx_max = tb_len_ - 1;
     double r_min = (
-        CDF_2_[idx_min] + 2.*mu_tilde*CDF_1_[idx_min]
-        + (mu_tilde*mu_tilde - m_tilde*m_tilde/2.)*CDF_0_[idx_min] - m_term);
+        cdfTable_[idx_min][2] + 2.*mu_tilde*cdfTable_[idx_min][1]
+        + (mu_tilde*mu_tilde - m_tilde*m_tilde/2.)*cdfTable_[idx_min][0] - m_term);
     double r_max = CDF_max;
     while ((idx_max - idx_min) > 1) {
-        int idx_mid = static_cast<int>((idx_max + idx_min)/2 + 0.1);
+        int idx_mid = idx_min + (idx_max - idx_min)/2;
         double r_mid = (
-                CDF_2_[idx_mid] + 2.*mu_tilde*CDF_1_[idx_mid]
-                + (mu_tilde*mu_tilde - m_tilde*m_tilde/2.)*CDF_0_[idx_mid]
+                cdfTable_[idx_mid][2] + 2.*mu_tilde*cdfTable_[idx_mid][1]
+                + (mu_tilde*mu_tilde - m_tilde*m_tilde/2.)*cdfTable_[idx_mid][0]
                 - m_term);
         if (r < r_mid) {
             idx_max = idx_mid;

@@ -11,6 +11,7 @@
 #include <vector>
 #include <array>
 #include <memory>
+#include <unordered_map>
 
 #include "Table.h"
 #include "TableFunction.h"
@@ -68,6 +69,7 @@ class FSSW {
 
     // list for information for all particles
     std::vector<particle_info> particles;
+    std::unordered_map<int, int> particleIndex_;
 
     // list for information for all fluid cells
     long FO_length;
@@ -215,7 +217,7 @@ class FSSW {
         const double mass, const int sign,
         const int baryon, const int strange, const int charge,
         const FO_surf_LRF *surf,
-        const std::vector<double> visCoefficients,
+        const std::vector<double> &visCoefficients,
         const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s, double mu_PCE = 0.);
     void add_one_sampled_particle(

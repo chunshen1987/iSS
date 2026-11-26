@@ -4,6 +4,7 @@
 #define SRC_MomentumSamplerBase_
 
 #include "Random.h"
+#include <array>
 #include <vector>
 #include <memory>
 
@@ -24,9 +25,8 @@ class MomentumSamplerBase {
 
     int tb_len_;
     std::vector<double> Etilde_;
-    std::vector<double> CDF_0_;
-    std::vector<double> CDF_1_;
-    std::vector<double> CDF_2_;
+    // Each inverse CDF probe uses all three terms for the same energy bin.
+    std::vector<std::array<double, 3>> cdfTable_;
 
     MomentumSamplerBase();
     virtual ~MomentumSamplerBase() {};

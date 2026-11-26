@@ -632,15 +632,12 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     long n_negative_flux = 0;
     double flux_total = 0., flux_negative = 0.;
     long line_number = 0;
+    std::vector<float> array_loc(surface_in_binary_ ? fluid_cell_size : 0);
     while (true) {
         FO_surf surf_elem;
         if (surface_in_binary_) {
-            std::vector<float> array_loc(fluid_cell_size, 0.0);
-            for (int ii = 0; ii < fluid_cell_size; ii++) {
-                float temp = 0.;
-                surfdat.read(reinterpret_cast<char*>(&temp), sizeof(float));
-                array_loc[ii] = temp;
-            }
+            if (!surfdat.read(reinterpret_cast<char*>(array_loc.data()),
+                              array_loc.size()*sizeof(float))) break;
             surf_elem.tau = array_loc[0];
             surf_elem.xpt = array_loc[1];
             surf_elem.ypt = array_loc[2];
@@ -687,7 +684,6 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
                 for (int ii = 0; ii < 38; ii++)
                     surf_elem.vorticity_arr.push_back(array_loc[36+ii]);
             }
-            if (!surfdat) break;
         } else {
             if (!read_MUSIC_text_cell(surfdat, filename,
                                       line_number, surf_elem)) break;
@@ -825,15 +821,12 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
     long n_negative_flux = 0;
     double flux_total = 0., flux_negative = 0.;
     long line_number = 0;
+    std::vector<float> array_loc(surface_in_binary_ ? fluid_cell_size : 0);
     while (true) {
         FO_surf surf_elem;
         if (surface_in_binary_) {
-            std::vector<float> array_loc(fluid_cell_size, 0.0);
-            for (int i = 0; i < fluid_cell_size; i++) {
-                float temp = 0.;
-                surfdat.read(reinterpret_cast<char*>(&temp), sizeof(float));
-                array_loc[i] = temp;
-            }
+            if (!surfdat.read(reinterpret_cast<char*>(array_loc.data()),
+                              array_loc.size()*sizeof(float))) break;
             surf_elem.tau = array_loc[0];
             surf_elem.xpt = array_loc[1];
             surf_elem.ypt = array_loc[2];
@@ -880,7 +873,6 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
                 for (int ii = 0; ii < 38; ii++)
                     surf_elem.vorticity_arr.push_back(array_loc[36+ii]);
             }
-            if (!surfdat) break;
         } else {
             if (!read_MUSIC_text_cell(surfdat, filename,
                                       line_number, surf_elem)) break;

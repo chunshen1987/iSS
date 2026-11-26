@@ -59,7 +59,11 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     iEoS_MUSIC_ = paraRdr_in->getVal("iEoS_MUSIC");
 
     particles = particles_in;
-    int Nparticles = particles.size();
+    const int Nparticles = particles.size();
+    particleIndex_.reserve(particles.size());
+    for (int i = 0; i < Nparticles; ++i) {
+        particleIndex_.emplace(particles[i].monval, i);
+    }
 
     //FOsurf_ptr = FOsurf_ptr_in;
     FO_length = FOsurf_ptr.size();
@@ -305,10 +309,10 @@ FSSW::~FSSW() {
         delete [] sf_expint_En;
     }
 
-    for (unsigned int i = 0; i < Hadron_list->size(); i++) {
-        (*Hadron_list)[i]->clear();
+    for (auto *event : *Hadron_list) {
+        delete event;
     }
-    Hadron_list->clear();
+    delete Hadron_list;
 }
 //***************************************************************************
 
@@ -455,7 +459,7 @@ void FSSW::combine_samples_to_OSCAR() {
     while (true) {
         header.getline(line_buffer, 500);
         if (!header.eof()) {
-            oscar << line_buffer << endl;
+            oscar << line_buffer << '\n';
         } else {
             break;
         }
@@ -507,7 +511,7 @@ void FSSW::combine_samples_to_OSCAR() {
             // sub-header for each event
             oscar << setw(10) << sample_idx << "  "
                   << setw(10) << total_number_of_particles << "  "
-                  << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
+                  << setw(8) << 0.0 << "  " << setw(8) << 0.0 << '\n';
 
             // now copy each line from samples file to OSCAR file
             long ipart = 1;
@@ -518,7 +522,7 @@ void FSSW::combine_samples_to_OSCAR() {
                     oscar << setw(10) << ipart << "  "
                           << setw(10) << monval << "  ";
                     samples[m]->getline(line_buffer, 500);
-                    oscar << line_buffer << endl;
+                    oscar << line_buffer << '\n';
                     ipart ++;
                 }
             }
@@ -534,7 +538,7 @@ void FSSW::combine_samples_to_OSCAR() {
                 // sub-header for each event
                 oscar << setw(10) << iev << "  "
                       << setw(10) << total_number_of_particles << "  "
-                      << setw(8) << 0.0 << "  " << setw(8) << 0.0 << endl;
+                      << setw(8) << 0.0 << "  " << setw(8) << 0.0 << '\n';
                 for (int ipart = 0; ipart < total_number_of_particles;
                      ipart++) {
                     oscar << setw(10) << ipart + 1 << "  "
@@ -551,7 +555,7 @@ void FSSW::combine_samples_to_OSCAR() {
                              (*(*Hadron_list)[iev])[ipart].y,
                              (*(*Hadron_list)[iev])[ipart].z,
                              (*(*Hadron_list)[iev])[ipart].t);
-                    oscar << line_buffer << endl;
+                    oscar << line_buffer << '\n';
                 }
             }
         }
@@ -580,16 +584,15 @@ void FSSW::combine_samples_to_OSCAR2013() {
     if (!oscar) iSS_data::sample_output_error(OSCAR_output_filename_, "cannot open file");
 
     // write header first
-    oscar << "#!OSCAR2013 particle_lists t x y z mass p0 px py pz pdg ID charge"
-          << endl;
-    oscar << "# Units: fm fm fm fm GeV GeV GeV GeV GeV none none e" << endl;
+    oscar << "#!OSCAR2013 particle_lists t x y z mass p0 px py pz pdg ID charge" << '\n';
+    oscar << "# Units: fm fm fm fm GeV GeV GeV GeV GeV none none e" << '\n';
 
     const particle_info *particle_info_local = &particles[0];
     for (unsigned int iev = 0; iev < Hadron_list->size(); iev++) {
         const auto &event = *(*Hadron_list)[iev];
         const int total_number_of_particles = event.size();
         oscar << "# event " << iev + 1 << " out "
-              << total_number_of_particles << endl;
+              << total_number_of_particles << '\n';
         for (int ipart = 0; ipart < total_number_of_particles; ipart++) {
             const auto &particle = event[ipart];
             if (particle_info_local->monval != particle.pid) {
@@ -606,9 +609,9 @@ void FSSW::combine_samples_to_OSCAR2013() {
                      particle.mass, particle.E, particle.px, particle.py,
                      particle.pz, particle.pid, ipart + 1,
                      particle_info_local->charge);
-            oscar << line_buffer << endl;
+            oscar << line_buffer << '\n';
         }
-        oscar << "# event " << iev + 1 << " end 0 impact 0.000" << endl;
+        oscar << "# event " << iev + 1 << " end 0 impact 0.000" << '\n';
     }
 
     oscar.close();
@@ -1970,7 +1973,7 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         const double mass, const int sign,
         const int baryon, const int strange, const int charge,
         const FO_surf_LRF *surf,
-        const std::vector<double> visCoefficients,
+        const std::vector<double> &visCoefficients,
         const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s, double mu_PCE
         ) {
@@ -2096,18 +2099,18 @@ void FSSW::add_one_sampled_particle(
     const double z = surf->tau*sinh(eta_s);
     const double t = surf->tau*cosh(eta_s);
 
-    iSS_Hadron *temp_hadron = new iSS_Hadron;
-    temp_hadron->pid        = particle_monval;
-    temp_hadron->mass       = mass;
-    temp_hadron->E          = E;
-    temp_hadron->px         = px;
-    temp_hadron->py         = py;
-    temp_hadron->pz         = p_z;
-    temp_hadron->t          = t;
-    temp_hadron->x          = surf->xpt;
-    temp_hadron->y          = surf->ypt;
-    temp_hadron->z          = z;
-    (*Hadron_list)[repeated_sampling_idx-1]->push_back(*temp_hadron);
+    iSS_Hadron particle;
+    particle.pid = particle_monval;
+    particle.mass = mass;
+    particle.E = E;
+    particle.px = px;
+    particle.py = py;
+    particle.pz = p_z;
+    particle.t = t;
+    particle.x = surf->xpt;
+    particle.y = surf->ypt;
+    particle.z = z;
+    (*Hadron_list)[repeated_sampling_idx-1]->push_back(particle);
 }
 
 
@@ -2210,10 +2213,6 @@ void FSSW::computeAvgTotalEnergyMomentum() {
 
 
 int FSSW::getParticleInfo(const int monval) const {
-    for (unsigned int i = 0; i < particles.size(); i++) {
-        if (monval == particles[i].monval) {
-            return(i);
-        }
-    }
-    return(-1);
+    const auto it = particleIndex_.find(monval);
+    return it == particleIndex_.end() ? -1 : it->second;
 }

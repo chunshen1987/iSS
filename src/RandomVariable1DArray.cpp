@@ -62,8 +62,24 @@ RandomVariable1DArray::~RandomVariable1DArray()
 //----------------------------------------------------------------------
 long RandomVariable1DArray::rand() {
 // Sample according to inverse CDF, which gives a (left, right) pair.
-    return binarySearch(invCDF,
-                        (*invCDF)[0]+(data_sum-(*invCDF)[0]-1e-15)*ran_gen_ptr.lock()->rand_uniform());
+    const double first = (*invCDF)[0];
+    const double value = first + (data_sum - first - 1e-15)
+                                 *ran_gen_ptr.lock()->rand_uniform();
+    if (value < first || value > data_sum) {
+        return binarySearch(invCDF, value);
+    }
+    const auto &cdf = *invCDF;
+    long left = 0;
+    long right = data_size;
+    while (right - left > 1) {
+        const long middle = left + (right - left)/2;
+        if (cdf[middle] < value) {
+            left = middle;
+        } else {
+            right = middle;
+        }
+    }
+    return left;
 }
 
 //----------------------------------------------------------------------

@@ -17,16 +17,14 @@ BosonMomentumSampler::BosonMomentumSampler(
     double dE_tilde = 0.05;
     int npoints = (E_tilde_max - E_tilde_min)/dE_tilde + 1;
     Etilde_.resize(npoints);
-    CDF_0_.resize(npoints);
-    CDF_1_.resize(npoints);
-    CDF_2_.resize(npoints);
+    cdfTable_.resize(npoints);
     tb_len_ = npoints;
     for (int i = 0; i < npoints; i++) {
         const double E_tilde_local = E_tilde_min + i*dE_tilde;
         Etilde_[i] = E_tilde_local;
-        CDF_0_[i] = CDF_0(E_tilde_local);
-        CDF_1_[i] = CDF_1(E_tilde_local);
-        CDF_2_[i] = CDF_2(E_tilde_local);
+        cdfTable_[i][0] = CDF_0(E_tilde_local);
+        cdfTable_[i][1] = CDF_1(E_tilde_local);
+        cdfTable_[i][2] = CDF_2(E_tilde_local);
     }
 }
 
