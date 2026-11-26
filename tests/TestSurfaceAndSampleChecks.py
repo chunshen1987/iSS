@@ -58,6 +58,18 @@ with TemporaryDirectory() as workdir:
     values = [float(value) for value in " ".join(reconstruction.splitlines()[1:]).split()]
     assert len(values) == 51 and all(map(math.isfinite, values)), reconstruction
 
+    cell[4] = "0"
+    surface.write_text(" ".join(cell) + "\n")
+    result = run(directory, "number_of_repeated_sampling=1",
+                 "perform_checks=1", "use_binary_format=0")
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "Sample reconstruction requires a finite, positive first-cell volume" in result.stdout
+
+    (directory / "checkReconstructedTmunu.dat").write_text("0 0 nan\n" * 17)
+    result = subprocess.run([sys.executable, str(ROOT / "tests/TestOutputFiles.py")],
+                            cwd=directory, capture_output=True, text=True, timeout=10)
+    assert result.returncode == 1 and "nonfinite reconstruction data" in result.stderr, result
+
     # VISH2+1 rows contain nB, muB and muS, without nQ, nS or muQ.
     (directory / "decdat2.dat").write_text(
         "10 2 0 0 0 0 0.3 0.1 0.15 0 0 0.05 0 0 0 0 0 0 0\n"

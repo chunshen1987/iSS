@@ -94,10 +94,12 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     deltaf_max_ratio_ = std::max(0., std::min(1., deltaf_max_ratio_));
 
     NEoS_deltaf_kind_ = -1;
-    if (bulk_deltaf_kind_ == 21) {
-        NEoS_deltaf_kind_ = 1;
-    } else if (bulk_deltaf_kind_ == 20) {
-        NEoS_deltaf_kind_ = 0;
+    if (INCLUDE_BULK_DELTAF || INCLUDE_SHEAR_DELTAF) {
+        if (bulk_deltaf_kind_ == 21) {
+            NEoS_deltaf_kind_ = 1;
+        } else if (bulk_deltaf_kind_ == 20) {
+            NEoS_deltaf_kind_ = 0;
+        }
     }
 
     local_charge_conservation = paraRdr->getVal("local_charge_conservation");
@@ -669,6 +671,9 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
 
     // now loop over all freeze-out cells and particles
     const double unit_factor = 1.0/pow(hbarC, 3);  // unit: convert to unitless
+    const bool use_bulk_quadrature = (bulk_deltaf_kind_ == 0
+                                      || (bulk_deltaf_kind_ >= 2
+                                          && bulk_deltaf_kind_ <= 4));
 
     // loop over all the fluid cells
     for (long l = 0; l < FO_length; l++) {
@@ -695,17 +700,10 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         }
 
         if (INCLUDE_BULK_DELTAF) {
-            if (bulk_deltaf_kind_ == 21 || bulk_deltaf_kind_ == 20) {
-                bulkPi = surf->bulkPi;    // GeV/fm^3
-            } else if (bulk_deltaf_kind_ == 11) {
-                bulkPi = surf->bulkPi;    // GeV/fm^3
+            bulkPi = bulk_pressure_for_deltaf(surf->bulkPi);
+            if (bulk_deltaf_kind_ == 11) {
                 getbulkvisCoefficients(temp, mu_B, visCoefficients);
-            } else {
-                if (bulk_deltaf_kind_ == 0) {
-                    bulkPi = surf->bulkPi;        // unit in GeV/fm^3
-                } else {
-                    bulkPi = surf->bulkPi/hbarC;  // unit in fm^-4
-                }
+            } else if (NEoS_deltaf_kind_ < 0) {
                 getbulkvisCoefficients(temp, visCoefficients);
             }
         }
@@ -752,7 +750,11 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
 
         double deltaN_bulk = 0.0;
         if (INCLUDE_BULK_DELTAF) {
-            if (bulk_deltaf_kind_ == 1) {
+            if (use_bulk_quadrature) {
+                deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u
+                               *integrate_bulk_deltaf(*particle, mu, temp,
+                                                      bulkPi, visCoefficients));
+            } else if (bulk_deltaf_kind_ == 1) {
                 deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u
                                *(- bulkPi*visCoefficients[0])
                                *(- visCoefficients[1]*results_ptr[1]
@@ -937,24 +939,26 @@ void FSSW::calculate_dN_analytic(
 }
 
 
-int FSSW::compute_number_of_sampling_needed(
-                                            int number_of_particles_needed) {
+int FSSW::compute_number_of_sampling_needed(double number_of_particles_needed) {
     double dNdy_thermal_pion = 0.;
     calculate_dN_dxtdy_for_one_particle_species(1);  // 1 for thermal pion^+
     for (long l = 0; l < FO_length; l++) {
         dNdy_thermal_pion += dN_dxtdy_for_one_particle_species[l];
     }
-    // particle_info *particle = &particles[1];
-    // cout << "check  Name: " << particle->name
-    //      << ", Monte-carlo index: " << particle->monval
-    //      << ", dN/dy = " << dNdy_thermal_pion << endl;
-    int nev_needed = static_cast<int>(number_of_particles_needed
-                                      /(6.*dNdy_thermal_pion));
-    if (hydro_mode == 2) {
-        nev_needed *= 10;
+    if (!std::isfinite(dNdy_thermal_pion) || dNdy_thermal_pion <= 0.) {
+        messager_.warning("Cannot estimate oversampling from the thermal pion yield. Generating one event.");
+        return 1;
     }
-    nev_needed = std::max(1, std::min(maximumSamplingEvents_, nev_needed));
-    return(nev_needed);
+    if (number_of_particles_needed <= 0.) return 1;
+
+    double nev_needed = std::floor(number_of_particles_needed
+                                   /(6.*dNdy_thermal_pion));
+    if (hydro_mode == 2) {
+        nev_needed *= 10.;
+    }
+    const double bounded_events = std::max(
+        1., std::min(static_cast<double>(maximumSamplingEvents_), nev_needed));
+    return static_cast<int>(bounded_events);
 }
 
 
@@ -977,7 +981,7 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
     int flag_sample_upto_desired_particle_number = paraRdr->getVal(
                                     "sample_upto_desired_particle_number");
     if (flag_sample_upto_desired_particle_number == 1) {
-        long number_of_particles_needed = paraRdr->getVal(
+        const double number_of_particles_needed = paraRdr->getVal(
                                                 "number_of_particles_needed");
         number_of_repeated_sampling = compute_number_of_sampling_needed(
                                                 number_of_particles_needed);
@@ -1673,12 +1677,13 @@ void FSSW::load_deltaf_qmu_coeff_table(string filename) {
 double FSSW::get_deltaf_qmu_coeff(double T, double muB) {
     int idx_T = static_cast<int>((T - delta_qmu_coeff_table_T0)
                                  /delta_qmu_coeff_table_dT);
-    int idx_mu = static_cast<int>((muB - delta_qmu_coeff_table_mu0)
-                                  /delta_qmu_coeff_table_dmu);
+    // The diffusion coefficient is charge-even and tabulated for muB >= 0.
+    const double mu_position = ((std::abs(muB) - delta_qmu_coeff_table_mu0)
+                                /delta_qmu_coeff_table_dmu);
+    int idx_mu = static_cast<int>(mu_position);
     double x_fraction = ((T - delta_qmu_coeff_table_T0)
                          /delta_qmu_coeff_table_dT - idx_T);
-    double y_fraction = ((muB - delta_qmu_coeff_table_mu0)
-                         /delta_qmu_coeff_table_dmu - idx_mu); 
+    double y_fraction = mu_position - idx_mu;
 
     //avoid overflow
     if (idx_mu > deltaf_qmu_coeff_table_length_mu - 2) {
@@ -1894,11 +1899,62 @@ void FSSW::addSpectatorsToHadronList() {
 }
 
 
+double FSSW::bulk_pressure_for_deltaf(double bulk_pressure) const {
+    // The fits for kinds 1 through 4 use pressure in fm^-4.
+    if (bulk_deltaf_kind_ >= 1 && bulk_deltaf_kind_ <= 4) {
+        return bulk_pressure/hbarC;
+    }
+    return bulk_pressure;  // GeV/fm^3
+}
+
+
+double FSSW::regulate_deltaf(double deltaf) const {
+    return deltaf*std::min(1., deltaf_max_ratio_/(std::abs(deltaf) + 1e-16));
+}
+
+
+double FSSW::integrate_bulk_deltaf(const particle_info &particle, double mu,
+                                  double temperature, double bulk_pressure,
+                                  const std::vector<double> &coefficients) {
+    if (bulk_pressure == 0. || deltaf_max_ratio_ == 0.) return 0.;
+
+    // In the local rest frame the bulk correction is isotropic. Integrate
+    // p^2 dp f0 delta_f_bulk using q = sqrt((E - m)/T), which resolves the
+    // threshold at p = 0. The tail above E - m = 40 T is negligible.
+    static const auto quadrature = [] {
+        std::array<std::array<double, 128>, 2> rule;
+        GaussLegendre_getWeight(rule[0].size(), rule[0].data(), rule[1].data(),
+                                0., std::sqrt(40.), 1);
+        return rule;
+    }();
+
+    const double mass = particle.mass;
+    const double gap_over_T = (mass - std::min(mu, mass))/temperature;
+    double integral = 0.;
+    for (std::size_t i = 0; i < quadrature[0].size(); ++i) {
+        const double q = quadrature[0][i];
+        const double kinetic_energy = temperature*q*q;
+        const double energy = mass + kinetic_energy;
+        const double momentum = std::sqrt(kinetic_energy*(energy + mass));
+        const double exponent = q*q + gap_over_T;
+        const double f0 = particle.sign == -1 ? 1./std::expm1(exponent)
+                                             : 1./(std::exp(exponent) + particle.sign);
+        const double deltaf = get_deltaf_bulk(
+            mass, energy, bulk_pressure, temperature, particle.sign,
+            particle.baryon, particle.strange, particle.charge, f0, coefficients);
+        const double measure = 2.*temperature*q*energy*momentum;
+        // Apply the cap to bulk here. The diffusion yield is added separately.
+        integral += quadrature[1][i]*measure*f0*regulate_deltaf(deltaf);
+    }
+    return integral;
+}
+
+
 double FSSW::get_deltaf_bulk(
         const double mass, const double pdotu, const double bulkPi,
         const double Tdec, const int sign, const int baryon,
         const int strange, const int charge,
-        const double f0, const std::vector<double> bulkvisCoefficients) {
+        const double f0, const std::vector<double> &bulkvisCoefficients) {
     if (!INCLUDE_BULK_DELTAF) return(0.0);
     double delta_f_bulk = 0.0;
     if (bulk_deltaf_kind_ == 0) {
@@ -2017,12 +2073,7 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         // delta f for bulk viscosity
         double delta_f_bulk = 0.;
         if (INCLUDE_BULK_DELTAF) {
-            double bulkPi = 0.;
-            if (bulk_deltaf_kind_ == 1) {
-                bulkPi = surf->bulkPi/hbarC;   // 1/fm^4
-            } else {
-                bulkPi = surf->bulkPi;         // GeV/fm^3
-            }
+            const double bulkPi = bulk_pressure_for_deltaf(surf->bulkPi);
             delta_f_bulk = get_deltaf_bulk(mass, p0, bulkPi, Tdec, sign,
                                            baryon, strange, charge,
                                            f0, visCoefficients);
@@ -2038,8 +2089,7 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         }
 
         double deltaf_total = delta_f_shear + delta_f_bulk + delta_f_qmu;
-        double deltaf_regulated = deltaf_total*(
-            std::min(1., deltaf_max_ratio_/(std::abs(deltaf_total) + 1e-16)));
+        double deltaf_regulated = regulate_deltaf(deltaf_total);
 
         double fact1 = pdsigma/p0/dsigam_fac;
         double fact2 = (1. + deltaf_regulated)/(1. + deltaf_max_ratio_);

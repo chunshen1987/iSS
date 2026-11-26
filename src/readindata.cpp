@@ -151,13 +151,17 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
         regulateEOS_ = true;
         if (iEOS_MUSIC_ == 20) {
             eos_4d_.initialize_eos();
-            int deltaf_kind = paraRdr->getVal("bulk_deltaf_kind");
-            if (deltaf_kind == 21) {
-                eos_4d_.initialize_dfCoeffs(1);
-            } else if (deltaf_kind == 20) {
-                eos_4d_.initialize_dfCoeffs(0);
+            if (paraRdr->exist("MC_sampling")
+                    && paraRdr->getVal("MC_sampling") == 4
+                    && (paraRdr->getVal("include_deltaf_shear", 1) != 0
+                        || paraRdr->getVal("include_deltaf_bulk", 1) != 0)) {
+                const int deltaf_kind = paraRdr->getVal("bulk_deltaf_kind", 20);
+                if (deltaf_kind == 21) {
+                    eos_4d_.initialize_dfCoeffs(1);
+                } else if (deltaf_kind == 20) {
+                    eos_4d_.initialize_dfCoeffs(0);
+                }
             }
-            //read_in_HRG_EOS_binary();
         } else {
             read_in_HRG_EOS();
         }

@@ -667,6 +667,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
     for (int k=0; k<y_minus_eta_tab_length; k++) {
         delta_y_minus_eta_tab[k] = y_minus_eta_tab->get(2,k+1);
     }
+    const int rapidity_bins = boost_invariant_ ? y_minus_eta_tab_length : 1;
 
     //---------------------------
     // THE main summation loop
@@ -753,11 +754,15 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
                     prefactor_qmu = rho_B/(Edec + Pdec);  // 1/GeV
                 }
 
-                for (int k=0; k<y_minus_eta_tab_length; k++) {
-                    double delta_eta = delta_y_minus_eta_tab[k];
-
-                    double pt = mT*hypertrig_y_minus_eta_table[k][0];
-                    double pz = mT*hypertrig_y_minus_eta_table[k][1];
+                for (int k=0; k<rapidity_bins; k++) {
+                    // A 3+1D cell already represents a surface element in eta.
+                    // Evaluate it at y = 0, so y - eta_s = -eta_s.
+                    const double delta_eta = boost_invariant_
+                        ? delta_y_minus_eta_tab[k] : 1.;
+                    const double pt = mT*(boost_invariant_
+                        ? hypertrig_y_minus_eta_table[k][0] : surf->cosh_eta);
+                    const double pz = mT*(boost_invariant_
+                        ? hypertrig_y_minus_eta_table[k][1] : -surf->sinh_eta);
 
                     double pdotu = pt*gammaT - px*ux - py*uy - pz*tau_ueta;
                     double expon = (pdotu - mu) / Tdec;
@@ -2546,6 +2551,10 @@ void EmissionFunctionArray::shell() {
 
     int perform_sampling_during_calculation = 0;
     if (MC_sampling == 3) {
+        if (!boost_invariant_) {
+            messager.error("MC_sampling = 3 requires a boost-invariant surface");
+            exit(1);
+        }
         calculate_vn = 1;
         perform_sampling_during_calculation = 1;
     }
@@ -3788,12 +3797,13 @@ void EmissionFunctionArray::load_deltaf_qmu_coeff_table(string filename) {
 double EmissionFunctionArray::get_deltaf_qmu_coeff(double T, double muB) {
     int idx_T = static_cast<int>((T - delta_qmu_coeff_table_T0)
                                  /delta_qmu_coeff_table_dT);
-    int idx_mu = static_cast<int>((muB - delta_qmu_coeff_table_mu0)
-                                  /delta_qmu_coeff_table_dmu);
+    // The diffusion coefficient is charge-even and tabulated for muB >= 0.
+    const double mu_position = ((std::abs(muB) - delta_qmu_coeff_table_mu0)
+                                /delta_qmu_coeff_table_dmu);
+    int idx_mu = static_cast<int>(mu_position);
     double x_fraction = ((T - delta_qmu_coeff_table_T0)
                          /delta_qmu_coeff_table_dT - idx_T);
-    double y_fraction = ((muB - delta_qmu_coeff_table_mu0)
-                         /delta_qmu_coeff_table_dmu - idx_mu); 
+    double y_fraction = mu_position - idx_mu;
 
     //avoid overflow
     if (idx_mu > deltaf_qmu_coeff_table_length_mu - 2) {

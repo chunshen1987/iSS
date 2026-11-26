@@ -65,6 +65,10 @@ int iSS::shell() {
             }
         }
     }
+    if (sampling_mode == 3 && paraRdr_ptr->getVal("hydro_mode") == 2) {
+        messager.error("MC_sampling = 3 requires a boost-invariant surface");
+        exit(1);
+    }
 
     int status = read_in_FO_surface();
     if (status != 0) {
@@ -355,8 +359,12 @@ void iSS::compute_spin_polarization() {
 void iSS::construct_Tmunu_from_particle_samples() {
     if (!has_samples_for_checks()) return;
     messager.info("Constructing the fluid cell T^{mu nu} from samples ...");
-    double volume = (FOsurf_LRF_array_[0].da_mu_LRF[0]
-                     /FOsurf_LRF_array_[0].u_tz[0]);
+    const double volume = (FOsurf_LRF_array_[0].da_mu_LRF[0]
+                           /FOsurf_LRF_array_[0].u_tz[0]);
+    if (!std::isfinite(volume) || volume <= 0.) {
+        messager.error("Sample reconstruction requires a finite, positive first-cell volume");
+        exit(1);
+    }
     int monval_cached = 0;
     std::array<int, 3> Qparticle = {0, 0, 0};
     double T[4][4];

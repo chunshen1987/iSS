@@ -51,6 +51,11 @@ class FSSW {
     int iEoS_MUSIC_;
 
     double deltaf_max_ratio_;
+    double bulk_pressure_for_deltaf(double bulk_pressure) const;
+    double regulate_deltaf(double deltaf) const;
+    double integrate_bulk_deltaf(const particle_info &particle, double mu,
+                                 double temperature, double bulk_pressure,
+                                 const std::vector<double> &coefficients);
 
     // dN/(dxt dy) for one particle species
     std::vector<double> dN_dxtdy_for_one_particle_species;
@@ -194,12 +199,12 @@ class FSSW {
 
     void perform_resonance_feed_down(
                 std::vector< std::vector<iSS_Hadron>* >* input_particle_list);
-    int compute_number_of_sampling_needed(int number_of_particles_needed);
+    int compute_number_of_sampling_needed(double number_of_particles_needed);
     double get_deltaf_bulk(
         const double mass, const double pdotu, const double bulkPi,
         const double Tdec, const int sign, const int baryon,
         const int strange, const int charge,
-        const double f0, const std::vector<double> bulkvisCoefficients);
+        const double f0, const std::vector<double> &bulkvisCoefficients);
     int sample_momemtum_from_a_fluid_cell(
         const double mass, const int sign,
         const int baryon, const int strange, const int charge,

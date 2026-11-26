@@ -16,10 +16,11 @@ def pack(values):
     return struct.pack(f"={len(values)}f", *values)
 
 
-def run(directory, kind=1):
+def run(directory, kind=1, *options):
     return subprocess.run(
         [str(EXE), str(ROOT / "iSS_parameters.dat"), ".", "surface.dat",
-         "MC_sampling=0", f"bulk_deltaf_kind={kind}"],
+         "MC_sampling=4", f"bulk_deltaf_kind={kind}",
+         "number_of_repeated_sampling=0", "use_binary_format=0", *options],
         cwd=directory, capture_output=True, text=True, timeout=10,
     )
 
@@ -40,6 +41,7 @@ with TemporaryDirectory() as workdir:
     coefficients.mkdir(parents=True)
     particle_list = "pdg-urqmd_v3.3+.dat"
     (tables / particle_list).symlink_to(ROOT / "iSS_tables" / particle_list)
+    (tables / "chosen_particles_urqmd_v3.3+.dat").write_text("211\n")
     music_input = (ROOT / "tests/music_input_14").read_text()
     (directory / "music_input").write_text(
         music_input.replace("EOS_to_use 14", "EOS_to_use 20")
@@ -68,6 +70,17 @@ with TemporaryDirectory() as workdir:
     temperature.write_bytes(pack(GRID[:-1] + [1.] + [0.15]*16))
     check_error(run(directory), temperature.name, "invalid grid origin")
     temperature.write_bytes(valid_temperature)
+
+    for regulate in (0, 1):
+        result = run(directory, 20, f"regulateEOS={regulate}",
+                     "include_deltaf_bulk=0", "include_deltaf_shear=0")
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert "Read in deltaf Coeffs for EoS 4D" not in result.stdout
+
+    for shear in (0, 1):
+        result = run(directory, 20, f"include_deltaf_bulk={1 - shear}",
+                     f"include_deltaf_shear={shear}")
+        check_error(result, "NEoS4D_22mom_deltafCoeff.bin", "cannot open file")
 
     for kind, name, count in ((20, "22mom", 6), (21, "CE", 3)):
         table = coefficients / f"NEoS4D_{name}_deltafCoeff.bin"
