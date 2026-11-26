@@ -15,6 +15,7 @@ class FermionMomentumSampler : public MomentumSamplerBase {
                            double m0, int trunc_order);
     ~FermionMomentumSampler() {};
 
+    std::array<double, 2> CDF_12(double Etilde) const override;
     double CDF_0(const double Etilde) const;
     double CDF_1(const double Etilde) const;
     double CDF_2(const double Etilde) const;

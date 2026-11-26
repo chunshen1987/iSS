@@ -680,6 +680,15 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
                                       || (bulk_deltaf_kind_ >= 2
                                           && bulk_deltaf_kind_ <= 4));
 
+    const particle_info *particle = &particles[real_particle_idx];
+
+    const int degen = particle->gspin;
+    const int baryon  = particle->baryon;
+    const int strange = particle->strange;
+    const int charge  = particle->charge;
+    const double mass = particle->mass;
+    const double prefactor = degen/(2.*M_PI*M_PI);
+
     // loop over all the fluid cells
     for (long l = 0; l < FO_length; l++) {
         const FO_surf_LRF* surf = &FOsurf_ptr[l];
@@ -708,22 +717,11 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
             prefactor_qmu = rho_B/(Edec + Pdec);  // 1/GeV
         }
 
-        // calculate dN / (dxt dy) for all particles
-        double total_N = 0;
-        const particle_info *particle = &particles[real_particle_idx];
-
-        const int degen = particle->gspin;
-        const int baryon  = particle->baryon;
-        const int strange = particle->strange;
-        const int charge  = particle->charge;
-        const double mass = particle->mass;
         double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
         if (flag_PCE_ == 1) {
             double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
             mu += mu_PCE;
         }
-
-        double prefactor = degen/(2.*M_PI*M_PI);
 
         // calculate dN / (dxt dy)
         std::array<double, 6> results_ptr = {0.0};
@@ -775,7 +773,7 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
                             - baryon*results_ptr[5]));
         }
 
-        total_N = N_eq + deltaN_bulk + deltaN_qmu;
+        const double total_N = N_eq + deltaN_bulk + deltaN_qmu;
 
         dN_dxtdy_for_one_particle_species[l] = std::max(0., total_N);
     }
@@ -809,6 +807,14 @@ void FSSW::calculate_dN_analytic(
     const double mass = particle->mass;
     const double beta = 1./Temperature;
 
+    const bool bulk_ce = INCLUDE_BULK_DELTAF
+        && (bulk_deltaf_kind_ == 1 || bulk_deltaf_kind_ == 21);
+    const bool bulk_moment = INCLUDE_BULK_DELTAF
+        && (bulk_deltaf_kind_ == 11 || bulk_deltaf_kind_ == 20);
+    const int min_bessel_order = bulk_ce || bulk_moment ? 1 : 2;
+    const int max_bessel_order = bulk_moment ? 3 : 2;
+    const double mbeta = mass*beta;
+    std::array<double, sf_expint_truncate_order - 1> expint;
     double lambda = exp(beta*mu);  // fugacity factor
 
     int truncate_order;
@@ -824,7 +830,9 @@ void FSSW::calculate_dN_analytic(
     for (int n = 1; n <= truncate_order; n++) {
         double arg = n*mass*beta;  // argument inside bessel functions
 
-        double K_2 = get_special_function_K2(arg);
+        std::array<double, 3> bessel;
+        interpolate_bessel(arg, min_bessel_order, max_bessel_order, bessel);
+        const double K_2 = bessel[1];
 
         N_eq += theta/n*fugacity*K_2;
         if (std::isnan(N_eq)) {
@@ -838,46 +846,40 @@ void FSSW::calculate_dN_analytic(
             exit(1);
         }
 
-        if (INCLUDE_BULK_DELTAF) {
-            double K_1 = get_special_function_K1(arg);
-            if (bulk_deltaf_kind_ == 1 || bulk_deltaf_kind_ == 21) {
-                // Chapman-Enskog
-                deltaN_bulk_term1 += theta*fugacity*(mass*beta*K_1 + 3*K_2/n);
-                deltaN_bulk_term2 += theta*fugacity*K_1;
-            } else if (bulk_deltaf_kind_ == 11 || bulk_deltaf_kind_ == 20) {
-                // 14-moment/22-moment
-                double K_3 = get_special_function_K3(arg);
-                deltaN_bulk_term1 += theta*fugacity*K_2;  // mass
-                deltaN_bulk_term2 += theta*fugacity*(mass*beta*K_1 + 3*K_2/n);  // E
-                deltaN_bulk_term3 += theta*fugacity*(mass*beta*K_2 + 3*K_3/n);  // E^2
-            }
+        if (bulk_ce) {
+            const double K_1 = bessel[0];
+            deltaN_bulk_term1 += theta*fugacity*(mbeta*K_1 + 3*K_2/n);
+            deltaN_bulk_term2 += theta*fugacity*K_1;
+        } else if (bulk_moment) {
+            const double K_1 = bessel[0];
+            const double K_3 = bessel[2];
+            deltaN_bulk_term1 += theta*fugacity*K_2;
+            deltaN_bulk_term2 += theta*fugacity*(mbeta*K_1 + 3*K_2/n);
+            deltaN_bulk_term3 += theta*fugacity*(mbeta*K_2 + 3*K_3/n);
         }
 
         if (INCLUDE_DIFFUSION_DELTAF) {
             deltaN_qmu_term1 += theta/n*fugacity*K_2;
 
-            std::vector<double> sf_expint_En_ptr(
-                                            sf_expint_truncate_order-1, 0.);
-            get_special_function_En(arg, sf_expint_En_ptr);
-
-            double mbeta = mass*beta;
-            double I_1_n = 0.0;
-            double I_1_1 = exp(-arg)/arg*(2./(arg*arg) + 2./arg - 1./2.);
-            double I_1_2 = 3./8.*sf_expint_En_ptr[0];
-            I_1_n = I_1_1 + I_1_2;
-
-            double double_factorial = 1.;  // record (2k-5)!!
-            double factorial = 2.;         // record k! start with 2!
-            double factor_2_to_k_power = 4.;      // record 2^k start with 2^2
-            for (int k = 3; k <= sf_expint_truncate_order; k++) {
-                double_factorial *= (2*k - 5);
-                factorial *= k;
-                factor_2_to_k_power *= 2;
-
-                double I_1_k = (
-                    3.*double_factorial/factor_2_to_k_power/factorial
-                    *sf_expint_En_ptr[k-2]);
-                I_1_n += I_1_k;
+            fill_expint(arg, expint.data());
+            static const auto factors = [] {
+                std::array<double, sf_expint_truncate_order - 1> weights;
+                weights[0] = 3./8.;
+                double double_factorial = 1.;
+                double factorial = 2.;
+                double power_of_two = 4.;
+                for (int k = 3; k <= sf_expint_truncate_order; ++k) {
+                    double_factorial *= 2*k - 5;
+                    factorial *= k;
+                    power_of_two *= 2.;
+                    weights[k-2] = 3.*double_factorial/power_of_two/factorial;
+                }
+                return weights;
+            }();
+            const double leading = exp(-arg)/arg*(2./(arg*arg) + 2./arg - 1./2.);
+            double I_1_n = leading + factors[0]*expint[0];
+            for (int k = 3; k <= sf_expint_truncate_order; ++k) {
+                I_1_n += factors[k-2]*expint[k-2];
             }
             I_1_n = -(mbeta*mbeta*mbeta)*I_1_n;
             deltaN_qmu_term2 += n*theta*fugacity*I_1_n;
@@ -1677,7 +1679,6 @@ double FSSW::get_deltaf_qmu_coeff(double T, double muB) {
 
 void FSSW::initialize_special_function_arrays() {
     messager_.info("Initializing special function arrays ... ");
-    sf_expint_truncate_order = 10;
     sf_x_min = 0.5;
     sf_x_max = 400;
     sf_dx = 0.05;
@@ -1772,8 +1773,31 @@ double FSSW::get_special_function_K1(double arg) {
 }
 
 
-void FSSW::get_special_function_En(
-                                double arg, std::vector<double> &results) {
+void FSSW::interpolate_bessel(double arg, int first_order, int last_order,
+                              std::array<double, 3> &results) {
+    if (arg < sf_x_min || arg > sf_x_max - sf_dx) {
+        results[1] = get_special_function_K2(arg);
+        if (first_order == 1) results[0] = get_special_function_K1(arg);
+        if (last_order == 3) results[2] = get_special_function_K3(arg);
+        return;
+    }
+
+    const int idx = static_cast<int>((arg - sf_x_min)/sf_dx);
+    const double fraction = (arg - sf_x_min - idx*sf_dx)/sf_dx;
+    const auto *lower = sf_bessel_Kn[idx];
+    const auto *upper = sf_bessel_Kn[idx + 1];
+    for (int i = first_order - 1; i < last_order; ++i) {
+        results[i] = (1. - fraction)*lower[i] + fraction*upper[i];
+    }
+}
+
+
+void FSSW::get_special_function_En(double arg, std::vector<double> &results) {
+    fill_expint(arg, results.data());
+}
+
+
+void FSSW::fill_expint(double arg, double *results) {
     if (arg < sf_x_min || arg > sf_x_max-sf_dx) {
         if (AMOUNT_OF_OUTPUT > 5) {
             cout << "FSSW::get_special_function_En: "

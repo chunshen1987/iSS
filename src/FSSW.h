@@ -25,6 +25,10 @@
 
 class FSSW {
  private:
+    void interpolate_bessel(double arg, int first_order, int last_order,
+                            std::array<double, 3> &results);
+    void fill_expint(double arg, double *results);
+
     int hydro_mode;   // switch for (2+1)-d or (3+1)-d hypersurface
     int flag_PCE_;
 
@@ -121,7 +125,7 @@ class FSSW {
     // arrays to speed up computing particle yield
     double sf_dx, sf_x_min, sf_x_max;
     int sf_tb_length;
-    int sf_expint_truncate_order;
+    static constexpr int sf_expint_truncate_order = 10;
     double** sf_bessel_Kn;
     double** sf_expint_En;
 

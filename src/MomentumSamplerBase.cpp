@@ -12,8 +12,9 @@ MomentumSamplerBase::MomentumSamplerBase() : tol_(1e-8), eps_(1e-16) {}
 void MomentumSamplerBase::update_cache(const double m_minus_mu_tilde) {
     m_minus_mu_tilde_ = m_minus_mu_tilde;
     CDF_0_mtilde_ = CDF_0(m_minus_mu_tilde);
-    CDF_1_mtilde_ = CDF_1(m_minus_mu_tilde);
-    CDF_2_mtilde_ = CDF_2(m_minus_mu_tilde);
+    const auto terms = CDF_12(m_minus_mu_tilde);
+    CDF_1_mtilde_ = terms[0];
+    CDF_2_mtilde_ = terms[1];
 }
 
 
