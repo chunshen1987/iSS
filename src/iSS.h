@@ -12,6 +12,7 @@
 #include "Random.h"
 #include "pretty_ostream.h"
 #include "FSSW.h"
+#include "spin_polarization.h"
 
 class iSS {
  private:
@@ -26,7 +27,6 @@ class iSS {
     std::vector<float> FOsurf_Q_;
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr_;
 
-    int Nparticle;
     int flag_PCE_;
     AfterburnerType afterburner_type_;
 
@@ -36,6 +36,8 @@ class iSS {
 
     std::unique_ptr<EmissionFunctionArray> efa_;
     std::unique_ptr<FSSW> spectra_sampler_;
+
+    std::unique_ptr<SpinPolarization> polarizor;
 
     pretty_ostream messager;
 
@@ -57,6 +59,7 @@ class iSS {
     int shell();
     int read_in_FO_surface();
     int generate_samples();
+    void compute_spin_polarization();
 
     int get_number_of_sampled_events() {
         if (paraRdr_ptr->getVal("MC_sampling") == 4) {

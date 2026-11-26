@@ -9,6 +9,7 @@
 #include "data_struct.h"
 #include "ParameterReader.h"
 #include "pretty_ostream.h"
+#include "eos_4D.h"
 
 class read_FOdata {
  private:
@@ -19,8 +20,12 @@ class read_FOdata {
     const std::string particle_table_path_;
 
     int mode;
-    bool surface_in_binary;
+    bool surface_in_binary_;
+    bool include_vorticity_;
     bool quantum_statistics_;
+    bool regulateEOS_;
+
+    EOS_4D eos_4d_;
 
     // flag to determine whether the EoS is partial chemical equilibrium or not
     int flag_PCE_;
@@ -31,7 +36,8 @@ class read_FOdata {
     int n_eta_skip;
     int iEOS_MUSIC_;
 
-    std::vector<std::vector<double>> HRGEOS_;
+    int fluid_cell_size;
+    std::vector<std::vector<float>> HRGEOS_;
 
     AfterburnerType afterburner_type_;
 
@@ -50,6 +56,7 @@ class read_FOdata {
     int get_number_of_lines_of_binary_surface_file(string filename);
     int get_flag_PCE() {return(flag_PCE_);}
     void read_in_HRG_EOS();
+    void read_in_HRG_EOS_binary();
     void read_in_freeze_out_data(std::vector<FO_surf> &surf_ptr,
                                  std::string surface_filename);
     void read_in_chemical_potentials(std::vector<FO_surf> &surf_ptr,
@@ -76,7 +83,10 @@ class read_FOdata {
     void regulate_surface_cells(std::vector<FO_surf> &surf_ptr);
     void regulate_Wmunu(double u[4], double Wmunu[4][4],
                         double Wmunu_regulated[4][4]);
-    int getValuesFromHRGEOS(double ed, double nB, std::vector<double> &eos);
+    int getValuesFromHRGEOS(const double ed, const double nB,
+                            std::vector<float> &eos);
+    int getValuesFromHRGEOS3D(const double ed, const double nB,
+                              const double nQ, std::vector<float> &eos);
 };
 
 #endif  // SRC_READINDATA_H_

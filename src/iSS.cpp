@@ -45,12 +45,20 @@ int iSS::shell() {
         messager.flush("error");
         exit(-1);
     }
-    set_random_seed();
-    status = generate_samples();
-    if (status != 0) {
-        messager << "Some errors happened in generating particle samples";
-        messager.flush("error");
-        exit(-1);
+
+    if (paraRdr_ptr->getVal("calculate_polarization", 0) == 1) {
+        compute_spin_polarization();
+    }
+
+    if (paraRdr_ptr->getVal("MC_sampling") != 0) {
+        set_random_seed();
+        status = generate_samples();
+        if (status != 0) {
+            messager << "Some errors happened in generating particle samples";
+            messager.flush("error");
+            exit(-1);
+        }
+        return(0);
     }
     return(0);
 }
@@ -104,6 +112,8 @@ int iSS::read_in_FO_surface() {
     computeFOSurfTmunu(FOsurf_temp);
     if (paraRdr_ptr->getVal("MC_sampling") == 4) {
         transform_to_local_rest_frame(FOsurf_temp, FOsurf_LRF_array_);
+        if (paraRdr_ptr->getVal("calculate_polarization", 0) == 1)
+            FOsurf_array_ = FOsurf_temp;
     } else {
         FOsurf_array_ = FOsurf_temp;
     }
@@ -186,6 +196,7 @@ void iSS::transform_to_local_rest_frame(
         surf_LRF_i.muQ = surf_i.muQ;
         surf_LRF_i.bulkPi = surf_i.bulkPi;
         surf_LRF_i.particle_mu_PCE = surf_i.particle_mu_PCE;
+        surf_LRF_i.visCoeffs = surf_i.visCoeffs;
         float cosh_eta = cosh(surf_i.eta);
         float sinh_eta = sinh(surf_i.eta);
         float ut = surf_i.u0*cosh_eta + surf_i.u3*sinh_eta;
@@ -293,6 +304,14 @@ void iSS::transform_to_local_rest_frame(
 }
 
 
+void iSS::compute_spin_polarization() {
+    polarizor = std::unique_ptr<SpinPolarization> (
+            new SpinPolarization(FOsurf_array_, particle_, path_, table_path_,
+                                 *paraRdr_ptr));
+    polarizor->compute_spin_polarization_shell();
+}
+
+
 void iSS::construct_Tmunu_from_particle_samples() {
     messager.info("Constructing the fluid cell T^{mu nu} from samples ...");
     double volume = (FOsurf_LRF_array_[0].da_mu_LRF[0]
@@ -327,8 +346,9 @@ void iSS::construct_Tmunu_from_particle_samples() {
             T[i][j] /= (nev*volume);
         }
     }
-    for (int i = 0; i < 3; i++)
-        netChargeArr[i] /= (nev*volume);
+    for (int i = 0; i < 3; i++) {
+        netChargeArr[i] /= nev;
+    }
 
     std::ofstream output("checkReconstructedTmunu.dat");
     output << "# Tmunu_FOcell[GeV/fm^3]  Tmunu_Particles[GeV/fm^3]  diff"
@@ -338,25 +358,25 @@ void iSS::construct_Tmunu_from_particle_samples() {
             output << std::scientific << std::setprecision(8)
                    << FOsurf_Tmunu_[4*i+j] << "  "
                    << T[i][j] << "  "
-                   << FOsurf_Tmunu_[4*i+j] - T[i][j]
+                   << (FOsurf_Tmunu_[4*i+j] - T[i][j])
                    << std::endl;
             messager << "check: T[" << i << "][" << j << "] = "
                      << FOsurf_Tmunu_[4*i+j] << " GeV/fm^3,  "
                      << T[i][j] << " GeV/fm^3, diff = "
-                     << FOsurf_Tmunu_[4*i+j] - T[i][j]
+                     << (FOsurf_Tmunu_[4*i+j] - T[i][j])
                      << " GeV/fm^3";
             messager.flush("info");
         }
     }
     for (int i = 0; i < 3; i++) {
+        float Err = std::abs((FOsurf_Q_[i] - netChargeArr[i])/volume);
         if (i == 0) {       // only check net baryon density for now
             output << std::scientific << std::setprecision(8)
                    << FOsurf_Q_[i] << "  " << netChargeArr[i] << "  "
-                   << FOsurf_Q_[i] - netChargeArr[i] << std::endl;
+                   << Err << std::endl;
         }
         messager << "check: nQ[" << i << "] = " << FOsurf_Q_[i]
-                 << " 1/fm^3," << netChargeArr[i] << " 1/fm^3, diff = "
-                 << FOsurf_Q_[i] - netChargeArr[i] << " 1/fm^3";
+                 << "," << netChargeArr[i] << ", diff = " << Err;
         messager.flush("info");
     }
     output.close();
@@ -392,6 +412,12 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
     float pi_tz[4][4];
     float Tmunu[4][4];
     for (auto &surf_i: FOsurf_ptr) {
+        float udotsigma = surf_i.tau*(
+                surf_i.u0*surf_i.da0 + surf_i.u1*surf_i.da1
+                + surf_i.u2*surf_i.da2 + surf_i.u3*surf_i.da3/surf_i.tau);
+        FOsurf_Q_[0] += surf_i.Bn*udotsigma;
+        FOsurf_Q_[1] += surf_i.Qn*udotsigma;
+        FOsurf_Q_[2] += surf_i.Sn*udotsigma;
         float cosh_eta = cosh(surf_i.eta);
         float sinh_eta = sinh(surf_i.eta);
         u[0] = surf_i.u0*cosh_eta + surf_i.u3*sinh_eta;
@@ -429,17 +455,23 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
                 FOsurf_Tmunu_[4*i+j] += Tmunu[i][j];
             }
         }
-        FOsurf_Q_[0] = surf_i.Bn;
-        FOsurf_Q_[2] = 0.4*surf_i.Bn;
     }
-    messager << "The total energy-momentum tensor from the surface:";
+    //messager << "The total energy-momentum tensor from the surface:";
+    //messager.flush("info");
+    //for (int i = 0; i < 4; i++) {
+    //    for (int j = 0; j < 4; j++) {
+    //        messager << "T[" << i << "][" << j << "] = "
+    //                 << std::scientific << std::setprecision(6)
+    //                 << FOsurf_Tmunu_[4*i+j] << " GeV/fm^3.";
+    //        messager.flush("info");
+    //    }
+    //}
+    messager << "The total charges from the surface (B, Q, S):";
     messager.flush("info");
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            messager << "T[" << i << "][" << j << "] = "
-                     << std::scientific << std::setprecision(6)
-                     << FOsurf_Tmunu_[4*i+j] << " GeV/fm^3.";
-            messager.flush("info");
-        }
+    for (int i = 0; i < 3; i++) {
+        messager << "nQ[" << i << "] = "
+                 << std::scientific << std::setprecision(6)
+                 << FOsurf_Q_[i];
+        messager.flush("info");
     }
 }

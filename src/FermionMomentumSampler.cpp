@@ -80,14 +80,12 @@ double FermionMomentumSampler::CDF_2(const double Etilde) const {
 double FermionMomentumSampler::CDF_2(const double Etilde,
                                      const double mtilde) const {
     double res = 0.;
-    double sign = 1.;
     for (int n = 0; n < trunc_order_; n++) {
         int n1 = n + 1;
         res += (1./(n1*n1*n1)*exp(-mtilde*n)*(
               (mtilde*n1*(mtilde*n1 + 2) + 2)
             - exp((mtilde - Etilde)*n1)*(Etilde*n1*(Etilde*n1 + 2) + 2))
         );
-        sign *= -1.;
     }
     return(res);
 }
