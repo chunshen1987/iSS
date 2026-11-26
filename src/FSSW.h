@@ -85,6 +85,13 @@ class FSSW {
     };
     std::vector<CellFactors> cellFactors_;
 
+    //! the per-cell inputs of calculate_dN_dxtdy_for_one_particle_species
+    struct YieldCell {
+        float Tdec, muB, muS, muQ, dsigma0, bulkPi;
+        std::array<double, 6> coefficients;  // visCoefficients, zero padded
+    };
+    std::vector<YieldCell> yieldCells_;
+
     inline long determine_number_to_sample(
                     double dN, int model=1, double para1=0);
 

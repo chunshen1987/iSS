@@ -15,6 +15,7 @@
 #include <iomanip>
 #include <vector>
 #include <array>
+#include <algorithm>
 
 #include "sample_output.h"
 #include "data_struct.h"
@@ -264,6 +265,31 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
             factors.diffusionCoefficient = get_deltaf_qmu_coeff(surf.Tdec,
                                                                 surf.muB);
         }
+    }
+
+    // The yield of every species loops over all cells, and that loop is
+    // limited by memory traffic. Keep what it reads in one compact array.
+    yieldCells_.resize(FO_length);
+    for (long l = 0; l < FO_length; ++l) {
+        const auto &surf = FOsurf_ptr[l];
+        auto &cell = yieldCells_[l];
+        cell.Tdec = surf.Tdec;
+        cell.muB = surf.muB;
+        cell.muS = surf.muS;
+        cell.muQ = surf.muQ;
+        cell.dsigma0 = surf.da_mu_LRF[0];
+        cell.bulkPi = surf.bulkPi;
+        cell.coefficients.fill(0.);
+        const auto &coefficients = cellFactors_[l].visCoefficients;
+        if (coefficients.size() > cell.coefficients.size()) {
+            messager_ << "FSSW: " << coefficients.size()
+                      << " delta f coefficients per cell, at most "
+                      << cell.coefficients.size() << " are supported";
+            messager_.flush("error");
+            exit(1);
+        }
+        std::copy(coefficients.begin(), coefficients.end(),
+                  cell.coefficients.begin());
     }
 
     // create arrays for special functions who are needed to compute 
@@ -689,18 +715,29 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
     const double mass = particle->mass;
     const double prefactor = degen/(2.*M_PI*M_PI);
 
-    // loop over all the fluid cells
+    // The cells are independent. calculate_dN_analytic depends only on
+    // (T, mu), which neighbouring cells often share (exactly, at constant
+    // energy density and mu_B = 0), so each thread keeps its last result.
+    #pragma omp parallel
+    {
+    double cached_T = std::nan("");
+    double cached_mu = std::nan("");
+    std::array<double, 6> cached_results = {{0.}};
+    #pragma omp for schedule(static)
     for (long l = 0; l < FO_length; l++) {
+        // The common path reads only the compact copy of the cell.
+        // Diffusion, PCE and the bulk quadrature read the full cell.
+        const YieldCell &cell = yieldCells_[l];
         const FO_surf_LRF* surf = &FOsurf_ptr[l];
-        const double temp = surf->Tdec;
+        const double temp = cell.Tdec;
         const auto &factors = cellFactors_[l];
-        const auto &visCoefficients = factors.visCoefficients;
+        const double *visCoefficients = cell.coefficients.data();
 
-        double dsigma_dot_u = surf->da_mu_LRF[0];
+        double dsigma_dot_u = cell.dsigma0;
 
         // bulk delta f contribution
         const double bulkPi = INCLUDE_BULK_DELTAF
-            ? bulk_pressure_for_deltaf(surf->bulkPi) : 0.;
+            ? bulk_pressure_for_deltaf(cell.bulkPi) : 0.;
 
         // diffusion delta f
         double dsigma_dot_q = 0.0;
@@ -717,15 +754,19 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
             prefactor_qmu = rho_B/(Edec + Pdec);  // 1/GeV
         }
 
-        double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
+        double mu = baryon*cell.muB + strange*cell.muS + charge*cell.muQ;
         if (flag_PCE_ == 1) {
             double mu_PCE = surf->particle_mu_PCE[real_particle_idx];
             mu += mu_PCE;
         }
 
         // calculate dN / (dxt dy)
-        std::array<double, 6> results_ptr = {0.0};
-        calculate_dN_analytic(particle, mu, temp, results_ptr);
+        if (!(temp == cached_T && mu == cached_mu)) {
+            calculate_dN_analytic(particle, mu, temp, cached_results);
+            cached_T = temp;
+            cached_mu = mu;
+        }
+        const std::array<double, 6> &results_ptr = cached_results;
 
         double N_eq = unit_factor*prefactor*dsigma_dot_u*results_ptr[0];
 
@@ -734,7 +775,8 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
             if (use_bulk_quadrature) {
                 deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u
                                *integrate_bulk_deltaf(*particle, mu, temp,
-                                                      bulkPi, visCoefficients));
+                                                      bulkPi,
+                                                      factors.visCoefficients));
             } else if (bulk_deltaf_kind_ == 1) {
                 deltaN_bulk = (unit_factor*prefactor*dsigma_dot_u
                                *(- bulkPi*visCoefficients[0])
@@ -777,6 +819,7 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
 
         dN_dxtdy_for_one_particle_species[l] = std::max(0., total_N);
     }
+    }  // omp parallel
 
     sw.toc();
     if (AMOUNT_OF_OUTPUT > 2) {
