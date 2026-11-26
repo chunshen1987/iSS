@@ -45,7 +45,7 @@ The flow is `main.cpp` → `iSS::shell()` (`iSS.cpp`):
 
 1. **Surface input**: `read_FOdata` (`readindata.cpp`) reads the surface according to `hydro_mode` (VISH2+1, or MUSIC boost-invariant or 3+1D, text or binary) and the `music_input` flags.
    - It sets `iEOS_MUSIC` and picks the afterburner, which also selects the particle table. EOS 9 forces UrQMD and 91 forces SMASH.
-   - With `regulateEOS = 1`, it recomputes T and μ from an HRG EoS table. `EOS_to_use = 20` uses the 4D (μB, μQ, μS) `EOS_4D` class instead of the 2D tables.
+   - With `regulateEOS = 1`, it recomputes T and μ from an HRG EoS table, only for EoS 9, 91, 12, 14 and 20 (others are left as they are). `EOS_to_use = 20` uses the 4D (μB, μQ, μS) `EOS_4D` class instead of the 2D tables.
    - `iSS` then transforms the cells to the local rest frame (`FO_surf_LRF`).
 2. **Sampling** (`MC_sampling`):
    - `4` → `FSSW` (`FSSW.cpp`): the fast, default sampler. It samples hadron counts per cell, then momenta in the LRF via `MomentumSamplerBase`, `BosonMomentumSampler` and `FermionMomentumSampler`, then boosts them back to the lab frame.
@@ -64,6 +64,10 @@ The flow is `main.cpp` → `iSS::shell()` (`iSS.cpp`):
 - The 4D EoS and its delta f coefficients are not in git. Download them with:
   - `iSS_tables/EOS_tables/download_HRG4D.sh` (creates `HRG4D/`), run from `iSS_tables/EOS_tables/`;
   - `iSS_tables/deltaf_tables/urqmd/download_NEoS4D_deltafCoeffs.sh`, run from that same `urqmd/` folder.
+
+## Notes
+
+`doc/` holds development reports: merge history, review fixes, 4D EoS validation (including an open mismatch between the HRG4D table and the sampled gas) and the MUSIC surface column layout (`doc/surface_text_format.md`).
 
 ## Branches
 
