@@ -103,6 +103,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
         if (include_vorticity_)
             messager.info("the hyper-surface includes vorticity arrays.");
     }
+    paraRdr->setVal("iEOS_MUSIC", iEOS_MUSIC_);
 
     if (paraRdr->getVal("calculate_polarization", 0) == 1
             && !include_vorticity_) {
@@ -111,7 +112,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
         paraRdr->setVal("calculate_polarization", 0);
     }
 
-    fluid_cell_size = 34;
+    fluid_cell_size = 36;
     if (include_vorticity_)
         fluid_cell_size += 38;
 
@@ -130,9 +131,21 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
     if (iEOS_MUSIC_ == 91) {
         afterburner_type_ = AfterburnerType::SMASH;
     }
+
     if (paraRdr->getVal("regulateEOS", 0) == 1) {
         regulateEOS_ = true;
-        read_in_HRG_EOS();
+        if (iEOS_MUSIC_ == 20) {
+            eos_4d_.initialize_eos();
+            int deltaf_kind = paraRdr->getVal("bulk_deltaf_kind");
+            if (deltaf_kind == 21) {
+                eos_4d_.initialize_dfCoeffs(1);
+            } else if (deltaf_kind == 20) {
+                eos_4d_.initialize_dfCoeffs(0);
+            }
+            //read_in_HRG_EOS_binary();
+        } else {
+            read_in_HRG_EOS();
+        }
     } else {
         regulateEOS_ = false;
     }
@@ -297,6 +310,8 @@ void read_FOdata::read_in_chemical_potentials(
         } else if (iEOS_MUSIC_ >= 10 && iEOS_MUSIC_ <=15) {   // NEoS
             N_stableparticle = 0;
         } else if (iEOS_MUSIC_ == 17) {       // BEST
+            N_stableparticle = 0;
+        } else if (iEOS_MUSIC_ == 20) {       // 4D NEoS (HRG4D)
             N_stableparticle = 0;
         } else if (iEOS_MUSIC_ == 42) {       // EoS Generator
             N_stableparticle = 0;
@@ -502,15 +517,18 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             surf_elem.bulkPi = array_loc[28]*hbarC;   // GeV/fm^3
 
             surf_elem.Bn   = array_loc[29];             // 1/fm^3
-            surf_elem.qmu0 = array_loc[30];
-            surf_elem.qmu1 = array_loc[31];
-            surf_elem.qmu2 = array_loc[32];
-            surf_elem.qmu3 = array_loc[33];
+            surf_elem.Qn   = array_loc[30];             // 1/fm^3
+            surf_elem.Sn   = array_loc[31];             // 1/fm^3
+            surf_elem.qmu0 = array_loc[32];
+            surf_elem.qmu1 = array_loc[33];
+            surf_elem.qmu2 = array_loc[34];
+            surf_elem.qmu3 = array_loc[35];
             if (include_vorticity_) {
                 for (int ii = 0; ii < 38; ii++)
-                    surf_elem.vorticity_arr.push_back(array_loc[34+ii]);
+                    surf_elem.vorticity_arr.push_back(array_loc[36+ii]);
             }
         } else {
+            // Not adapted to rhoQ and rhoS at pos 30 and 31.
             getline(surfdat, input, '\n');
             std::stringstream ss(input);
 
@@ -566,6 +584,8 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             } else {
                 surf_elem.Bn = 0.0;
             }
+            surf_elem.Qn = 0.;
+            surf_elem.Sn = 0.;
             if (turn_on_diff == 1) {
                 ss >> surf_elem.qmu0;
                 ss >> surf_elem.qmu1;
@@ -663,6 +683,8 @@ void read_FOdata::read_FOsurfdat_hydro_analysis_boost_invariant(
 
         surf_elem.bulkPi = 0.0;
         surf_elem.Bn = 0.0;
+        surf_elem.Qn = 0.0;
+        surf_elem.Sn = 0.0;
 
         surf_elem.qmu0 = 0.0e0;
         surf_elem.qmu1 = 0.0e0;
@@ -741,15 +763,18 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
             surf_elem.bulkPi = array_loc[28]*hbarC;   // GeV/fm^3
 
             surf_elem.Bn   = array_loc[29];             // 1/fm^3
-            surf_elem.qmu0 = array_loc[30];
-            surf_elem.qmu1 = array_loc[31];
-            surf_elem.qmu2 = array_loc[32];
-            surf_elem.qmu3 = array_loc[33];
+            surf_elem.Qn   = array_loc[30];             // 1/fm^3
+            surf_elem.Sn   = array_loc[31];             // 1/fm^3
+            surf_elem.qmu0 = array_loc[32];
+            surf_elem.qmu1 = array_loc[33];
+            surf_elem.qmu2 = array_loc[34];
+            surf_elem.qmu3 = array_loc[35];
             if (include_vorticity_) {
                 for (int ii = 0; ii < 38; ii++)
-                    surf_elem.vorticity_arr.push_back(array_loc[34+ii]);
+                    surf_elem.vorticity_arr.push_back(array_loc[36+ii]);
             }
         } else {
+            // not adapted to rhoq and rhos at pos 30, 31.
             // freeze out position
             surfdat >> surf_elem.tau;
             surfdat >> surf_elem.xpt;
@@ -800,6 +825,8 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
             } else {
                 surf_elem.Bn = 0.0;
             }
+            surf_elem.Qn = 0.;
+            surf_elem.Sn = 0.;
             if (turn_on_diff == 1) {
                 surfdat >> surf_elem.qmu0;
                 surfdat >> surf_elem.qmu1;
@@ -847,8 +874,26 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
 
     for (auto &surf_i: surf_ptr) {
         if (regulateEOS_) {
-            std::vector<double> eosVar;    // {P, T, muB, muS, muQ}
-            int status = getValuesFromHRGEOS(surf_i.Edec, surf_i.Bn, eosVar);
+            std::vector<float> eosVar;    // {P, T, muB, muS, muQ}
+            std::vector<double> visCoefficients;
+            int status = -1;
+            if (iEOS_MUSIC_ == 20) {
+                //status = getValuesFromHRGEOS3D(surf_i.Edec, surf_i.Bn,
+                //                               surf_i.Qn, eosVar);
+                eos_4d_.getThermalVariables(surf_i.Edec, surf_i.Bn,
+                                            surf_i.Qn, surf_i.Sn, eosVar);
+                eos_4d_.getDeltafCoeffs(surf_i.Edec, surf_i.Bn, surf_i.Qn,
+                                         surf_i.Sn, visCoefficients);
+                status = 0;
+            } else {
+                status = getValuesFromHRGEOS(
+                        surf_i.Edec, std::abs(surf_i.Bn), eosVar);
+                if (surf_i.Bn < 0.) {
+                    eosVar[2] = - eosVar[2];
+                    eosVar[3] = - eosVar[3];
+                    eosVar[4] = - eosVar[4];
+                }
+            }
             if (status == 0) {      // success
                 //cout << "check: Tdec = " << surf_i.Tdec << " GeV, "
                 //     << eosVar[1] << " GeV, muB = " << surf_i.muB << " GeV, "
@@ -865,6 +910,7 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
                 // the trace of Tmunu is continuious here.
                 //surf_i.bulkPi = surf_i.bulkPi + surf_i.Pdec - eosVar[0];
                 surf_i.Pdec = eosVar[0];
+                surf_i.visCoeffs = visCoefficients;
             }
         }
         surf_i.u0 = sqrt(1. + surf_i.u1*surf_i.u1
@@ -1047,21 +1093,21 @@ void read_FOdata::read_in_HRG_EOS() {
     std::getline(eosFile, strLine);
     while (!eosFile.eof()) {
         std::stringstream ss(strLine);
-        std::vector<double> item(7, 0);     // {ed, nB, P, T, muB, muS, muQ}
+        std::vector<float> item(7, 0);     // {ed, nB, P, T, muB, muS, muQ}
         if (iEOS_MUSIC_ == 12) {
             for (int i = 0; i < 5; i++) {
-                double temp;
+                float temp;
                 ss >> temp;
                 item[i] = temp;
             }
         } else if (iEOS_MUSIC_ == 14) {
             for (int i = 0; i < 7; i++) {
-                double temp;
+                float temp;
                 ss >> temp;
                 item[i] = temp;
             }
         } else {
-            double temp, ed_loc, P_loc, T_loc;
+            float temp, ed_loc, P_loc, T_loc;
             ss >> ed_loc >> P_loc >> temp >> T_loc;
             item[0] = ed_loc;
             item[2] = P_loc;
@@ -1069,6 +1115,39 @@ void read_FOdata::read_in_HRG_EOS() {
         }
         HRGEOS_.push_back(item);
         std::getline(eosFile, strLine);
+    }
+    eosFile.close();
+    cout << "done." << endl;
+}
+
+
+void read_FOdata::read_in_HRG_EOS_binary() {
+    cout << " -- Read in pure HRG EoS table...";
+    std::string eos_filename = table_path_ + "/EOS_tables/";
+    eos_filename += "NEOS3D_StrangNeutral-";
+
+    if (afterburner_type_ == AfterburnerType::SMASH) {
+        eos_filename += "SMASH.bin";
+    } else if (afterburner_type_ == AfterburnerType::UrQMD) {
+        eos_filename += "urqmd_v3.3+.bin";
+    } else {
+        eos_filename += "s95pv1.bin";
+    }
+
+    std::ifstream eosFile(eos_filename.c_str(), std::ios::binary);
+    if (!eosFile.good()) {
+        cout << "[Error] Can not found EOS file: " << eos_filename << endl;
+        exit(1);
+    }
+
+    while (!eosFile.eof()) {
+        std::vector<float> item(8, 0);     // {ed, nB, nQ, P, T, muB, muS, muQ}
+        for (int ii = 0; ii < 8; ii++) {
+            float temp = 0.;
+            eosFile.read(reinterpret_cast<char*>(&temp), sizeof(float));
+            item[ii] = temp;
+        }
+        HRGEOS_.push_back(item);
     }
     eosFile.close();
     cout << "done." << endl;
@@ -1353,8 +1432,8 @@ void read_FOdata::regulate_Wmunu(double u[4], double Wmunu[4][4],
 }
 
 
-int read_FOdata::getValuesFromHRGEOS(double ed, double nB,
-                                     std::vector<double> &eosVar) {
+int read_FOdata::getValuesFromHRGEOS(const double ed, const double nB,
+                                     std::vector<float> &eosVar) {
     eosVar.resize(5, 0);        // {P, T, muB, muS, muQ}
     int nBlen = 1;
     if (iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14) {
@@ -1412,6 +1491,97 @@ int read_FOdata::getValuesFromHRGEOS(double ed, double nB,
                           + HRGEOS_[e_idx2+nB_idx2+1][muCol]*nB_frac2);
             eosVar[muCol-2] = mu1*(1 - e_frac) + mu2*e_frac;
         }
+    }
+    return(0);
+}
+
+
+int read_FOdata::getValuesFromHRGEOS3D(const double ed, const double nB,
+                                       const double nQ,
+                                       std::vector<float> &eosVar) {
+    eosVar.resize(5, 0);        // {P, T, muB, muS, muQ}
+    const int nBlen = 40;
+    const int nQlen = 40;
+
+    const float HRGEOS_de = HRGEOS_[nBlen*nQlen][0] - HRGEOS_[0][0];
+    const float HRGEOS_e0 = HRGEOS_[0][0];
+    int e_idx = static_cast<int>((ed - HRGEOS_e0)/HRGEOS_de);
+    if (e_idx < 0
+            || e_idx > static_cast<int>(HRGEOS_.size()/(nBlen*nQlen)) - 2) {
+        messager << "ed is out of range: ed = " << ed << " GeV/fm^3. ";
+        messager << "Can not regulate this fluid cell!";
+        messager.flush("warning");
+        return(-1);
+    }
+
+    const int e_idx1 = e_idx*nBlen*nQlen;
+    const int e_idx2 = (e_idx + 1)*nBlen*nQlen;
+    double e_frac = (ed - HRGEOS_[e_idx1][0])/HRGEOS_de;
+
+    float dnB1 = HRGEOS_[e_idx1+nQlen][1];
+    float dnB2 = HRGEOS_[e_idx2+nQlen][1];
+    int nB_idx1 = std::min(nBlen - 2, static_cast<int>(nB/dnB1));
+    int nB_idx2 = std::min(nBlen - 2, static_cast<int>(nB/dnB2));
+    double nB_frac1 = (nB - HRGEOS_[e_idx1+nB_idx1*nQlen][1])/dnB1;
+    nB_frac1 = std::max(0., std::min(1., nB_frac1));
+    double nB_frac2 = (nB - HRGEOS_[e_idx2+nB_idx2*nQlen][1])/dnB2;
+    nB_frac2 = std::max(0., std::min(1., nB_frac2));
+
+    float nQ011 = HRGEOS_[e_idx1+nB_idx1*nQlen][2];
+    float dnQ11 = HRGEOS_[e_idx1+nB_idx1*nQlen+1][2] - nQ011;
+    float nQ012 = HRGEOS_[e_idx1+(nB_idx1+1)*nQlen][2];
+    float dnQ12 = HRGEOS_[e_idx1+(nB_idx1+1)*nQlen+1][2] - nQ012;
+    float nQ021 = HRGEOS_[e_idx2+nB_idx2*nQlen][2];
+    float dnQ21 = HRGEOS_[e_idx2+nB_idx2*nQlen+1][2] - nQ021;
+    float nQ022 = HRGEOS_[e_idx2+(nB_idx2+1)*nQlen][2];
+    float dnQ22 = HRGEOS_[e_idx2+(nB_idx2+1)*nQlen+1][2] - nQ022;
+    //cout << "Q0_11 = " << nQ011 << ", dQ_11 = " << dnQ11
+    //     << ", Q0_12 = " << nQ012 << ", dQ_11 = " << dnQ12
+    //     << ", Q0_21 = " << nQ021 << ", dQ_21 = " << dnQ21
+    //     << ", Q0_22 = " << nQ022 << ", dQ_11 = " << dnQ22 << endl;
+
+    int nQ_idx11 = static_cast<int>((nQ - nQ011)/dnQ11);
+    nQ_idx11 = std::max(0, std::min(nQlen - 2, nQ_idx11));
+    int nQ_idx12 = static_cast<int>((nQ - nQ012)/dnQ12);
+    nQ_idx12 = std::max(0, std::min(nQlen - 2, nQ_idx12));
+    int nQ_idx21 = static_cast<int>((nQ - nQ021)/dnQ21);
+    nQ_idx21 = std::max(0, std::min(nQlen - 2, nQ_idx21));
+    int nQ_idx22 = static_cast<int>((nQ - nQ022)/dnQ22);
+    nQ_idx22 = std::max(0, std::min(nQlen - 2, nQ_idx22));
+    //cout << "nQ = " << nQ << ", idx11 = " << nQ_idx11
+    //     << ", idx12 = " << nQ_idx12
+    //     << ", idx21 = " << nQ_idx21
+    //     << ", idx22 = " << nQ_idx22 << endl;
+    nQ_idx11 = e_idx1 + nB_idx1*nQlen + nQ_idx11;
+    nQ_idx12 = e_idx1 + (nB_idx1 + 1)*nQlen + nQ_idx12;
+    nQ_idx21 = e_idx2 + nB_idx2*nQlen + nQ_idx21;
+    nQ_idx22 = e_idx2 + (nB_idx2 + 1)*nQlen + nQ_idx22;
+
+    double nQ_frac11 = (nQ - HRGEOS_[nQ_idx11][2])/dnQ11;
+    nQ_frac11 = std::max(0., std::min(1., nQ_frac11));
+    double nQ_frac12 = (nQ - HRGEOS_[nQ_idx12][2])/dnQ12;
+    nQ_frac12 = std::max(0., std::min(1., nQ_frac12));
+    double nQ_frac21 = (nQ - HRGEOS_[nQ_idx21][2])/dnQ21;
+    nQ_frac21 = std::max(0., std::min(1., nQ_frac21));
+    double nQ_frac22 = (nQ - HRGEOS_[nQ_idx22][2])/dnQ22;
+    nQ_frac22 = std::max(0., std::min(1., nQ_frac22));
+    //cout << "frac11 = " << nQ_frac11 << ", frac12 = " << nQ_frac12
+    //     << ", frac21 = " << nQ_frac21 << ", frac22 = " << nQ_frac22 << endl;
+    //exit(1);
+
+    for (int mCol = 3; mCol < 8; mCol++) {
+        // the order is mCol = {P, T, muB, muS, muQ}
+        float var11 = (HRGEOS_[nQ_idx11][mCol]*(1. - nQ_frac11)
+                       + HRGEOS_[nQ_idx11+1][mCol]*nQ_frac11);
+        float var12 = (HRGEOS_[nQ_idx12][mCol]*(1. - nQ_frac12)
+                       + HRGEOS_[nQ_idx12+1][mCol]*nQ_frac12);
+        float var21 = (HRGEOS_[nQ_idx21][mCol]*(1. - nQ_frac21)
+                       + HRGEOS_[nQ_idx21+1][mCol]*nQ_frac21);
+        float var22 = (HRGEOS_[nQ_idx22][mCol]*(1. - nQ_frac22)
+                       + HRGEOS_[nQ_idx22+1][mCol]*nQ_frac22);
+        float var1 = var11*(1. - nB_frac1) + var12*nB_frac1;
+        float var2 = var21*(1. - nB_frac2) + var22*nB_frac2;
+        eosVar[mCol-3] = var1*(1 - e_frac) + var2*e_frac;
     }
     return(0);
 }

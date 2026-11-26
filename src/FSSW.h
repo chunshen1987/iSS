@@ -21,6 +21,7 @@
 #include "Random.h"
 #include "pretty_ostream.h"
 #include "MomentumSamplerShell.h"
+#include "eos_4D.h"
 
 class FSSW {
  private:
@@ -42,11 +43,13 @@ class FSSW {
 
     ParameterReader *paraRdr; // used to pass-in parameters
     int USE_OSCAR_FORMAT;
+    int USE_OSCAR2013;
     int USE_GZIP_FORMAT;
     int USE_BINARY_FORMAT;
     bool INCLUDE_SHEAR_DELTAF, INCLUDE_BULK_DELTAF, INCLUDE_DIFFUSION_DELTAF;
     int NEoS_deltaf_kind_;        // 0: 14-mom, 1: CE
     int bulk_deltaf_kind_;
+    int iEoS_MUSIC_;
 
     double deltaf_max_ratio_;
 
@@ -95,6 +98,7 @@ class FSSW {
     double **deltaf_bulk_coeff_14mom_c1_tb_;
     double **deltaf_bulk_coeff_14mom_c2_tb_;
 
+    EOS_4D eos_4d_;
 
     // table parameter for bulk deltaf coefficient CE for NEOS BQS
     int deltaf_coeff_NEOSBQS_table_length_e_;
@@ -144,6 +148,7 @@ class FSSW {
     void shell();  // it all starts here...
 
     void combine_samples_to_OSCAR();
+    void combine_samples_to_OSCAR2013();
     void combine_samples_to_gzip_file();
     void combine_samples_to_binary_file();
 
@@ -215,6 +220,7 @@ class FSSW {
     double bilinearInterp(std::vector<std::vector<double>>&mat,
                           int idx_e1, int idx_e2, int idx_nB1, int idx_nB2,
                           double x_fraction, double y_fraction);
+    int getParticleInfo(const int monval) const;
 };
 
 #endif  // SRC_FSSW_H_

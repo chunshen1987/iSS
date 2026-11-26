@@ -57,12 +57,13 @@ typedef struct {
     float da0, da1, da2, da3;
     float u0, u1, u2, u3;
     float Edec, Tdec, Pdec;
-    float Bn, muB, muS, muQ;
+    float Bn, Qn, Sn, muB, muS, muQ;
     float pi00, pi01, pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33;
     float bulkPi;
     float qmu0, qmu1, qmu2, qmu3;
     std::vector<float> particle_mu_PCE;
     std::vector<float> vorticity_arr;
+    std::vector<double> visCoeffs;
 } FO_surf;
 
 
@@ -71,11 +72,12 @@ typedef struct {
     iSS_data::Vec4 da_mu_LRF;
     iSS_data::Vec4 u_tz;
     float Edec, Tdec, Pdec;
-    float Bn, muB, muS, muQ;
+    float Bn, Qn, Sn, muB, muS, muQ;
     float bulkPi;
     float piLRF_xx, piLRF_xy, piLRF_xz, piLRF_yy, piLRF_yz;
     float qmuLRF_x, qmuLRF_y, qmuLRF_z;
     std::vector<float> particle_mu_PCE;
+    std::vector<double> visCoeffs;
 } FO_surf_LRF;
 
 
