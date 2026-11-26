@@ -544,42 +544,31 @@ void FSSW::combine_samples_to_OSCAR2013() {
           << endl;
     oscar << "# Units: fm fm fm fm GeV GeV GeV GeV GeV none none e" << endl;
 
-    particle_info *particle_info_local = &particles[0];
+    const particle_info *particle_info_local = &particles[0];
     for (unsigned int iev = 0; iev < Hadron_list->size(); iev++) {
-        int total_number_of_particles = (*Hadron_list)[iev]->size();
-        if (total_number_of_particles > 0) {
-            oscar << "# event " << iev + 1 << " out "
-                  << total_number_of_particles << endl;
-            for (int ipart = 0; ipart < total_number_of_particles;
-                 ipart++) {
-                int pid_local = (*(*Hadron_list)[iev])[ipart].pid;
-                if (particle_info_local->monval != pid_local) {
-                    for (unsigned int ii = 0; ii < particles.size(); ii++) {
-                        if (particles[ii].monval == pid_local) {
-                            particle_info_local = &particles[ii];
-                            break;
-                        }
+        const auto &event = *(*Hadron_list)[iev];
+        const int total_number_of_particles = event.size();
+        oscar << "# event " << iev + 1 << " out "
+              << total_number_of_particles << endl;
+        for (int ipart = 0; ipart < total_number_of_particles; ipart++) {
+            const auto &particle = event[ipart];
+            if (particle_info_local->monval != particle.pid) {
+                for (const auto &info : particles) {
+                    if (info.monval == particle.pid) {
+                        particle_info_local = &info;
+                        break;
                     }
                 }
-                snprintf(line_buffer, 500,
-                         "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %d  %d  %d",
-                         (*(*Hadron_list)[iev])[ipart].t,
-                         (*(*Hadron_list)[iev])[ipart].x,
-                         (*(*Hadron_list)[iev])[ipart].y,
-                         (*(*Hadron_list)[iev])[ipart].z,
-                         (*(*Hadron_list)[iev])[ipart].mass,
-                         (*(*Hadron_list)[iev])[ipart].E,
-                         (*(*Hadron_list)[iev])[ipart].px,
-                         (*(*Hadron_list)[iev])[ipart].py,
-                         (*(*Hadron_list)[iev])[ipart].pz,
-                         (*(*Hadron_list)[iev])[ipart].pid,
-                         ipart + 1,
-                         particle_info_local->charge
-                         );
-                oscar << line_buffer << endl;
             }
-            oscar << "# event " << iev + 1 << " end 0 impact 0.000" << endl;
+            snprintf(line_buffer, sizeof(line_buffer),
+                     "%24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %24.16e  %d  %d  %d",
+                     particle.t, particle.x, particle.y, particle.z,
+                     particle.mass, particle.E, particle.px, particle.py,
+                     particle.pz, particle.pid, ipart + 1,
+                     particle_info_local->charge);
+            oscar << line_buffer << endl;
         }
+        oscar << "# event " << iev + 1 << " end 0 impact 0.000" << endl;
     }
 
     sw.toc();
@@ -700,7 +689,7 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
                 getCENEOSBQSCoefficients(surf->Edec, std::abs(surf->Bn),
                                          visCoefficients);
             } else if (NEoS_deltaf_kind_ == 0) {
-                get22momNEOSBQSCoefficients(surf->Edec, std::abs(surf->Bn),
+                get22momNEOSBQSCoefficients(surf->Edec, surf->Bn,
                                             visCoefficients);
             }
         }
@@ -1088,7 +1077,7 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                         getCENEOSBQSCoefficients(surf->Edec, std::abs(surf->Bn),
                                                  visCoefficients);
                     } else if (NEoS_deltaf_kind_ == 0) {
-                        get22momNEOSBQSCoefficients(surf->Edec, std::abs(surf->Bn),
+                        get22momNEOSBQSCoefficients(surf->Edec, surf->Bn,
                                                     visCoefficients);
                     }
                 }
@@ -1597,6 +1586,7 @@ void FSSW::getCENEOSBQSCoefficients(const double Edec, const double nB,
 void FSSW::get22momNEOSBQSCoefficients(const double Edec, const double nB,
                                        std::vector<double> &visCoefficients) {
     visCoefficients.resize(6, 0.);
+    const double nB_magnitude = std::abs(nB);
     int idx_e = static_cast<int>((Edec - deltaf_coeff_22mom_NEOSBQS_tb_[0][0])
                                  /deltaf_coeff_NEOSBQS_table_de_);
     // avoid overflow and underflow
@@ -1609,15 +1599,17 @@ void FSSW::get22momNEOSBQSCoefficients(const double Edec, const double nB,
 
     double dnB1 = deltaf_coeff_22mom_NEOSBQS_tb_[Ne1+1][1];
     double dnB2 = deltaf_coeff_22mom_NEOSBQS_tb_[Ne2+1][1];
-    int idx_nB1 = static_cast<int>((nB)/dnB1);
-    int idx_nB2 = static_cast<int>((nB)/dnB2);
+    int idx_nB1 = static_cast<int>(nB_magnitude/dnB1);
+    int idx_nB2 = static_cast<int>(nB_magnitude/dnB2);
     // avoid overflow and underflow
     idx_nB1 = std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 2, idx_nB1);
     idx_nB2 = std::min(deltaf_coeff_NEOSBQS_table_length_nB_ - 2, idx_nB2);
     double nB_frac1 = std::min(
-            1., (nB - deltaf_coeff_22mom_NEOSBQS_tb_[Ne1+idx_nB1][1])/dnB1);
+            1., (nB_magnitude - deltaf_coeff_22mom_NEOSBQS_tb_[Ne1+idx_nB1][1])
+                /dnB1);
     double nB_frac2 = std::min(
-            1., (nB - deltaf_coeff_22mom_NEOSBQS_tb_[Ne2+idx_nB2][1])/dnB2);
+            1., (nB_magnitude - deltaf_coeff_22mom_NEOSBQS_tb_[Ne2+idx_nB2][1])
+                /dnB2);
 
     // check
     //cout << "ed = " << Edec
@@ -1633,7 +1625,6 @@ void FSSW::get22momNEOSBQSCoefficients(const double Edec, const double nB,
     //     << ", nB_frac2 = " << nB_frac2
     //     << endl;
 
-    std::vector<double> interpCoeff(6, 0);
     for (int i = 2; i < 8; i++) {
         double temp1 = (
               deltaf_coeff_22mom_NEOSBQS_tb_[Ne1+idx_nB1  ][i]*(1 - nB_frac1)
@@ -1642,11 +1633,15 @@ void FSSW::get22momNEOSBQSCoefficients(const double Edec, const double nB,
               deltaf_coeff_22mom_NEOSBQS_tb_[Ne2+idx_nB2  ][i]*(1 - nB_frac2)
             + deltaf_coeff_22mom_NEOSBQS_tb_[Ne2+idx_nB2+1][i]*nB_frac2);
 
-        interpCoeff[i-2] = temp1*(1. - e_frac) + temp2*e_frac;
+        visCoefficients[i-2] = temp1*(1. - e_frac) + temp2*e_frac;
     }
 
-    for (int i = 0; i < 6; i++)
-        visCoefficients[i] = interpCoeff[i];
+    // The table covers nB >= 0. The coefficients multiplying the particle's
+    // B, S and Q are odd under charge conjugation and vanish at nB = 0.
+    const double charge_sign = nB == 0. ? 0. : std::copysign(1., nB);
+    for (int i = 3; i < 6; i++) {
+        visCoefficients[i] *= charge_sign;
+    }
 }
 
 

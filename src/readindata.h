@@ -43,6 +43,9 @@ class read_FOdata {
 
     pretty_ostream messager;
 
+    bool read_MUSIC_text_cell(std::istream &surface, const std::string &filename,
+                              long &line_number, FO_surf &cell);
+
  public:
     read_FOdata(ParameterReader* paraRdr_in, std::string path,
                 std::string table_path, std::string particle_table_path);

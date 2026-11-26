@@ -3,12 +3,10 @@
 #include "eos_4D.h"
 #include "data_struct.h"
 
-#include <sstream>
-#include <fstream>
 #include <cmath>
-
-using std::stringstream;
-using std::string;
+#include <cstdint>
+#include <cstdlib>
+#include <limits>
 
 EOS_4D::EOS_4D() {}
 
@@ -24,70 +22,119 @@ void EOS_4D::get_eos_max_values() {
 }
 
 
-void EOS_4D::read_header_binary(std::string filepath, int header_size) {
-    std::ifstream ifs(filepath, std::ios::in | std::ios::binary);
-    if (!ifs.is_open()) {
-        messenger << "Can not open EOS files: "<< filepath;
-        messenger.flush("error");
-        exit(1);
-    }
-    std::vector<float> hd(header_size);
-    ifs.read(reinterpret_cast<char*>(hd.data()), sizeof(float) * header_size);
-
-    Ttilde0  = hd[3];dTtilde = hd[7];
-    mubtilde0 = hd[0];muqtilde0 = hd[1];mustilde0 = hd[2];
-    dmubtilde = hd[4];dmuqtilde = hd[5];dmustilde = hd[6];
-    N_mub = hd[8];N_muq = hd[9];N_mus = hd[10];N_T = hd[11];
-    ifs.close();
+void EOS_4D::invalid_table(const std::string &filepath,
+                            const std::string &reason) {
+    messenger << "Invalid 4D table " << filepath << ": " << reason;
+    messenger.flush("error");
+    std::exit(1);
 }
 
 
-void EOS_4D::read_eos_binary(std::string filepath,
-                             std::vector<float> &out, int header_size) {
-    std::ifstream eos_binary_file(filepath, std::ios::in | std::ios::binary);
+std::array<float, 12> EOS_4D::read_header_binary(
+        std::ifstream &input, const std::string &filepath) {
+    if (!input.is_open()) invalid_table(filepath, "cannot open file");
 
-    if (!eos_binary_file.is_open()) {
-        messenger << "Can not open EOS file: "<< filepath;
-        messenger.flush("error");
-        exit(1);
-    } else {
-        float number;
-        while (eos_binary_file.read(reinterpret_cast<char*>(&number),
-                sizeof(float))) {
-            out.push_back(number);
+    std::array<float, 12> header;
+    if (!input.read(reinterpret_cast<char*>(header.data()),
+                    header.size()*sizeof(float))) {
+        invalid_table(filepath, "truncated grid header");
+    }
+    return header;
+}
+
+
+void EOS_4D::initialize_grid(const std::string &filepath) {
+    std::ifstream input(filepath, std::ios::binary);
+    grid_header_ = read_header_binary(input, filepath);
+    grid_size_ = 1;
+    for (std::size_t axis = 0; axis < 4; ++axis) {
+        const float origin = grid_header_[axis];
+        const float spacing = grid_header_[axis + 4];
+        const double count = grid_header_[axis + 8];
+        if (!std::isfinite(origin) || !std::isfinite(spacing) || spacing <= 0.
+                || !std::isfinite(count) || count < 2.
+                || count > std::numeric_limits<int>::max()
+                || count != std::floor(count)) {
+            invalid_table(filepath, "invalid grid origin, spacing or dimension");
         }
-        eos_binary_file.close();
+        const auto dimension = static_cast<std::size_t>(count);
+        if (grid_size_ > std::numeric_limits<int>::max()/dimension) {
+            invalid_table(filepath, "grid is too large to index");
+        }
+        grid_size_ *= dimension;
+    }
 
-        // remove header
-        out.erase(out.begin(), out.begin() + header_size);
-        out.resize(out.size());
+    mubtilde0 = grid_header_[0];
+    muqtilde0 = grid_header_[1];
+    mustilde0 = grid_header_[2];
+    Ttilde0   = grid_header_[3];
+    dmubtilde = grid_header_[4];
+    dmuqtilde = grid_header_[5];
+    dmustilde = grid_header_[6];
+    dTtilde   = grid_header_[7];
+    N_mub = static_cast<int>(grid_header_[8]);
+    N_muq = static_cast<int>(grid_header_[9]);
+    N_mus = static_cast<int>(grid_header_[10]);
+    N_T   = static_cast<int>(grid_header_[11]);
+    get_eos_max_values();
+}
+
+
+void EOS_4D::check_payload_size(std::ifstream &input,
+                               const std::string &filepath,
+                               std::size_t floats_per_cell) {
+    const std::streamoff start = input.tellg();
+    input.seekg(0, std::ios::end);
+    const std::streamoff end = input.tellg();
+    const auto expected = static_cast<std::uintmax_t>(grid_size_)
+                          * floats_per_cell * sizeof(float);
+    if (start < 0 || end < start) {
+        invalid_table(filepath, "cannot determine payload size");
+    }
+    const auto actual = static_cast<std::uintmax_t>(end - start);
+    if (actual != expected) {
+        invalid_table(filepath, "expected " + std::to_string(expected)
+                      + " payload bytes, found " + std::to_string(actual));
+    }
+    if (!input.seekg(start)) {
+        invalid_table(filepath, "cannot seek to payload");
     }
 }
 
 
-void EOS_4D::read_dfCoeffs_binary(std::string filepath, const int dfType) {
-    dfCoeffs_.clear();
-    std::ifstream df_binary_file(filepath, std::ios::in | std::ios::binary);
+void EOS_4D::read_eos_binary(const std::string &filepath,
+                            std::vector<float> &out) {
+    std::ifstream input(filepath, std::ios::binary);
+    if (read_header_binary(input, filepath) != grid_header_) {
+        invalid_table(filepath, "grid header differs from the temperature table");
+    }
+    check_payload_size(input, filepath, 1);
 
-    if (!df_binary_file.is_open()) {
-        messenger << "Can not open deltaf coeffs file: "<< filepath;
-        messenger.flush("error");
-        exit(1);
+    out.resize(grid_size_);
+    if (!input.read(reinterpret_cast<char*>(out.data()),
+                    out.size()*sizeof(float))) {
+        invalid_table(filepath, "cannot read payload");
     }
+}
 
-    int numCoeffs = 6;
-    if (dfType == 1) {
-        numCoeffs = 3;
+
+void EOS_4D::read_dfCoeffs_binary(const std::string &filepath, int dfType) {
+    std::ifstream input(filepath, std::ios::binary);
+    if (!input.is_open()) invalid_table(filepath, "cannot open file");
+
+    const std::size_t num_coeffs = dfType == 1 ? 3 : 6;
+    check_payload_size(input, filepath, num_coeffs);
+    dfCoeffs_.assign(num_coeffs, std::vector<float>(grid_size_));
+    std::array<float, 6> coefficients;
+    for (std::size_t cell = 0; cell < grid_size_; ++cell) {
+        if (!input.read(reinterpret_cast<char*>(coefficients.data()),
+                        num_coeffs*sizeof(float))) {
+            invalid_table(filepath, "cannot read payload");
+        }
+        for (std::size_t i = 0; i < num_coeffs; ++i) {
+            dfCoeffs_[i][cell] = coefficients[i];
+        }
     }
-    dfCoeffs_.resize(numCoeffs);
-    int counter = 0;
-    float number;
-    while (df_binary_file.read(reinterpret_cast<char*>(&number),
-                               sizeof(float))) {
-        dfCoeffs_[counter%numCoeffs].push_back(number);
-        counter++;
-    }
-    df_binary_file.close();
 }
 
 
@@ -329,25 +376,17 @@ void EOS_4D::get_tilde_variables(
 void EOS_4D::initialize_eos() {
     messenger.info("Read in 4D EOS");
 
-    std::stringstream spath;
-    spath << "./iSS_tables/EOS_tables/HRG4D/";
-    std::string path = spath.str();
+    const std::string path = "./iSS_tables/EOS_tables/HRG4D/";
     messenger << "from path " << path;
     messenger.flush("info");
 
-    // Read EoS in binary
-    // 1D Tables
+    initialize_grid(path + "HRG_t_b.dat");
     read_eos_binary(path + "HRG_p_b.dat", pressure_vec);
     read_eos_binary(path + "HRG_t_b.dat", temp_vec);
     read_eos_binary(path  + "HRG_mub_b.dat", mub_vec);
     read_eos_binary(path  + "HRG_muq_b.dat", muq_vec);
     read_eos_binary(path  + "HRG_mus_b.dat", mus_vec);
 
-    // Header info
-    read_header_binary(path + "HRG_t_b.dat");
-
-    // Get max values of EoS table for interpolation boundary.
-    get_eos_max_values();
     messenger.info("Done reading EOS.");
 }
 
@@ -355,8 +394,7 @@ void EOS_4D::initialize_eos() {
 void EOS_4D::initialize_dfCoeffs(const int dfType) {
     messenger.info("Read in deltaf Coeffs for EoS 4D");
     std::string EOSPath = "./iSS_tables/EOS_tables/HRG4D/";
-    // Header info
-    read_header_binary(EOSPath + "HRG_t_b.dat");
+    initialize_grid(EOSPath + "HRG_t_b.dat");
 
     std::string dfCoeffsPath = "./iSS_tables/deltaf_tables/urqmd/";
     std::string dfFileName = "NEoS4D_22mom_deltafCoeff.bin";

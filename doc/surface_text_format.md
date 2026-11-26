@@ -7,9 +7,14 @@ The format is selected by `freeze_surface_in_binary` in `music_input`.
 
 ## Binary (`freeze_surface_in_binary 1`)
 
-36 floats per cell, plus 38 when `output_vorticity 1`. Older MUSIC
-versions wrote 34 floats, without Qn and Sn; iSS does not read those
-files any more.
+iSS reads 36 floats per cell, plus 38 when `output_vorticity 1`.
+With the default `music_binary_surface_columns = 0`, iSS rejects
+headerless files whose size fits both the current and legacy record
+widths (36 and 34 floats, respectively, before the vorticity fields).
+For a file known to contain nQ and nS, set
+`music_binary_surface_columns = 36` in the iSS parameter file or on the
+command line to confirm its layout. Legacy surfaces need to be
+regenerated or converted to include nQ and nS.
 
 | Index | Quantity |
 |---|---|

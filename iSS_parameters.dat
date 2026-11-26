@@ -4,6 +4,9 @@ hydro_mode = 2           # mode for reading in freeze out information
                          #    boost-invariant
                          # 2: reads outputs from MUSIC full (3+1)-d
 
+music_binary_surface_columns = 0  # 0: automatic size check
+                                  # 36: confirm nQ and nS are present in ambiguous files
+
 afterburner_type = 1     # 0: PDG_Decay
                          # 1: UrQMD
                          # 2: SMASH
@@ -37,7 +40,7 @@ use_gzip_format = 0          # output results in gzip format (only works with
                              # store_samples_in_memory = 1)
 use_binary_format = 1        # output results in binary format
 perform_decays = 0           # flag to perform resonance decay
-perform_checks = 0           # perform tests for particle samples
+perform_checks = 0           # perform tests for particle samples (MC_sampling = 4)
 include_spectators = 0       # include spectators (filename: spectators.dat)
 
 local_charge_conservation = 0  # flag to impose local charge conservation
@@ -47,7 +50,8 @@ polarizationRapType = 1        # 0: rapidity; 1: pseudorapidity; 2: both
 
 calculate_vn = 0         # 1/0: whether to calculate the
                          # dN/(pt dpt dphi dy) and v_n flows
-                         # (they not required for MC-sampling)
+                         # Requires MC_sampling = 0, 1, 2, or 3.
+                         # With bulk corrections enabled, use bulk_deltaf_kind = 0 through 4.
 
 MC_sampling = 4          # 0/1/2/3: whether to perform Monte-Carlo sampling
                          # (not required for spectra calculation). 

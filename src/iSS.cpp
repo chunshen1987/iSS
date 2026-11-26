@@ -1,4 +1,4 @@
-
+#include <cmath>
 #include <memory>
 #include <iomanip>
 
@@ -39,6 +39,33 @@ void iSS::clear() {
 
 
 int iSS::shell() {
+    const double sampling_mode = paraRdr_ptr->getVal("MC_sampling");
+    if (sampling_mode != 4 && paraRdr_ptr->exist("perform_checks")
+            && paraRdr_ptr->getVal("perform_checks") == 1) {
+        messager.error("perform_checks = 1 requires MC_sampling = 4");
+        exit(1);
+    }
+    const bool calculate_vn = (paraRdr_ptr->getVal("calculate_vn", 0) == 1
+                               || sampling_mode == 3);
+    if (calculate_vn) {
+        if (sampling_mode < 0 || sampling_mode > 3
+                || sampling_mode != std::floor(sampling_mode)) {
+            messager.error("calculate_vn requires MC_sampling = 0, 1, 2, or 3");
+            exit(1);
+        }
+        if (paraRdr_ptr->getVal("include_deltaf_bulk") == 1) {
+            const double kind = paraRdr_ptr->getVal("bulk_deltaf_kind");
+            if (kind < 0 || kind > 4 || kind != std::floor(kind)) {
+                messager << "Smooth spectra and v_n do not support "
+                         << "bulk_deltaf_kind = " << kind
+                         << ". Use bulk_deltaf_kind = 0, 1, 2, 3, or 4, "
+                         << "or set include_deltaf_bulk = 0.";
+                messager.flush("error");
+                exit(1);
+            }
+        }
+    }
+
     int status = read_in_FO_surface();
     if (status != 0) {
         messager << "Some errors happened in reading in the hyper-surface";
@@ -52,8 +79,7 @@ int iSS::shell() {
 
     // MC_sampling = 0 with calculate_vn = 1 computes the smooth spectra and
     // v_n (EmissionFunctionArray::shell) without sampling particles
-    if (paraRdr_ptr->getVal("MC_sampling") != 0
-            || paraRdr_ptr->getVal("calculate_vn", 0) == 1) {
+    if (sampling_mode != 0 || calculate_vn) {
         set_random_seed();
         status = generate_samples();
         if (status != 0) {
@@ -67,7 +93,18 @@ int iSS::shell() {
 }
 
 
+bool iSS::has_samples_for_checks() {
+    if (!spectra_sampler_ || FOsurf_LRF_array_.empty()
+            || spectra_sampler_->get_number_of_sampled_events() == 0) {
+        messager.warning("Sample checks require a surface and events from MC_sampling = 4.");
+        return false;
+    }
+    return true;
+}
+
+
 void iSS::perform_checks() {
+    if (!has_samples_for_checks()) return;
     messager.info("Performing checks for the samples ...");
     construct_Tmunu_from_particle_samples();
     Histogram hist_pion(0., 5., 100);
@@ -316,6 +353,7 @@ void iSS::compute_spin_polarization() {
 
 
 void iSS::construct_Tmunu_from_particle_samples() {
+    if (!has_samples_for_checks()) return;
     messager.info("Constructing the fluid cell T^{mu nu} from samples ...");
     double volume = (FOsurf_LRF_array_[0].da_mu_LRF[0]
                      /FOsurf_LRF_array_[0].u_tz[0]);

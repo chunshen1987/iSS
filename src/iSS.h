@@ -41,6 +41,8 @@ class iSS {
 
     pretty_ostream messager;
 
+    bool has_samples_for_checks();
+
  public:
     iSS(std::string path, std::string table_path="iSS_tables",
         std::string particle_table_path="iSS_tables",

@@ -729,8 +729,8 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
                         bulkPi = surf->bulkPi;
                     } else {
                         bulkPi = surf->bulkPi/hbarC;   // unit in fm^-4 
-                        getbulkvisCoefficients(Tdec, bulkvisCoefficients);
                     }
+                    getbulkvisCoefficients(Tdec, bulkvisCoefficients);
                 }
 
                 // diffusion delta f

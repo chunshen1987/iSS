@@ -5,6 +5,8 @@
 
 #include <cmath>
 #include <array>
+#include <cstddef>
+#include <fstream>
 #include <vector>
 
 #include "pretty_ostream.h"
@@ -15,6 +17,8 @@ class EOS_4D {
     float mubtilde0, muqtilde0, mustilde0, Ttilde0;
     float dmubtilde, dmuqtilde, dmustilde, dTtilde;
     int N_mub, N_muq, N_mus, N_T;
+    std::array<float, 12> grid_header_;
+    std::size_t grid_size_;
 
     // max values for the tilde variables
     float T_tilde_max;
@@ -38,16 +42,18 @@ class EOS_4D {
 
     std::vector<std::vector<float>> dfCoeffs_;
 
-    // method to read/mainupalate header info and data
-    void read_eos_binary(std::string filepath,
-                         std::vector<float> &out, int header_size=12);
-    void read_dfCoeffs_binary(std::string filepath, const int dfType);
+    void read_eos_binary(const std::string &filepath, std::vector<float> &out);
+    void read_dfCoeffs_binary(const std::string &filepath, int dfType);
+    std::array<float, 12> read_header_binary(
+        std::ifstream &input, const std::string &filepath);
+    void initialize_grid(const std::string &filepath);
+    void check_payload_size(std::ifstream &input, const std::string &filepath,
+                            std::size_t floats_per_cell);
+    [[noreturn]] void invalid_table(const std::string &filepath,
+                                    const std::string &reason);
 
     void get_eos_max_values();
 
-    void read_header_binary(std::string filepath, int header_size=12);
-
-    // Shift in the index corresponds to the header size.
     int index(int i_T, int i_mub, int i_muq, int i_mus) const;
 
     void FourDLInterp(const std::vector<float> &data,

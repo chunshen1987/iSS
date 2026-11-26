@@ -1,7 +1,10 @@
 // Copyright @ 2012 Chun Shen and Zhi Qiu
 #include <stdlib.h>
 
+#include <array>
+#include <cctype>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -21,6 +24,12 @@ using std::string;
 using std::ostringstream;
 using iSS_data::hbarC;
 using iSS_data::Vec4;
+
+namespace {
+constexpr int legacy_music_cell_columns = 34;
+constexpr int music_cell_columns = 36;
+constexpr int music_vorticity_columns = 38;
+}
 
 read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
                          string table_path, string particle_table_path) :
@@ -55,12 +64,11 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
             messager.flush("error");
             exit(1);
         }
-        string temp1;
-        string temp_name;
-        while (!configuration.eof()) {
-            getline(configuration, temp1);
-            std::stringstream ss(temp1);
-            ss >> temp_name;
+        string line;
+        while (std::getline(configuration, line)) {
+            std::stringstream ss(line);
+            string temp_name;
+            if (!(ss >> temp_name)) continue;
             if (temp_name == "Include_Bulk_Visc_Yes_1_No_0") {
                 ss >> turn_on_bulk;
             }
@@ -71,21 +79,12 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
                 ss >> turn_on_diff;
             }
             if (temp_name == "freeze_surface_in_binary") {
-                int flag_b;
-                ss >> flag_b;
-                if (flag_b == 1) {
-                    surface_in_binary_ = true;
-                } else {
-                    surface_in_binary_ = false;
-                }
+                int flag;
+                if (ss >> flag) surface_in_binary_ = flag == 1;
             }
             if (temp_name == "output_vorticity") {
-                int flag_vor;
-                ss >> flag_vor;
-                if (flag_vor == 1)
-                    include_vorticity_ = true;
-                else
-                    include_vorticity_ = false;
+                int flag;
+                if (ss >> flag) include_vorticity_ = flag == 1;
             }
             if (temp_name == "EOS_to_use") {
                 ss >> iEOS_MUSIC_;
@@ -118,9 +117,9 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
         paraRdr->setVal("calculate_polarization", 0);
     }
 
-    fluid_cell_size = 36;
+    fluid_cell_size = music_cell_columns;
     if (include_vorticity_)
-        fluid_cell_size += 38;
+        fluid_cell_size += music_vorticity_columns;
 
     n_eta_skip = 0;
     int afterburner_id = paraRdr->getVal("afterburner_type");
@@ -183,17 +182,23 @@ int read_FOdata::get_number_of_freezeout_cells(std::string surfaceFilename) {
                                                         surface_file.str());
             n_eta_skip = 1;
         } else {
-            Table block_file(surface_file.str().c_str());
-
-            // determine number of the eta slides that are output
-            double eta_target = block_file.get(4, 1);
-            int num_temp = 0;
-            for (int i = 0; i < block_file.getNumberOfRows(); i++) {
-                if (block_file.get(4, i+1) == eta_target)
-                    num_temp++;
+            // Count cells on the first eta slice without assuming every row
+            // has the same width. The text reader validates the full records.
+            std::ifstream surface(surface_file.str());
+            string line;
+            double eta_target = 0.;
+            int number_of_rows = 0;
+            while (std::getline(surface, line)) {
+                std::istringstream row(line);
+                double tau, x, y, eta;
+                if (!(row >> tau >> x >> y >> eta)) continue;
+                if (number_of_rows == 0) eta_target = eta;
+                if (eta == eta_target) number_of_cells++;
+                number_of_rows++;
             }
-            number_of_cells = num_temp;
-            n_eta_skip = block_file.getNumberOfRows()/number_of_cells;
+            if (number_of_cells > 0) {
+                n_eta_skip = number_of_rows/number_of_cells;
+            }
         }
     } else if (mode == 2) {  // outputs from MUSIC full (3+1)-d
         int number_of_lines = 0;
@@ -222,26 +227,59 @@ int read_FOdata::get_number_of_freezeout_cells(std::string surfaceFilename) {
 
 
 int read_FOdata::get_number_of_lines_of_binary_surface_file(string filename) {
-    std::ifstream surface_file(filename.c_str(), std::ios::binary);
-    int count = 0;
-    float temp = 0.;
-    while(surface_file) {
-        surface_file.read(reinterpret_cast<char*>(&temp), sizeof(float));
-        count++;
-    }
-    count -= 1;
-    if (count % fluid_cell_size != 0) {
-        messager << "The input file format is not correct!";
-        messager.flush("error");
-        messager << "Every line should have " << fluid_cell_size
-                 << " variables, but we got " << count
-                 << " variables in total!";
+    const double declared_columns = paraRdr->exist("music_binary_surface_columns")
+        ? paraRdr->getVal("music_binary_surface_columns") : 0;
+    if (declared_columns != 0 && declared_columns != music_cell_columns) {
+        messager << "music_binary_surface_columns must be 0 (automatic) or "
+                 << music_cell_columns << " (includes nQ and nS)";
         messager.flush("error");
         exit(1);
     }
-    int counted_line = count/fluid_cell_size;
-    surface_file.close();
-    return(counted_line);
+
+    std::ifstream surface_file(filename, std::ios::binary | std::ios::ate);
+    const std::streamoff size = surface_file.tellg();
+    if (size < 0) {
+        messager << "Cannot determine the size of MUSIC binary surface "
+                 << filename;
+        messager.flush("error");
+        exit(1);
+    }
+
+    const std::streamoff record_bytes = fluid_cell_size*sizeof(float);
+    const int legacy_columns = legacy_music_cell_columns
+        + (include_vorticity_ ? music_vorticity_columns : 0);
+    const std::streamoff legacy_record_bytes = legacy_columns*sizeof(float);
+    const bool fits_legacy = size > 0 && size % legacy_record_bytes == 0;
+    if (size == 0 || size % record_bytes != 0) {
+        if (fits_legacy) {
+            messager << "MUSIC binary surface " << filename
+                     << " matches the legacy " << legacy_columns
+                     << "-float record size. Use a surface written with nQ and nS.";
+        } else {
+            messager << "Invalid MUSIC binary surface " << filename << ": "
+                     << size << " bytes, expected whole " << record_bytes
+                     << "-byte records (" << fluid_cell_size << " floats)";
+        }
+        messager.flush("error");
+        exit(1);
+    }
+    if (fits_legacy && declared_columns == 0) {
+        messager << "Ambiguous MUSIC binary surface " << filename << ": "
+                 << size << " bytes fit both " << legacy_columns << "- and "
+                 << fluid_cell_size << "-float records. Set "
+                 << "music_binary_surface_columns = " << music_cell_columns
+                 << " only if the surface was written with nQ and nS.";
+        messager.flush("error");
+        exit(1);
+    }
+    const std::streamoff number_of_cells = size/record_bytes;
+    if (number_of_cells > std::numeric_limits<int>::max()) {
+        messager << "Too many cells in MUSIC binary surface " << filename
+                 << ": " << number_of_cells;
+        messager.flush("error");
+        exit(1);
+    }
+    return static_cast<int>(number_of_cells);
 }
 
 
@@ -406,9 +444,12 @@ void read_FOdata::read_decdat(std::vector<FO_surf> &surf_ptr) {
 
         ss >> surf_elem.Edec;
         ss >> surf_elem.Bn;
+        surf_elem.Qn = 0.;
+        surf_elem.Sn = 0.;
         ss >> surf_elem.Tdec;
         ss >> surf_elem.muB;
         ss >> surf_elem.muS;
+        surf_elem.muQ = 0.;
         ss >> surf_elem.Pdec;
 
         ss >> surf_elem.pi33;
@@ -468,29 +509,120 @@ void read_FOdata::read_FOsurfdat_VISH2p1(std::vector<FO_surf> &surf_ptr) {
 }
 
 
+bool read_FOdata::read_MUSIC_text_cell(
+        std::istream &surface, const string &filename, long &line_number,
+        FO_surf &cell) {
+    const bool has_bulk = turn_on_bulk == 1;
+    const bool has_baryon = turn_on_rhob == 1;
+    const bool has_charges = has_baryon && iEOS_MUSIC_ == 20;
+    const bool has_diffusion = turn_on_diff == 1;
+    const int expected_columns = (28 + has_bulk + has_baryon
+                                  + 2*has_charges + 4*has_diffusion);
+
+    string line;
+    while (std::getline(surface, line)) {
+        ++line_number;
+        if (line.find_first_not_of(" \t\r\n\f\v") == string::npos) continue;
+
+        std::istringstream row(line);
+        std::array<double, 36> values;
+        int column = 0;
+        for (; column < expected_columns; ++column) {
+            if (!(row >> values[column])) break;
+            const int next = row.peek();
+            if (next != std::char_traits<char>::eof()
+                    && !std::isspace(next)) break;
+        }
+        // A value ending at EOF is valid, including when the file has no
+        // newline after the last cell.
+        if (!row.eof()) row >> std::ws;
+        if (column != expected_columns || !row.eof()) {
+            messager << "Invalid MUSIC text surface " << filename
+                     << " at line " << line_number << ": expected "
+                     << expected_columns << " numeric columns";
+            if (has_charges) {
+                messager << " (EOS_to_use = 20 requires nQ and nS after nB)";
+            }
+            messager.flush("error");
+            exit(1);
+        }
+
+        cell.tau = values[0];
+        cell.xpt = values[1];
+        cell.ypt = values[2];
+        cell.eta = values[3];
+        cell.cosh_eta = cosh(cell.eta);
+        cell.sinh_eta = sinh(cell.eta);
+        cell.da0 = values[4];
+        cell.da1 = values[5];
+        cell.da2 = values[6];
+        cell.da3 = values[7];
+        cell.u0  = values[8];
+        cell.u1  = values[9];
+        cell.u2  = values[10];
+        cell.u3  = values[11];
+
+        cell.Edec = values[12]*hbarC;
+        cell.Tdec = values[13]*hbarC;
+        cell.muB  = values[14]*hbarC;
+        cell.muS  = values[15]*hbarC;
+        cell.muQ  = values[16]*hbarC;
+        cell.Pdec = values[17]*cell.Tdec - cell.Edec;
+
+        cell.pi00 = values[18]*hbarC;
+        cell.pi01 = values[19]*hbarC;
+        cell.pi02 = values[20]*hbarC;
+        cell.pi03 = values[21]*hbarC;
+        cell.pi11 = values[22]*hbarC;
+        cell.pi12 = values[23]*hbarC;
+        cell.pi13 = values[24]*hbarC;
+        cell.pi22 = values[25]*hbarC;
+        cell.pi23 = values[26]*hbarC;
+        cell.pi33 = values[27]*hbarC;
+
+        column = 28;
+        cell.bulkPi = has_bulk ? values[column++]*hbarC : 0.;
+        cell.Bn = has_baryon ? values[column++] : 0.;
+        cell.Qn = has_charges ? values[column++] : 0.;
+        cell.Sn = has_charges ? values[column++] : 0.;
+        cell.qmu0 = has_diffusion ? values[column++] : 0.;
+        cell.qmu1 = has_diffusion ? values[column++] : 0.;
+        cell.qmu2 = has_diffusion ? values[column++] : 0.;
+        cell.qmu3 = has_diffusion ? values[column] : 0.;
+        return true;
+    }
+    if (!surface.eof()) {
+        messager << "Error reading MUSIC text surface " << filename
+                 << " after line " << line_number;
+        messager.flush("error");
+        exit(1);
+    }
+    return false;
+}
+
+
 void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
                 std::vector<FO_surf> &surf_ptr, std::string surface_filename) {
     cout << " -- Read spatial positions of freeze out surface from MUSIC "
          << "(boost-invariant) ...";
     ostringstream surfdat_stream;
-    double dummy;
-    string input;
-    double temp_tau, temp_xpt, temp_ypt, temp_eta;
     surfdat_stream << path_ << "/" << surface_filename;
+    const string filename = surfdat_stream.str();
     std::ifstream surfdat;
     if (surface_in_binary_) {
-        surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);
+        surfdat.open(filename, std::ios::binary);
     } else {
-        surfdat.open(surfdat_stream.str().c_str());
+        surfdat.open(filename);
     }
     if (!surfdat.good()) {
-        cout << "[Error] Surface file is not found! " << surfdat_stream.str()
+        cout << "[Error] Surface file is not found! " << filename
              << endl;
         exit(1);
     }
     long n_negative_flux = 0;
     double flux_total = 0., flux_negative = 0.;
-    while (!surfdat.eof()) {
+    long line_number = 0;
+    while (true) {
         FO_surf surf_elem;
         if (surface_in_binary_) {
             std::vector<float> array_loc(fluid_cell_size, 0.0);
@@ -545,109 +677,35 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
                 for (int ii = 0; ii < 38; ii++)
                     surf_elem.vorticity_arr.push_back(array_loc[36+ii]);
             }
+            if (!surfdat) break;
         } else {
-            // Not adapted to rhoQ and rhoS at pos 30 and 31.
-            getline(surfdat, input, '\n');
-            std::stringstream ss(input);
-
-            ss >> temp_tau >> temp_xpt >> temp_ypt >> temp_eta;
-            // freeze out position
-            surf_elem.tau = temp_tau;
-            surf_elem.xpt = temp_xpt;
-            surf_elem.ypt = temp_ypt;
-            surf_elem.eta = 0.0;
-
-            // freeze out normal vectors
-            ss >> surf_elem.da0;
-            ss >> surf_elem.da1;
-            ss >> surf_elem.da2;
-            ss >> surf_elem.da3;
-            surf_elem.da3 = 0.0;
-
-            // flow velocity
-            ss >> surf_elem.u0;
-            ss >> surf_elem.u1;
-            ss >> surf_elem.u2;
-            ss >> surf_elem.u3;
-
-            // thermodynamic quantities at freeze out
-            ss >> dummy; surf_elem.Edec = dummy*hbarC;
-            ss >> dummy; surf_elem.Tdec = dummy*hbarC;
-            ss >> dummy; surf_elem.muB = dummy*hbarC;
-            ss >> dummy; surf_elem.muS = dummy*hbarC;
-            ss >> dummy; surf_elem.muQ = dummy*hbarC;
-            ss >> dummy;              // (e+P)/T
-            surf_elem.Pdec = dummy*surf_elem.Tdec - surf_elem.Edec;
-
-            // dissipative quantities at freeze out
-            ss >> dummy;                       // 1/fm^4
-            surf_elem.pi00 = dummy*hbarC;  // GeV/fm^3
-            ss >> dummy; surf_elem.pi01 = dummy*hbarC;
-            ss >> dummy; surf_elem.pi02 = dummy*hbarC;
-            ss >> dummy; surf_elem.pi03 = dummy*hbarC;
-            ss >> dummy; surf_elem.pi11 = dummy*hbarC;
-            ss >> dummy; surf_elem.pi12 = dummy*hbarC;
-            ss >> dummy; surf_elem.pi13 = dummy*hbarC;
-            ss >> dummy; surf_elem.pi22 = dummy*hbarC;
-            ss >> dummy; surf_elem.pi23 = dummy*hbarC;
-            ss >> dummy; surf_elem.pi33 = dummy*hbarC;
-
-            if (turn_on_bulk == 1) {
-                ss >> dummy; surf_elem.bulkPi = dummy*hbarC;  // GeV/fm^3
-            } else {
-                surf_elem.bulkPi = 0.0;
-            }
-            if (turn_on_rhob == 1) {
-                ss >> dummy; surf_elem.Bn = dummy;   // 1/fm^3
-            } else {
-                surf_elem.Bn = 0.0;
-            }
-            // the 4D EoS needs net electric charge and strangeness densities;
-            // they follow Bn, in the same order as in the binary format
-            if (turn_on_rhob == 1 && iEOS_MUSIC_ == 20) {
-                ss >> dummy; surf_elem.Qn = dummy;   // 1/fm^3
-                ss >> dummy; surf_elem.Sn = dummy;   // 1/fm^3
-            } else {
-                surf_elem.Qn = 0.;
-                surf_elem.Sn = 0.;
-            }
-            if (turn_on_diff == 1) {
-                ss >> surf_elem.qmu0;
-                ss >> surf_elem.qmu1;
-                ss >> surf_elem.qmu2;
-                ss >> surf_elem.qmu3;
-            } else {
-                surf_elem.qmu0 = 0.0e0;
-                surf_elem.qmu1 = 0.0e0;
-                surf_elem.qmu2 = 0.0e0;
-                surf_elem.qmu3 = 0.0e0;
-            }
+            if (!read_MUSIC_text_cell(surfdat, filename,
+                                      line_number, surf_elem)) break;
+            surf_elem.eta = 0.;
+            surf_elem.cosh_eta = 1.;
+            surf_elem.sinh_eta = 0.;
+            surf_elem.da3 = 0.;
         }
 
         double u_dot_dsigma = surf_elem.tau*(
             surf_elem.u0*surf_elem.da0 + surf_elem.u1*surf_elem.da1
             + surf_elem.u2*surf_elem.da2
             + surf_elem.u3*surf_elem.da3/surf_elem.tau);
-        if (!surfdat.eof()) {
-            flux_total += std::abs(u_dot_dsigma);
-            if (u_dot_dsigma < 0) {
-                // a sampler cannot draw a negative number of particles
-                n_negative_flux++;
-                flux_negative += std::abs(u_dot_dsigma);
-            }
+        flux_total += std::abs(u_dot_dsigma);
+        if (u_dot_dsigma < 0) {
+            // A sampler cannot draw a negative number of particles.
+            n_negative_flux++;
+            flux_negative += std::abs(u_dot_dsigma);
+            continue;
         }
-        if (u_dot_dsigma < 0) continue;
 
-        if (!surfdat.eof()) {
-            if (surf_elem.Tdec > 0.01) {
-                surf_ptr.push_back(surf_elem);
-            } else {
-                cout << "Discard surf elem: T = " << surf_elem.Tdec << " GeV, "
-                     << "Edec = " << surf_elem.Edec << " GeV/fm^3, "
-                     << "rhoB = " << surf_elem.Bn << " 1/fm^3, "
-                     << "muB = " << surf_elem.muB << " GeV. "
-                     << endl;
-            }
+        if (surf_elem.Tdec > 0.01) {
+            surf_ptr.push_back(surf_elem);
+        } else {
+            cout << "Discard surf elem: T = " << surf_elem.Tdec << " GeV, "
+                 << "Edec = " << surf_elem.Edec << " GeV/fm^3, "
+                 << "rhoB = " << surf_elem.Bn << " 1/fm^3, "
+                 << "muB = " << surf_elem.muB << " GeV. " << endl;
         }
     }
     surfdat.close();
@@ -744,22 +802,23 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
                                        std::string surface_filename) {
     cout << " -- Read spatial positions of freeze out surface from MUSIC...";
     ostringstream surfdat_stream;
-    double dummy;
     surfdat_stream << path_ << "/" << surface_filename;
+    const string filename = surfdat_stream.str();
     std::ifstream surfdat;
     if (surface_in_binary_) {
-        surfdat.open(surfdat_stream.str().c_str(), std::ios::binary);
+        surfdat.open(filename, std::ios::binary);
     } else {
-        surfdat.open(surfdat_stream.str().c_str());
+        surfdat.open(filename);
     }
     if (!surfdat.good()) {
-        cout << "[Error] Surface file is not found! " << surfdat_stream.str()
+        cout << "[Error] Surface file is not found! " << filename
              << endl;
         exit(1);
     }
     long n_negative_flux = 0;
     double flux_total = 0., flux_negative = 0.;
-    while (!surfdat.eof()) {
+    long line_number = 0;
+    while (true) {
         FO_surf surf_elem;
         if (surface_in_binary_) {
             std::vector<float> array_loc(fluid_cell_size, 0.0);
@@ -814,103 +873,31 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
                 for (int ii = 0; ii < 38; ii++)
                     surf_elem.vorticity_arr.push_back(array_loc[36+ii]);
             }
+            if (!surfdat) break;
         } else {
-            // freeze out position
-            surfdat >> surf_elem.tau;
-            surfdat >> surf_elem.xpt;
-            surfdat >> surf_elem.ypt;
-            surfdat >> surf_elem.eta;
-            surf_elem.cosh_eta = cosh(surf_elem.eta);
-            surf_elem.sinh_eta = sinh(surf_elem.eta);
-
-            // freeze out normal vectors
-            surfdat >> surf_elem.da0;
-            surfdat >> surf_elem.da1;
-            surfdat >> surf_elem.da2;
-            surfdat >> surf_elem.da3;
-
-            // flow velocity
-            surfdat >> surf_elem.u0;
-            surfdat >> surf_elem.u1;
-            surfdat >> surf_elem.u2;
-            surfdat >> surf_elem.u3;
-
-            // thermodynamic quantities at freeze out
-            surfdat >> dummy; surf_elem.Edec = dummy*hbarC;
-            surfdat >> dummy; surf_elem.Tdec = dummy*hbarC;
-            surfdat >> dummy; surf_elem.muB = dummy*hbarC;
-            surfdat >> dummy; surf_elem.muS = dummy*hbarC;
-            surfdat >> dummy; surf_elem.muQ = dummy*hbarC;
-            surfdat >> dummy;                    //(e+p)/T
-            surf_elem.Pdec = dummy*surf_elem.Tdec - surf_elem.Edec;
-
-            // dissipative quantities at freeze out
-            surfdat >> dummy; surf_elem.pi00 = dummy*hbarC;
-            surfdat >> dummy; surf_elem.pi01 = dummy*hbarC;
-            surfdat >> dummy; surf_elem.pi02 = dummy*hbarC;
-            surfdat >> dummy; surf_elem.pi03 = dummy*hbarC;
-            surfdat >> dummy; surf_elem.pi11 = dummy*hbarC;
-            surfdat >> dummy; surf_elem.pi12 = dummy*hbarC;
-            surfdat >> dummy; surf_elem.pi13 = dummy*hbarC;
-            surfdat >> dummy; surf_elem.pi22 = dummy*hbarC;
-            surfdat >> dummy; surf_elem.pi23 = dummy*hbarC;
-            surfdat >> dummy; surf_elem.pi33 = dummy*hbarC;
-            if (turn_on_bulk == 1) {
-                surfdat >> dummy; surf_elem.bulkPi = dummy*hbarC;
-            } else {
-                surf_elem.bulkPi = 0.0;
-            }
-            if (turn_on_rhob == 1) {
-                surfdat >> dummy; surf_elem.Bn = dummy;   // 1/fm^3
-            } else {
-                surf_elem.Bn = 0.0;
-            }
-            // the 4D EoS needs net electric charge and strangeness densities;
-            // they follow Bn, in the same order as in the binary format
-            if (turn_on_rhob == 1 && iEOS_MUSIC_ == 20) {
-                surfdat >> dummy; surf_elem.Qn = dummy;   // 1/fm^3
-                surfdat >> dummy; surf_elem.Sn = dummy;   // 1/fm^3
-            } else {
-                surf_elem.Qn = 0.;
-                surf_elem.Sn = 0.;
-            }
-            if (turn_on_diff == 1) {
-                surfdat >> surf_elem.qmu0;
-                surfdat >> surf_elem.qmu1;
-                surfdat >> surf_elem.qmu2;
-                surfdat >> surf_elem.qmu3;
-            } else {
-                surf_elem.qmu0 = 0.0e0;
-                surf_elem.qmu1 = 0.0e0;
-                surf_elem.qmu2 = 0.0e0;
-                surf_elem.qmu3 = 0.0e0;
-            }
+            if (!read_MUSIC_text_cell(surfdat, filename,
+                                      line_number, surf_elem)) break;
         }
 
         double u_dot_dsigma = surf_elem.tau*(
             surf_elem.u0*surf_elem.da0 + surf_elem.u1*surf_elem.da1
             + surf_elem.u2*surf_elem.da2
             + surf_elem.u3*surf_elem.da3/surf_elem.tau);
-        if (!surfdat.eof()) {
-            flux_total += std::abs(u_dot_dsigma);
-            if (u_dot_dsigma < 0) {
-                // a sampler cannot draw a negative number of particles
-                n_negative_flux++;
-                flux_negative += std::abs(u_dot_dsigma);
-            }
+        flux_total += std::abs(u_dot_dsigma);
+        if (u_dot_dsigma < 0) {
+            // A sampler cannot draw a negative number of particles.
+            n_negative_flux++;
+            flux_negative += std::abs(u_dot_dsigma);
+            continue;
         }
-        if (u_dot_dsigma < 0) continue;
 
-        if (!surfdat.eof()) {
-            if (surf_elem.Tdec > 0.01) {
-                surf_ptr.push_back(surf_elem);
-            } else {
-                cout << "Discard surf elem: T = " << surf_elem.Tdec << " GeV, "
-                     << "Edec = " << surf_elem.Edec << " GeV/fm^3, "
-                     << "rhoB = " << surf_elem.Bn << " 1/fm^3, "
-                     << "muB = " << surf_elem.muB << " GeV. "
-                     << endl;
-            }
+        if (surf_elem.Tdec > 0.01) {
+            surf_ptr.push_back(surf_elem);
+        } else {
+            cout << "Discard surf elem: T = " << surf_elem.Tdec << " GeV, "
+                 << "Edec = " << surf_elem.Edec << " GeV/fm^3, "
+                 << "rhoB = " << surf_elem.Bn << " 1/fm^3, "
+                 << "muB = " << surf_elem.muB << " GeV. " << endl;
         }
     }
     surfdat.close();
