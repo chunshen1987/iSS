@@ -138,7 +138,17 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
         afterburner_type_ = AfterburnerType::SMASH;
     }
 
-    if (paraRdr->getVal("regulateEOS", 0) == 1) {
+    // only these EoS have a matching HRG table to regulate T and mu with:
+    // 9, 91 (mu = 0), 12 (NEoS-B), 14 (NEoS-BQS) and 20 (4D NEoS)
+    const bool eos_has_HRG_table = (iEOS_MUSIC_ == 9 || iEOS_MUSIC_ == 91
+                                    || iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14
+                                    || iEOS_MUSIC_ == 20);
+    if (paraRdr->getVal("regulateEOS", 0) == 1 && !eos_has_HRG_table) {
+        messager << "regulateEOS = 1 is not supported for EOS_to_use = "
+                 << iEOS_MUSIC_ << "; the surface is used as it is.";
+        messager.flush("warning");
+    }
+    if (paraRdr->getVal("regulateEOS", 0) == 1 && eos_has_HRG_table) {
         regulateEOS_ = true;
         if (iEOS_MUSIC_ == 20) {
             eos_4d_.initialize_eos();
