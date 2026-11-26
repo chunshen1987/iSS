@@ -19,8 +19,8 @@ class particle_decay {
 
     //! What a decay channel needs at decay time, fixed when the table is
     //! read: the table index of each daughter, the sum of the daughters'
-    //! pole masses (the channel is open at or above it) and the sum of the
-    //! lowest masses they can take (below the pole sum the channel can
+    //! pole masses (the channel is open above it) and the sum of the
+    //! lowest masses they can take (up to the pole sum the channel can
     //! still be reached by giving its broad daughters masses from their
     //! Breit-Wigner distributions, see sample_daughter_masses()).
     struct ChannelKinematics {
@@ -40,6 +40,8 @@ class particle_decay {
     double compute_lowest_mass(int idx, std::vector<int> &state);
     bool is_broad(int idx) const;
     int find_index(int monval) const;
+    bool channel_reachable(const ChannelKinematics &channel, double M) const;
+    bool has_reachable_channel(int idx, double M) const;
     void sample_daughter_masses(double M, const ChannelKinematics &channel,
                                 std::vector<double> &masses);
 
@@ -59,7 +61,8 @@ class particle_decay {
     //! This function returns particle width in GeV
     double get_particle_width(iSS_Hadron *part);
 
-    //! This function checks whether the particle is stable
+    //! This function checks whether the particle is stable.  A resonance
+    //! whose mass is below all of its decay channels counts as stable too
     int check_particle_stable(iSS_Hadron *part);
 
     //! This function returns the electric charge of particle

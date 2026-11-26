@@ -24,8 +24,8 @@ particle_decay::particle_decay(shared_ptr<RandomUtil::Random> ran_gen,
 particle_decay::~particle_decay() {
     if (n_unreachable_ > 0) {
         cerr << "[Warning] particle_decay: " << n_unreachable_
-             << " resonances had no reachable decay channel and were kept"
-             << endl;
+             << " resonances were below all of their decay channels and"
+             << " were kept as final particles" << endl;
     }
     if (n_mass_fallback_ > 0) {
         cerr << "[Warning] particle_decay: daughter masses of "
@@ -223,16 +223,20 @@ double particle_decay::get_particle_width(iSS_Hadron *part) {
     return(width);
 }
 
-//! This function checks whether the particle is stable
+//! This function checks whether the particle is stable.  A resonance whose
+//! mass is below all of its decay channels counts as stable too:
+//! perform_decays() can only hand it back unchanged, so a cascade that
+//! queued it again would never end.  Such particles are counted and
+//! reported at the end of the run.
 int particle_decay::check_particle_stable(iSS_Hadron *part) {
-    int stable = 0;
-    for (unsigned int i = 0; i < resonance_table.size(); i++) {
-        if (part->pid == resonance_table[i]->monval) {
-            stable = resonance_table[i]->stable;
-            break;
-        }
+    const int idx = find_index(part->pid);
+    if (idx < 0) return(0);  // perform_decays() stops on it
+    if (resonance_table[idx]->stable == 1) return(1);
+    if (!has_reachable_channel(idx, part->mass)) {
+        n_unreachable_++;
+        return(1);
     }
-    return(stable);
+    return(0);
 }
 
 
@@ -275,7 +279,9 @@ int particle_decay::get_particle_strange_number(int monval) {
 
 namespace {
 
-//! a decay is reachable only above its threshold by at least this much [GeV]
+//! a channel with daughters below their pole masses is reachable only above
+//! its threshold by more than this much [GeV]; far above the rounding of
+//! the single-precision masses of iSS_Hadron
 const double kMassMargin = 1e-5;
 
 //! widths above this [GeV] are strong decays (see is_broad())
@@ -320,9 +326,13 @@ bool particle_decay::is_broad(int idx) const {
 
 
 //! The lowest mass a broad daughter may be given: the lowest at which every
-//! one of its own decay channels is still reachable, so that a daughter
-//! below its pole keeps the branching ratios of the table; never above its
-//! pole mass.  Narrow and stable particles: their pole masses.
+//! one of its own decay channels is still reachable in the sense of
+//! channel_reachable(), so that a daughter below its pole keeps the
+//! branching ratios of the table and can always decay; never above its
+//! pole mass.  The two margins put it strictly inside the reachable range:
+//! one is the margin of channel_reachable(), the other leaves room for the
+//! daughters' masses in sample_daughter_masses().  Narrow and stable
+//! particles: their pole masses.
 double particle_decay::compute_lowest_mass(int idx, vector<int> &state) {
     if (state[idx] == 2) return lowest_mass_[idx];
     const particle_info *info = resonance_table[idx];
@@ -347,7 +357,7 @@ double particle_decay::compute_lowest_mass(int idx, vector<int> &state) {
         }
         lowest = std::max(lowest, sum);
     }
-    lowest = std::min(lowest, pole);
+    lowest = std::min(lowest + 2.*kMassMargin, pole);
     lowest_mass_[idx] = lowest;
     state[idx] = 2;
     return lowest;
@@ -399,13 +409,58 @@ void particle_decay::prepare_channel_kinematics() {
                                             resonance_table[d]->mass);
                 // as the lower limits in sample_daughter_masses()
                 kin.threshold_min += (is_broad(d)
-                    ? lowest_mass_[d] + kMassMargin
+                    ? lowest_mass_[d]
                     : static_cast<float>(resonance_table[d]->mass));
                 if (is_broad(d)) kin.has_broad_daughter = true;
             }
             channel_kinematics_[i].push_back(kin);
         }
     }
+
+    // A species that cannot decay at its pole mass, or at the lowest mass
+    // it can be given as a daughter, stays in the final state
+    // (check_particle_stable()): say so once, when the table is read.
+    for (int i = 0; i < ntable; i++) {
+        const particle_info *info = resonance_table[i];
+        if (info->stable == 1) continue;
+        const double pole = static_cast<float>(info->mass);
+        if (!has_reachable_channel(i, pole)) {
+            cout << "[Warning] particle_decay: " << info->monval
+                 << " has no decay channel open at its pole mass " << pole
+                 << " GeV; it will be kept as a final particle" << endl;
+        } else if (!has_reachable_channel(i, lowest_mass_[i])) {
+            cout << "[Warning] particle_decay: " << info->monval
+                 << " has no decay channel open at " << lowest_mass_[i]
+                 << " GeV, the lowest mass it can be given as a daughter"
+                 << endl;
+        }
+    }
+}
+
+
+//! Whether a mother of mass M can decay through a channel: either the
+//! channel is open at the daughters' pole masses, strictly, as the decay
+//! routines need, or its broad daughters can be given lower masses
+//! (sample_daughter_masses()).
+bool particle_decay::channel_reachable(const ChannelKinematics &channel,
+                                       double M) const {
+    if (channel.daughter_index.size() < 2) return false;
+    if (M > channel.threshold_pole) return true;
+    return (channel.has_broad_daughter
+            && M - kMassMargin > channel.threshold_min);
+}
+
+
+bool particle_decay::has_reachable_channel(int idx, double M) const {
+    const particle_info *info = resonance_table[idx];
+    const vector<ChannelKinematics> &kin = channel_kinematics_[idx];
+    for (int i = 0; i < info->decays; i++) {
+        if (info->decay_channels[i]->branching_ratio > 0.
+                && channel_reachable(kin[i], M)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 
@@ -423,7 +478,7 @@ void particle_decay::sample_daughter_masses(double M,
     double sum_lo = 0.;
     for (int k = 0; k < n; k++) {
         int d = channel.daughter_index[k];
-        lo[k] = is_broad(d) ? lowest_mass_[d] + kMassMargin : masses[k];
+        lo[k] = is_broad(d) ? lowest_mass_[d] : masses[k];
         sum_lo += lo[k];
     }
     for (int k = 0; k < n; k++) hi[k] = M_top - (sum_lo - lo[k]);
@@ -469,7 +524,9 @@ void particle_decay::sample_daughter_masses(double M,
 //! channels the mother can reach: those open at the daughters' pole masses
 //! and those that open when its unstable daughters take masses below their
 //! poles (sample_daughter_masses()).  A channel that neither reaches is
-//! skipped, and its share goes to the others.  A negative number of
+//! skipped, and its share goes to the others; a mother that reaches none is
+//! handed back unchanged, and check_particle_stable() calls it stable, so
+//! that the cascades keep it as a final particle.  A negative number of
 //! daughters in the table (the UrQMD-derived lists use it to mark channels
 //! closed at the pole masses) is read as its absolute value.  Channels with
 //! two and three daughters use the original routines and random-number
@@ -496,16 +553,13 @@ void particle_decay::perform_decays(
     for (int i = 0; i < N_decay_channel; i++) {
         const decay_channel_info *ch = mother_decay_info->decay_channels[i];
         if (std::abs(ch->decay_Npart) < 2) continue;
-        bool reachable = (M >= kin[i].threshold_pole
-                          || (kin[i].has_broad_daughter
-                              && M - kMassMargin > kin[i].threshold_min));
-        if (reachable) {
+        if (channel_reachable(kin[i], M)) {
             weight[i] = ch->branching_ratio;
             total += weight[i];
         }
     }
     if (total <= 0.) {
-        n_unreachable_++;
+        // counted by check_particle_stable()
         daughter_list->push_back(*mother);
         return;
     }
@@ -528,7 +582,7 @@ void particle_decay::perform_decays(
         masses[k] = static_cast<float>(
                         resonance_table[channel.daughter_index[k]]->mass);
     }
-    if (M < channel.threshold_pole) {
+    if (!(M > channel.threshold_pole)) {
         sample_daughter_masses(M, channel, masses);
     }
     vector<iSS_Hadron> daughters(N_decay_part);
