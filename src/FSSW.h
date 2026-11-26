@@ -211,7 +211,7 @@ class FSSW {
         const FO_surf_LRF *surf,
         const std::vector<double> visCoefficients,
         const double deltaf_qmu_coeff,
-        double &pT, double &phi, double &y_minus_eta_s);
+        double &pT, double &phi, double &y_minus_eta_s, double mu_PCE = 0.);
     void add_one_sampled_particle(
         const int repeated_sampling_idx, const FO_surf_LRF *surf,
         const int particle_monval, const double mass,

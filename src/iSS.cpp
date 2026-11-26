@@ -8,6 +8,7 @@
 #include "Random.h"
 #include "data_struct.h"
 #include "Histogram.h"
+#include "sample_output.h"
 
 using iSS_data::Vec4;
 
@@ -31,9 +32,17 @@ iSS::~iSS() {
 
 
 void iSS::clear() {
+    polarizor.reset();
+    efa_.reset();
+    spectra_sampler_.reset();
     FOsurf_array_.clear();
     FOsurf_LRF_array_.clear();
     FOsurf_Tmunu_.clear();
+    FOsurf_Q_.clear();
+    FOsurf_volume_ = 0.;
+    for (const auto &particle : particle_) {
+        for (auto *channel : particle.decay_channels) delete channel;
+    }
     particle_.clear();
 }
 
@@ -136,6 +145,7 @@ void iSS::perform_checks() {
 
 
 int iSS::read_in_FO_surface() {
+    clear();
     std::vector<FO_surf> FOsurf_temp;
     read_FOdata freeze_out_data(paraRdr_ptr, path_, table_path_,
                                 particle_table_path_);
@@ -359,10 +369,9 @@ void iSS::compute_spin_polarization() {
 void iSS::construct_Tmunu_from_particle_samples() {
     if (!has_samples_for_checks()) return;
     messager.info("Constructing the fluid cell T^{mu nu} from samples ...");
-    const double volume = (FOsurf_LRF_array_[0].da_mu_LRF[0]
-                           /FOsurf_LRF_array_[0].u_tz[0]);
+    const double volume = FOsurf_volume_;
     if (!std::isfinite(volume) || volume <= 0.) {
-        messager.error("Sample reconstruction requires a finite, positive first-cell volume");
+        messager.error("Sample reconstruction requires a finite, positive surface volume");
         exit(1);
     }
     int monval_cached = 0;
@@ -401,6 +410,9 @@ void iSS::construct_Tmunu_from_particle_samples() {
     }
 
     std::ofstream output("checkReconstructedTmunu.dat");
+    if (!output) {
+        iSS_data::sample_output_error("checkReconstructedTmunu.dat", "cannot open file");
+    }
     output << "# Tmunu_FOcell[GeV/fm^3]  Tmunu_Particles[GeV/fm^3]  diff"
            << std::endl;
     for (int i = 0; i < 4; i++) {
@@ -430,6 +442,9 @@ void iSS::construct_Tmunu_from_particle_samples() {
         messager.flush("info");
     }
     output.close();
+    if (!output) {
+        iSS_data::sample_output_error("checkReconstructedTmunu.dat", "write failed");
+    }
 }
 
 
@@ -450,6 +465,7 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
     FOsurf_Tmunu_.resize(16, 0.);
     FOsurf_Q_.clear();
     FOsurf_Q_.resize(3, 0.);
+    FOsurf_volume_ = 0.;
     float gmunu[4][4];              // define the metric
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
@@ -462,9 +478,7 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
     float pi_tz[4][4];
     float Tmunu[4][4];
     for (auto &surf_i: FOsurf_ptr) {
-        float udotsigma = surf_i.tau*(
-                surf_i.u0*surf_i.da0 + surf_i.u1*surf_i.da1
-                + surf_i.u2*surf_i.da2 + surf_i.u3*surf_i.da3/surf_i.tau);
+        const double udotsigma = iSS_data::surface_flux(surf_i);
         FOsurf_Q_[0] += surf_i.Bn*udotsigma;
         FOsurf_Q_[1] += surf_i.Qn*udotsigma;
         FOsurf_Q_[2] += surf_i.Sn*udotsigma;
@@ -474,6 +488,9 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
         u[1] = surf_i.u1;
         u[2] = surf_i.u2;
         u[3] = surf_i.u3*cosh_eta + surf_i.u0*sinh_eta;
+        // Use the same lab-frame volume convention for each surface cell.
+        const double cell_volume = udotsigma/u[0];
+        FOsurf_volume_ += cell_volume;
         pi_tz[0][0] = (  surf_i.pi00*cosh_eta*cosh_eta
                        + 2.*surf_i.pi03*cosh_eta*sinh_eta
                        + surf_i.pi33*sinh_eta*sinh_eta);
@@ -502,9 +519,12 @@ void iSS::computeFOSurfTmunu(std::vector<FO_surf> &FOsurf_ptr) {
                     surf_i.Edec*u[i]*u[j]
                     - (surf_i.Pdec + surf_i.bulkPi)*(gmunu[i][j] - u[i]*u[j])
                     + pi_tz[i][j]);
-                FOsurf_Tmunu_[4*i+j] += Tmunu[i][j];
+                FOsurf_Tmunu_[4*i+j] += cell_volume*Tmunu[i][j];
             }
         }
+    }
+    if (FOsurf_volume_ > 0.) {
+        for (auto &element : FOsurf_Tmunu_) element /= FOsurf_volume_;
     }
     //messager << "The total energy-momentum tensor from the surface:";
     //messager.flush("info");

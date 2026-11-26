@@ -16,7 +16,7 @@
 #include <vector>
 #include <array>
 
-#include "zlib.h"
+#include "sample_output.h"
 #include "data_struct.h"
 #include "readindata.h"
 #include "FSSW.h"
@@ -92,6 +92,11 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     bulk_deltaf_kind_ = paraRdr->getVal("bulk_deltaf_kind", 20);
     deltaf_max_ratio_ = paraRdr->getVal("deltaf_max_ratio", 1.0);
     deltaf_max_ratio_ = std::max(0., std::min(1., deltaf_max_ratio_));
+    if (deltaf_max_ratio_ == 0.) {
+        INCLUDE_SHEAR_DELTAF = false;
+        INCLUDE_BULK_DELTAF = false;
+        INCLUDE_DIFFUSION_DELTAF = false;
+    }
 
     NEoS_deltaf_kind_ = -1;
     if (INCLUDE_BULK_DELTAF || INCLUDE_SHEAR_DELTAF) {
@@ -406,8 +411,8 @@ void FSSW::combine_samples_to_OSCAR() {
     char line_buffer[500];
 
     // open file for output
-    remove(OSCAR_output_filename_.c_str());
     ofstream oscar(OSCAR_output_filename_.c_str());
+    if (!oscar) iSS_data::sample_output_error(OSCAR_output_filename_, "cannot open file");
 
     // write header first
     ifstream header(OSCAR_header_filename_.c_str());
@@ -522,6 +527,9 @@ void FSSW::combine_samples_to_OSCAR() {
         }
     }
 
+    oscar.close();
+    if (!oscar) iSS_data::sample_output_error(OSCAR_output_filename_, "write failed");
+
     sw.toc();
     cout << endl
          << " -- combine_samples_to_OSCAR samples finishes " 
@@ -538,8 +546,8 @@ void FSSW::combine_samples_to_OSCAR2013() {
     char line_buffer[500];
 
     // open file for output
-    remove(OSCAR_output_filename_.c_str());
     ofstream oscar(OSCAR_output_filename_.c_str());
+    if (!oscar) iSS_data::sample_output_error(OSCAR_output_filename_, "cannot open file");
 
     // write header first
     oscar << "#!OSCAR2013 particle_lists t x y z mass p0 px py pz pdg ID charge"
@@ -573,6 +581,9 @@ void FSSW::combine_samples_to_OSCAR2013() {
         oscar << "# event " << iev + 1 << " end 0 impact 0.000" << endl;
     }
 
+    oscar.close();
+    if (!oscar) iSS_data::sample_output_error(OSCAR_output_filename_, "write failed");
+
     sw.toc();
     cout << endl
          << " -- combine_samples_to_OSCAR2013 samples finishes " 
@@ -586,24 +597,7 @@ void FSSW::combine_samples_to_gzip_file() {
     sw.tic();
     messager_.info(" -- Now combine sample files to a gzip file...");
 
-    // open file for output
-    std::string gzip_output_filename = "particle_samples.gz";
-    remove(gzip_output_filename.c_str());
-    gzFile fp_gz = gzopen(gzip_output_filename.c_str(), "wb");
-
-    for (auto const &ev_i: (*Hadron_list)) {
-        int total_number_of_particles = ev_i->size();
-        gzprintf(fp_gz, "%d \n", total_number_of_particles);
-        for (auto &part_i: (*ev_i)) {
-            gzprintf(fp_gz, "%d ", part_i.pid);
-            gzprintf(fp_gz,
-                     "%.7e %.7e %.7e %.7e %.7e %.7e %.7e %.7e %.7e\n",
-                     part_i.mass,
-                     part_i.t, part_i.x, part_i.y, part_i.z,
-                     part_i.E, part_i.px, part_i.py, part_i.pz);
-        }
-    }
-    gzclose(fp_gz);
+    iSS_data::write_gzip_samples("particle_samples.gz", *Hadron_list);
 
     sw.toc();
     cout << endl
@@ -618,27 +612,7 @@ void FSSW::combine_samples_to_binary_file() {
     sw.tic();
     messager_.info(" -- Now combine sample files to a binary file...");
 
-    // open file for output
-    std::string binary_output_filename = "particle_samples.bin";
-    remove(binary_output_filename.c_str());
-    FILE *outbin = NULL;
-    outbin = fopen(binary_output_filename.c_str(), "wb");
-    for (auto const &ev_i: (*Hadron_list)) {
-        int total_number_of_particles = ev_i->size();
-        fwrite(&total_number_of_particles, sizeof(int), 1, outbin);
-        for (auto &part_i: (*ev_i)) {
-            fwrite(&part_i.pid, sizeof(int), 1, outbin);
-            float array[] = {
-                static_cast<float>(part_i.mass),
-                static_cast<float>(part_i.t), static_cast<float>(part_i.x),
-                static_cast<float>(part_i.y), static_cast<float>(part_i.z),
-                static_cast<float>(part_i.E), static_cast<float>(part_i.px),
-                static_cast<float>(part_i.py), static_cast<float>(part_i.pz),
-            };
-            fwrite(array, sizeof(float), 9, outbin);
-        }
-    }
-    fclose(outbin);
+    iSS_data::write_binary_samples("particle_samples.bin", *Hadron_list);
 
     sw.toc();
     cout << endl
@@ -1018,6 +992,9 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
         const int baryon  = particle->baryon;
         const int strange = particle->strange;
         const int charge  = particle->charge;
+        const int conjugate_idx = (flag_PCE_ == 1 && local_charge_conservation == 1
+                                   && charge > 0)
+            ? getParticleInfo(-particle->monval) : -1;
         messager_ << "Index: " << n << ", Name: " << particle->name
                  << ", Monte-carlo index: " << particle->monval;
         messager_.flush("info");
@@ -1109,10 +1086,12 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
 
                 // next sample pt and phi
                 double pT, phi, y_minus_eta_s;
+                const double mu_PCE = flag_PCE_ == 1
+                    ? surf->particle_mu_PCE[real_particle_idx] : 0.;
                 int status = sample_momemtum_from_a_fluid_cell(
                                 mass, sign, baryon, strange, charge,
                                 surf, visCoefficients, deltaf_qmu_coeff,
-                                pT, phi, y_minus_eta_s);
+                                pT, phi, y_minus_eta_s, mu_PCE);
 
                 if (status == 0) {
                     continue;
@@ -1135,12 +1114,14 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 if (local_charge_conservation == 1 && particle->charge > 0) {
                     // sample a negative particle from the same fluid cell
                     double pT2, phi2, y_minus_eta_s2;
+                    const double conjugate_mu_PCE = conjugate_idx >= 0
+                        ? surf->particle_mu_PCE[conjugate_idx] : 0.;
                     int status2 = 0;
                     do {
                         status2 = sample_momemtum_from_a_fluid_cell(
                                 mass, sign, -baryon, -strange, -charge,
                                 surf, visCoefficients, deltaf_qmu_coeff,
-                                pT2, phi2, y_minus_eta_s2);
+                                pT2, phi2, y_minus_eta_s2, conjugate_mu_PCE);
                     } while (status2 == 0);
                     add_one_sampled_particle(
                         repeated_sampling_idx, surf, -particle->monval,
@@ -2013,12 +1994,11 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         const FO_surf_LRF *surf,
         const std::vector<double> visCoefficients,
         const double deltaf_qmu_coeff,
-        double &pT, double &phi, double &y_minus_eta_s
+        double &pT, double &phi, double &y_minus_eta_s, double mu_PCE
         ) {
     const double Tdec = surf->Tdec;
-    const double mu = std::min(mass, static_cast<double>(baryon*surf->muB
-                                                         + strange*surf->muS
-                                                         + charge*surf->muQ));
+    const double mu = std::min(mass, mu_PCE + baryon*surf->muB
+                               + strange*surf->muS + charge*surf->muQ);
     const double deltaf_prefactor = (
                             1.0/(2.0*Tdec*Tdec*(surf->Edec + surf->Pdec)));
     const double prefactor_qmu = surf->Bn/(surf->Edec + surf->Pdec);

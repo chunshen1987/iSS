@@ -38,6 +38,11 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
     paraRdr = paraRdr_in;
 
     mode = paraRdr->getVal("hydro_mode");
+    const double sampling_mode = paraRdr->exist("MC_sampling")
+        ? paraRdr->getVal("MC_sampling") : 0.;
+    keep_negative_flux_ = sampling_mode != 4
+        && (sampling_mode == 3 || (paraRdr->exist("calculate_vn")
+            && paraRdr->getVal("calculate_vn") == 1));
     turn_on_bulk = paraRdr->getVal("turn_on_bulk");
     turn_on_rhob = paraRdr->getVal("turn_on_rhob");
     turn_on_diff = paraRdr->getVal("turn_on_diff");
@@ -153,6 +158,7 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
             eos_4d_.initialize_eos();
             if (paraRdr->exist("MC_sampling")
                     && paraRdr->getVal("MC_sampling") == 4
+                    && paraRdr->getVal("deltaf_max_ratio", 1.) > 0.
                     && (paraRdr->getVal("include_deltaf_shear", 1) != 0
                         || paraRdr->getVal("include_deltaf_bulk", 1) != 0)) {
                 const int deltaf_kind = paraRdr->getVal("bulk_deltaf_kind", 20);
@@ -691,12 +697,9 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             surf_elem.da3 = 0.;
         }
 
-        double u_dot_dsigma = surf_elem.tau*(
-            surf_elem.u0*surf_elem.da0 + surf_elem.u1*surf_elem.da1
-            + surf_elem.u2*surf_elem.da2
-            + surf_elem.u3*surf_elem.da3/surf_elem.tau);
+        const double u_dot_dsigma = iSS_data::surface_flux(surf_elem);
         flux_total += std::abs(u_dot_dsigma);
-        if (u_dot_dsigma < 0) {
+        if (!keep_negative_flux_ && u_dot_dsigma < 0.) {
             // A sampler cannot draw a negative number of particles.
             n_negative_flux++;
             flux_negative += std::abs(u_dot_dsigma);
@@ -883,12 +886,9 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
                                       line_number, surf_elem)) break;
         }
 
-        double u_dot_dsigma = surf_elem.tau*(
-            surf_elem.u0*surf_elem.da0 + surf_elem.u1*surf_elem.da1
-            + surf_elem.u2*surf_elem.da2
-            + surf_elem.u3*surf_elem.da3/surf_elem.tau);
+        const double u_dot_dsigma = iSS_data::surface_flux(surf_elem);
         flux_total += std::abs(u_dot_dsigma);
-        if (u_dot_dsigma < 0) {
+        if (!keep_negative_flux_ && u_dot_dsigma < 0.) {
             // A sampler cannot draw a negative number of particles.
             n_negative_flux++;
             flux_negative += std::abs(u_dot_dsigma);
@@ -1138,36 +1138,64 @@ void read_FOdata::read_in_HRG_EOS() {
         cout << "[Error] Can not found EOS file: " << eos_filename << endl;
         exit(1);
     }
-    std::string strLine;
-    std::getline(eosFile, strLine);  // ignore the header
-
-    std::getline(eosFile, strLine);
-    while (!eosFile.eof()) {
-        std::stringstream ss(strLine);
-        std::vector<float> item(7, 0);     // {ed, nB, P, T, muB, muS, muQ}
-        if (iEOS_MUSIC_ == 12) {
-            for (int i = 0; i < 5; i++) {
-                float temp;
-                ss >> temp;
-                item[i] = temp;
+    const int columns = iEOS_MUSIC_ == 14 ? 7 : (iEOS_MUSIC_ == 12 ? 5 : 4);
+    const int densities_per_energy = columns == 4 ? 1 : 200;
+    const auto invalid_table = [&](const std::string &reason) {
+        messager << "Invalid 2D HRG table " << eos_filename << ": " << reason;
+        messager.flush("error");
+        exit(1);
+    };
+    HRGEOS_.clear();
+    std::string line;
+    std::getline(eosFile, line);  // Table header.
+    long line_number = 1;
+    while (std::getline(eosFile, line)) {
+        ++line_number;
+        std::istringstream row(line);
+        row >> std::ws;
+        if (row.eof() || row.peek() == '#') continue;
+        std::vector<float> values(7, 0.);
+        for (int column = 0; column < columns; ++column) {
+            if (!(row >> values[column]) || !std::isfinite(values[column])) {
+                invalid_table("invalid numeric row at line "
+                              + std::to_string(line_number));
             }
-        } else if (iEOS_MUSIC_ == 14) {
-            for (int i = 0; i < 7; i++) {
-                float temp;
-                ss >> temp;
-                item[i] = temp;
-            }
-        } else {
-            float temp, ed_loc, P_loc, T_loc;
-            ss >> ed_loc >> P_loc >> temp >> T_loc;
-            item[0] = ed_loc;
-            item[2] = P_loc;
-            item[3] = T_loc;
         }
-        HRGEOS_.push_back(item);
-        std::getline(eosFile, strLine);
+        if (densities_per_energy == 1) {
+            // At zero chemical potential the file stores e, P, s, T.
+            values[2] = values[1];
+            values[1] = 0.;
+        }
+        HRGEOS_.push_back(std::move(values));
     }
-    eosFile.close();
+    if (eosFile.bad()) invalid_table("read failed");
+    if (HRGEOS_.size() < 2*static_cast<std::size_t>(densities_per_energy)
+            || HRGEOS_.size() % densities_per_energy != 0) {
+        invalid_table("expected at least two complete energy slices");
+    }
+
+    const double first_energy = HRGEOS_.front()[0];
+    const double energy_step = HRGEOS_[densities_per_energy][0] - first_energy;
+    if (energy_step <= 0.) invalid_table("energy spacing must be positive");
+    const auto matches_grid = [](double value, double expected, double step) {
+        // Allow for decimal rounding in the shipped text tables.
+        return std::abs(value - expected) <= 1e-5*std::max(std::abs(expected), step);
+    };
+    for (std::size_t start = 0; start < HRGEOS_.size();
+            start += densities_per_energy) {
+        const double energy = first_energy + (start/densities_per_energy)*energy_step;
+        const double density_step = densities_per_energy > 1
+            ? HRGEOS_[start + 1][1] : 1.;
+        if (density_step <= 0.) invalid_table("baryon density spacing must be positive");
+        for (int i = 0; i < densities_per_energy; ++i) {
+            const auto &values = HRGEOS_[start + i];
+            if (!matches_grid(values[0], energy, energy_step)
+                    || !matches_grid(values[1], i*density_step, density_step)) {
+                invalid_table("inconsistent grid at data row "
+                              + std::to_string(start + i + 1));
+            }
+        }
+    }
     cout << "done." << endl;
 }
 
@@ -1486,25 +1514,27 @@ void read_FOdata::regulate_Wmunu(double u[4], double Wmunu[4][4],
 int read_FOdata::getValuesFromHRGEOS(const double ed, const double nB,
                                      std::vector<float> &eosVar) {
     eosVar.resize(5, 0);        // {P, T, muB, muS, muQ}
-    int nBlen = 1;
-    if (iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14) {
-        nBlen = 200;
-    }
-    double HRGEOS_de = HRGEOS_[nBlen][0] - HRGEOS_[0][0];
-    double HRGEOS_e0 = HRGEOS_[0][0];
-    int e_idx = static_cast<int>((ed - HRGEOS_e0)/HRGEOS_de);
-    if (e_idx < 0 || e_idx >= static_cast<int>(HRGEOS_.size()/nBlen) - 2) {
+    const int nBlen = (iEOS_MUSIC_ == 12 || iEOS_MUSIC_ == 14) ? 200 : 1;
+    if (HRGEOS_.size()/nBlen < 2) return -1;
+    const double HRGEOS_e0 = HRGEOS_.front()[0];
+    const double HRGEOS_de = HRGEOS_[nBlen][0] - HRGEOS_e0;
+    if (!std::isfinite(ed) || !std::isfinite(nB)
+            || ed < HRGEOS_e0 || ed > HRGEOS_.back()[0]) {
         messager << "ed is out of range: ed = " << ed << " GeV/fm^3. ";
         messager << "Can not regulate this fluid cell!";
         messager.flush("warning");
         return(-1);
     }
-    int e_idx1 = e_idx*nBlen;
-    int e_idx2 = (e_idx + 1)*nBlen;
+    const double last_interval = HRGEOS_.size()/nBlen - 2;
+    const auto e_idx = static_cast<std::size_t>(
+        std::min(last_interval, (ed - HRGEOS_e0)/HRGEOS_de));
+    const std::size_t e_idx1 = e_idx*nBlen;
+    const std::size_t e_idx2 = (e_idx + 1)*nBlen;
     //cout << "HRG size = " << HRGEOS_.size()
     //     << ", dim = " << HRGEOS_[0].size()
     //     << ", eidx1 = " << e_idx1 << ", eidx2 = " << e_idx2 << endl;
-    double e_frac = (ed - HRGEOS_[e_idx1][0])/HRGEOS_de;
+    const double e_frac = std::max(0., std::min(1.,
+        (ed - HRGEOS_[e_idx1][0])/(HRGEOS_[e_idx2][0] - HRGEOS_[e_idx1][0])));
 
     double nB_frac1 = 0;
     double nB_frac2 = 0;
@@ -1513,10 +1543,11 @@ int read_FOdata::getValuesFromHRGEOS(const double ed, const double nB,
     if (nBlen > 1) {
         double dnB1 = HRGEOS_[e_idx1+1][1];
         double dnB2 = HRGEOS_[e_idx2+1][1];
-        nB_idx1 = std::min(nBlen - 2, static_cast<int>(nB/dnB1));
-        nB_idx2 = std::min(nBlen - 2, static_cast<int>(nB/dnB2));
-        nB_frac1 = std::min(1., (nB - HRGEOS_[e_idx1+nB_idx1][1])/dnB1);
-        nB_frac2 = std::min(1., (nB - HRGEOS_[e_idx2+nB_idx2][1])/dnB2);
+        const double density = std::abs(nB);
+        nB_idx1 = static_cast<int>(std::min<double>(nBlen - 2, density/dnB1));
+        nB_idx2 = static_cast<int>(std::min<double>(nBlen - 2, density/dnB2));
+        nB_frac1 = std::min(1., (density - HRGEOS_[e_idx1+nB_idx1][1])/dnB1);
+        nB_frac2 = std::min(1., (density - HRGEOS_[e_idx2+nB_idx2][1])/dnB2);
         //cout << "HRG size = " << HRGEOS_.size() << ", nB_idx1 = " << nB_idx1
         //     << ", nB_idx2 = " << nB_idx2
         //     << ", dnB1 = " << dnB1 << ", dnB2 = " << dnB2

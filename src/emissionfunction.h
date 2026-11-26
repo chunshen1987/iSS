@@ -105,7 +105,7 @@ class EmissionFunctionArray {
 
     // list for information for all fluid cells
     long FO_length;
-    const std::vector<FO_surf> &FOsurf_ptr;
+    const std::vector<FO_surf> *FOsurf_ptr;
 
     // store the last particle index being used by calculate_dNArrays function
     int last_particle_idx;

@@ -24,6 +24,7 @@ class read_FOdata {
     bool include_vorticity_;
     bool quantum_statistics_;
     bool regulateEOS_;
+    bool keep_negative_flux_;
 
     EOS_4D eos_4d_;
 

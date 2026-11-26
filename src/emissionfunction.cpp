@@ -11,6 +11,7 @@
 #include <gsl/gsl_sf_lambert.h>
 
 #include <iostream>
+#include <algorithm>
 #include <sstream>
 #include <string>
 #include <fstream>
@@ -19,7 +20,7 @@
 #include <vector>
 #include <array>
 
-#include "zlib.h"
+#include "sample_output.h"
 #include "data_struct.h"
 #include "readindata.h"
 #include "emissionfunction.h"
@@ -51,7 +52,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     ParameterReader* paraRdr_in, string path, string table_path,
     AfterburnerType afterburner_type) :
         path_(path), table_path_(table_path),
-        afterburner_type_(afterburner_type), FOsurf_ptr(FOsurf_ptr_in) {
+        afterburner_type_(afterburner_type), FOsurf_ptr(&FOsurf_ptr_in) {
 
     ran_gen_ptr = ran_gen;
 
@@ -74,8 +75,7 @@ EmissionFunctionArray::EmissionFunctionArray(
     particles = particles_in;
     Nparticles = particles.size();
 
-    //FOsurf_ptr = FOsurf_ptr_in;
-    FO_length = FOsurf_ptr.size();
+    FO_length = FOsurf_ptr->size();
 
     paraRdr = paraRdr_in;
 
@@ -454,7 +454,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady(int particle_idx)
     double progress_total = FO_length;
     if (AMOUNT_OF_OUTPUT > 0) print_progressbar(-1);
     for (long l = 0; l < FO_length; l++) {
-        const FO_surf* surf = &FOsurf_ptr[l];
+        const FO_surf* surf = &(*FOsurf_ptr)[l];
 
         double Tdec = surf->Tdec;
         double Pdec = surf->Pdec;
@@ -688,7 +688,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
             double dN_pTdpTdphidy_max_tmp = 0.0;
 
             for (long l=0; l<FO_length; l++) {
-                const FO_surf *surf = &FOsurf_ptr[l];
+                const FO_surf *surf = &(*FOsurf_ptr)[l];
 
                 double Tdec = surf->Tdec;
                 double Pdec = surf->Pdec;
@@ -1363,7 +1363,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
         while (sample_idx <= number_to_sample) {
             // first, sample eta and freeze-out cell index
             rand2D.sampleAccToInvCDF(&y_minus_eta_s_idx, &FO_idx);
-            const FO_surf *surf = &FOsurf_ptr[FO_idx];
+            const FO_surf *surf = &(*FOsurf_ptr)[FO_idx];
 
             // Table starts with 1
             double y_minus_eta_s = y_minus_eta_tab->get(1,y_minus_eta_s_idx+1); 
@@ -1826,7 +1826,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                 // get a surface index
                 FO_idx = floor(ran_gen_ptr->rand_uniform()*(FO_length-1e-30));
 
-                const FO_surf *surf = &FOsurf_ptr[FO_idx];
+                const FO_surf *surf = &(*FOsurf_ptr)[FO_idx];
 
                 double Tdec = surf->Tdec;
                 double inv_Tdec = 1.0/Tdec;
@@ -2045,7 +2045,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
                     y_minus_eta_s = -y_minus_eta_s;
             }
 
-            const FO_surf *surf = &FOsurf_ptr[FO_idx];
+            const FO_surf *surf = &(*FOsurf_ptr)[FO_idx];
             double y = y_LB + ran_gen_ptr->rand_uniform()*(y_RB-y_LB);
             double eta_s = y - y_minus_eta_s;
             double p_z = mT*sinh(y);
@@ -2333,7 +2333,7 @@ void EmissionFunctionArray::calculate_dN_dtau_using_dN_dxtdetady(
     for (int k=0; k<y_minus_eta_tab_length; k++)
     for (long l=0; l<FO_length; l++)
     {
-        double tau = FOsurf_ptr[l].tau;
+        double tau = (*FOsurf_ptr)[l].tau;
         long idx = binarySearch(&bins, tau, true);
         if (idx==-1)
             continue; // skip those not falling in any bins
@@ -2390,8 +2390,8 @@ void EmissionFunctionArray::calculate_dN_dx_using_dN_dxtdetady(
     for (int k=0; k<y_minus_eta_tab_length; k++)
     for (long l=0; l<FO_length; l++)
     {
-        double x_local = FOsurf_ptr[l].xpt;
-        double y_local = FOsurf_ptr[l].ypt;
+        double x_local = (*FOsurf_ptr)[l].xpt;
+        double y_local = (*FOsurf_ptr)[l].ypt;
         if(std::abs(y_local) < 0.5)
         {
             long idx = binarySearch(&bins, x_local, true);
@@ -2531,8 +2531,8 @@ bool EmissionFunctionArray::particles_are_the_same(int idx1, int idx2)
         return false;
     if (flag_PCE_ == 1) {
         for (long l = 0; l < FO_length; l++) {
-            double chem1 = FOsurf_ptr[l].particle_mu_PCE[idx1];
-            double chem2 = FOsurf_ptr[l].particle_mu_PCE[idx2];
+            double chem1 = (*FOsurf_ptr)[l].particle_mu_PCE[idx1];
+            double chem2 = (*FOsurf_ptr)[l].particle_mu_PCE[idx2];
             if (std::abs((chem1-chem2)/(chem2+1e-30)) > tolerance) {
                 return false;
             }
@@ -2559,6 +2559,14 @@ void EmissionFunctionArray::shell() {
         perform_sampling_during_calculation = 1;
     }
 
+    const auto *full_surface = FOsurf_ptr;
+    const auto has_negative_flux = [](const FO_surf &cell) {
+        return iSS_data::surface_flux(cell) < 0.;
+    };
+    const bool filter_sampling_surface = calculate_vn && MC_sampling != 0
+        && std::any_of(full_surface->begin(), full_surface->end(), has_negative_flux);
+    if (filter_sampling_surface) perform_sampling_during_calculation = 0;
+
     if (calculate_vn) {
         if (historic_format) {
             calculate_dN_pTdpTdphidy_and_flows_4all_old_output(
@@ -2567,6 +2575,20 @@ void EmissionFunctionArray::shell() {
             calculate_dN_pTdpTdphidy_and_flows_4all(
                             perform_sampling_during_calculation);
         }
+    }
+
+    std::vector<FO_surf> sampling_surface;
+    if (filter_sampling_surface) {
+        for (const auto &cell : *full_surface) {
+            if (!has_negative_flux(cell)) sampling_surface.push_back(cell);
+        }
+        if (sampling_surface.empty()) {
+            messager.error("Particle sampling requires a surface with nonnegative flux");
+            exit(1);
+        }
+        FOsurf_ptr = &sampling_surface;
+        FO_length = sampling_surface.size();
+        dN_dxtdy_for_one_particle_species.resize(FO_length);
     }
 
     if (MC_sampling == 1) {
@@ -2593,9 +2615,22 @@ void EmissionFunctionArray::shell() {
             }
         }
     } else if (MC_sampling == 3) {
+        if (filter_sampling_surface) {
+            // The signed spectrum has already been written. Sample from the
+            // separate, nonnegative-flux surface.
+            for (int particle_idx : chosen_particles_sampling_table) {
+                calculate_dN_pTdpTdphidy(particle_idx);
+                sample_using_dN_pTdpTdphidy();
+            }
+        }
         if (USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
         }
+    }
+    if (filter_sampling_surface) {
+        FOsurf_ptr = full_surface;
+        FO_length = full_surface->size();
+        dN_dxtdy_for_one_particle_species.resize(FO_length);
     }
 }
 
@@ -2609,8 +2644,8 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
     char line_buffer[500];
 
     // open file for output
-    remove(OSCAR_output_filename.c_str());
     ofstream oscar(OSCAR_output_filename.c_str());
+    if (!oscar) iSS_data::sample_output_error(OSCAR_output_filename, "cannot open file");
 
     // write header first
     ifstream header(OSCAR_header_filename.c_str());
@@ -2725,6 +2760,9 @@ void EmissionFunctionArray::combine_samples_to_OSCAR() {
         }
     }
 
+    oscar.close();
+    if (!oscar) iSS_data::sample_output_error(OSCAR_output_filename, "write failed");
+
     sw.toc();
     cout << endl
          << " -- combine_samples_to_OSCAR samples finishes " 
@@ -2738,26 +2776,9 @@ void EmissionFunctionArray::combine_samples_to_gzip_file() {
     sw.tic();
     messager.info(" -- Now combine sample files to a gzip file...");
 
-    // open file for output
-    std::string gzip_output_filename = "particle_samples.gz";
-    remove(gzip_output_filename.c_str());
-    gzFile fp_gz = gzopen(gzip_output_filename.c_str(), "wb");
-
-    if (flag_store_samples_in_memory == 1) {
-        for (auto const &ev_i: (*Hadron_list)) {
-            int total_number_of_particles = ev_i->size();
-            gzprintf(fp_gz, "%d \n", total_number_of_particles);
-            for (auto &part_i: (*ev_i)) {
-                gzprintf(fp_gz, "%d ", part_i.pid);
-                gzprintf(fp_gz,
-                         "%.7e %.7e %.7e %.7e %.7e %.7e %.7e %.7e %.7e\n",
-                         part_i.mass,
-                         part_i.t, part_i.x, part_i.y, part_i.z,
-                         part_i.E, part_i.px, part_i.py, part_i.pz);
-            }
-        }
-    }
-    gzclose(fp_gz);
+    const std::vector<std::vector<iSS_Hadron>*> no_events;
+    iSS_data::write_gzip_samples("particle_samples.gz",
+        flag_store_samples_in_memory == 1 ? *Hadron_list : no_events);
 
     sw.toc();
     cout << endl
@@ -2772,27 +2793,7 @@ void EmissionFunctionArray::combine_samples_to_binary_file() {
     sw.tic();
     messager.info(" -- Now combine sample files to a binary file...");
 
-    // open file for output
-    std::string binary_output_filename = "particle_samples.bin";
-    remove(binary_output_filename.c_str());
-    FILE *outbin = NULL;
-    outbin = fopen(binary_output_filename.c_str(), "wb");
-    for (auto const &ev_i: (*Hadron_list)) {
-        int total_number_of_particles = ev_i->size();
-        fwrite(&total_number_of_particles, sizeof(int), 1, outbin);
-        for (auto &part_i: (*ev_i)) {
-            fwrite(&part_i.pid, sizeof(int), 1, outbin);
-            float array[] = {
-                static_cast<float>(part_i.mass),
-                static_cast<float>(part_i.t), static_cast<float>(part_i.x),
-                static_cast<float>(part_i.y), static_cast<float>(part_i.z),
-                static_cast<float>(part_i.E), static_cast<float>(part_i.px),
-                static_cast<float>(part_i.py), static_cast<float>(part_i.pz),
-            };
-            fwrite(array, sizeof(float), 9, outbin);
-        }
-    }
-    fclose(outbin);
+    iSS_data::write_binary_samples("particle_samples.bin", *Hadron_list);
 
     sw.toc();
     cout << endl
@@ -2842,7 +2843,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_4all_particles() {
 
     // loop over all the fluid cells
     for (long l = 0; l < FO_length; l++) {
-        const FO_surf *surf = &FOsurf_ptr[l];
+        const FO_surf *surf = &(*FOsurf_ptr)[l];
         double temp = surf->Tdec;
         double tau = surf->tau;
 
@@ -3008,7 +3009,7 @@ void EmissionFunctionArray::calculate_dN_dxtdy_for_one_particle_species(
 
     // loop over all the fluid cells
     for (long l = 0; l < FO_length; l++) {
-        const FO_surf* surf = &FOsurf_ptr[l];
+        const FO_surf* surf = &(*FOsurf_ptr)[l];
         double temp = surf->Tdec;
         double tau = surf->tau;
 
@@ -3226,7 +3227,7 @@ double EmissionFunctionArray::calculate_total_FZ_energy_flux() {
     cout << " Function calculate_total_FZ_energy_flux started..." << endl;
 
     double total_energy = 0;
-    for (auto const &surf_i: FOsurf_ptr) {
+    for (auto const &surf_i: *FOsurf_ptr) {
         double p = surf_i.Pdec;
         double e = surf_i.Edec;
 
@@ -3465,7 +3466,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
             while (sample_idx <= number_to_sample) {
                 // first, sample eta and freeze-out cell index
                 long FO_idx = rand1D.rand();
-                const FO_surf *surf = &FOsurf_ptr[FO_idx];
+                const FO_surf *surf = &(*FOsurf_ptr)[FO_idx];
 
                 if (INCLUDE_BULK_DELTAF == 1)
                     getbulkvisCoefficients(surf->Tdec, bulkvisCoefficients);

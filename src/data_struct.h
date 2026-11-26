@@ -66,6 +66,12 @@ typedef struct {
     std::vector<double> visCoeffs;
 } FO_surf;
 
+namespace iSS_data {
+inline double surface_flux(const FO_surf &cell) {
+    return cell.tau*(cell.u0*cell.da0 + cell.u1*cell.da1 + cell.u2*cell.da2)
+           + cell.u3*cell.da3;
+}
+}
 
 typedef struct {
     float tau, xpt, ypt, eta;

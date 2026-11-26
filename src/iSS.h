@@ -23,8 +23,9 @@ class iSS {
 
     std::vector<FO_surf> FOsurf_array_;
     std::vector<FO_surf_LRF> FOsurf_LRF_array_;
-    std::vector<float> FOsurf_Tmunu_;
-    std::vector<float> FOsurf_Q_;
+    std::vector<double> FOsurf_Tmunu_;
+    std::vector<double> FOsurf_Q_;
+    double FOsurf_volume_ = 0.;
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr_;
 
     int flag_PCE_;
