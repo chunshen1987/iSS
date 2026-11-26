@@ -2140,6 +2140,7 @@ double FSSW::bilinearInterp(std::vector<std::vector<double>>&mat,
 void FSSW::computeAvgTotalEnergyMomentum() {
     std::vector<std::vector<double>> PmuList;
     std::vector<std::vector<double>> ChargesList;
+    long n_unknown = 0;
     for (auto const &ev_i: (*Hadron_list)) {
         std::vector<double> totalPmu(4, 0.);
         std::vector<double> totalCharges(3, 0.);
@@ -2149,6 +2150,10 @@ void FSSW::computeAvgTotalEnergyMomentum() {
             totalPmu[2] += part_i.py;
             totalPmu[3] += part_i.pz;
             int idx = getParticleInfo(part_i.pid);
+            if (idx < 0) {
+                n_unknown++;
+                continue;
+            }
             totalCharges[0] += particles[idx].baryon;
             totalCharges[1] += particles[idx].charge;
             totalCharges[2] += particles[idx].strange;
@@ -2156,6 +2161,12 @@ void FSSW::computeAvgTotalEnergyMomentum() {
         PmuList.push_back(totalPmu);
         ChargesList.push_back(totalCharges);
     }
+    if (n_unknown > 0) {
+        messager_ << n_unknown << " sampled particles are not in the particle "
+                  << "table and were left out of the net charges";
+        messager_.flush("warning");
+    }
+    if (PmuList.empty()) return;
     int nev = 0;
     std::vector<double> Pmu_avg(4, 0);
     std::vector<double> Pmu_err(4, 0);
@@ -2177,7 +2188,8 @@ void FSSW::computeAvgTotalEnergyMomentum() {
     messager_.info("Averaged total energy and momentum:");
     for (int i = 0; i < 4; i++) {
         Pmu_avg[i] = Pmu_avg[i]/nev;
-        Pmu_err[i] = sqrt((Pmu_err[i]/nev - Pmu_avg[i]*Pmu_avg[i])/nev);
+        // rounding can make the variance slightly negative
+        Pmu_err[i] = sqrt(std::max(0., Pmu_err[i]/nev - Pmu_avg[i]*Pmu_avg[i])/nev);
         messager_ << "<P[" << i << "]> = " << Pmu_avg[i] << " +/- "
                   << Pmu_err[i] << " GeV.";
         messager_.flush("info");
@@ -2185,7 +2197,8 @@ void FSSW::computeAvgTotalEnergyMomentum() {
     messager_.info("Averaged total conserved charges:");
     for (int i = 0; i < 3; i++) {
         nQ_avg[i] = nQ_avg[i]/nev;
-        nQ_err[i] = sqrt((nQ_err[i]/nev - nQ_avg[i]*nQ_avg[i])/nev);
+        // rounding can make the variance slightly negative
+        nQ_err[i] = sqrt(std::max(0., nQ_err[i]/nev - nQ_avg[i]*nQ_avg[i])/nev);
         messager_ << "<nQ[" << i << "]> = " << nQ_avg[i] << " +/- "
                   << nQ_err[i] << ".";
         messager_.flush("info");
@@ -2199,5 +2212,5 @@ int FSSW::getParticleInfo(const int monval) const {
             return(i);
         }
     }
-    return(0);
+    return(-1);
 }

@@ -488,6 +488,8 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
              << endl;
         exit(1);
     }
+    long n_negative_flux = 0;
+    double flux_total = 0., flux_negative = 0.;
     while (!surfdat.eof()) {
         FO_surf surf_elem;
         if (surface_in_binary_) {
@@ -626,6 +628,14 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             surf_elem.u0*surf_elem.da0 + surf_elem.u1*surf_elem.da1
             + surf_elem.u2*surf_elem.da2
             + surf_elem.u3*surf_elem.da3/surf_elem.tau);
+        if (!surfdat.eof()) {
+            flux_total += std::abs(u_dot_dsigma);
+            if (u_dot_dsigma < 0) {
+                // a sampler cannot draw a negative number of particles
+                n_negative_flux++;
+                flux_negative += std::abs(u_dot_dsigma);
+            }
+        }
         if (u_dot_dsigma < 0) continue;
 
         if (!surfdat.eof()) {
@@ -642,6 +652,12 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     }
     surfdat.close();
     cout << "done" << endl;
+    if (n_negative_flux > 0) {
+        messager << "dropped " << n_negative_flux << " cells with u.dsigma < 0 "
+                 << "(" << 100.*flux_negative/flux_total
+                 << "% of the total |u.dsigma|)";
+        messager.flush("warning");
+    }
 }
 
 
@@ -741,6 +757,8 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
              << endl;
         exit(1);
     }
+    long n_negative_flux = 0;
+    double flux_total = 0., flux_negative = 0.;
     while (!surfdat.eof()) {
         FO_surf surf_elem;
         if (surface_in_binary_) {
@@ -873,6 +891,14 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
             surf_elem.u0*surf_elem.da0 + surf_elem.u1*surf_elem.da1
             + surf_elem.u2*surf_elem.da2
             + surf_elem.u3*surf_elem.da3/surf_elem.tau);
+        if (!surfdat.eof()) {
+            flux_total += std::abs(u_dot_dsigma);
+            if (u_dot_dsigma < 0) {
+                // a sampler cannot draw a negative number of particles
+                n_negative_flux++;
+                flux_negative += std::abs(u_dot_dsigma);
+            }
+        }
         if (u_dot_dsigma < 0) continue;
 
         if (!surfdat.eof()) {
@@ -889,6 +915,12 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
     }
     surfdat.close();
     cout << "done" << endl;
+    if (n_negative_flux > 0) {
+        messager << "dropped " << n_negative_flux << " cells with u.dsigma < 0 "
+                 << "(" << 100.*flux_negative/flux_total
+                 << "% of the total |u.dsigma|)";
+        messager.flush("warning");
+    }
 }
 
 
