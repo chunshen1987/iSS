@@ -50,7 +50,10 @@ int iSS::shell() {
         compute_spin_polarization();
     }
 
-    if (paraRdr_ptr->getVal("MC_sampling") != 0) {
+    // MC_sampling = 0 with calculate_vn = 1 computes the smooth spectra and
+    // v_n (EmissionFunctionArray::shell) without sampling particles
+    if (paraRdr_ptr->getVal("MC_sampling") != 0
+            || paraRdr_ptr->getVal("calculate_vn", 0) == 1) {
         set_random_seed();
         status = generate_samples();
         if (status != 0) {
