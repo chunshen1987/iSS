@@ -5,7 +5,7 @@ They need Python 3 with numpy. Run them from the iSS repo root.
 
 | Script | What it does |
 |---|---|
-| `make_benchmark_surface.py WORK_DIR` | Writes the 300K-cell constant energy density MUSIC binary surface and its `music_input` |
+| `make_benchmark_surface.py WORK_DIR [--profile P]` | Writes the 300K-cell MUSIC binary surface and its `music_input`. `P` is `constant` (default: ε = 0.26 GeV/fm³, EoS 9), `varying-e` (EoS 9), `nB` (EoS 14) or `BQS` (n_B, n_Q, n_S; EoS 20, needs the downloaded 4D tables) |
 | `make_spacelike_cell.py WORK_DIR` | Writes the spacelike, flowing single-cell test surface and its `music_input` |
 | `sample_stats.py summarize BIN JSON` | Reduces `particle_samples.bin` to per-species means and errors |
 | `sample_stats.py compare A.json B.json` | Prints the z-score of each observable, and the max and rms |

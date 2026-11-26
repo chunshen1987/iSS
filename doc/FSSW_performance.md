@@ -163,6 +163,77 @@ Scaling, kind 20 (same output at every thread count):
   observable agrees within errors.
 - **CI tests.** All 8 pass.
 
+## Surfaces with varying T and chemical potentials
+
+The constant-ε surface is the easy case for the caches, so the same
+geometry, flow and viscous fields were also run with three thermodynamic
+profiles (`make_benchmark_surface.py --profile`). In each, ε follows a
+smooth profile from about 0.15 to 0.47 GeV/fm³ (clipped to 0.10–0.60)
+with 10% noise per cell, so no two neighbouring cells match exactly.
+
+| Profile | EoS | Densities | What `regulateEOS = 1` does per cell |
+|---|---|---|---|
+| `varying-e` | 9 | none | T and P from the 2D HRG table |
+| `nB` | 14 | n_B up to 0.16 fm⁻³, two humps at η_s = ±2.5 (baryon stopping) | T, P and μ_B, μ_S, μ_Q from the 2D NEoS-BQS table |
+| `BQS` | 20 | as `nB`, with n_Q = 0.4 n_B (5% noise) and n_S around 0 (±0.01 fm⁻³) | T, P, three μ's and the δf coefficients from the 4D HRG tables: 11 4D interpolations |
+
+The `BQS` surface carries total B = 1048, Q = 419 and S = 0.009. Its
+samples have p/p̄ ≈ 107/16 and K⁺/K⁻ ≈ 183/101, so the chemical potentials
+from the tables reach the sampler. All tilde variables stay inside the
+4D grid.
+
+### Timings (1000 events)
+
+| Profile | δf | Before | After, 12 threads | After, 1 thread |
+|---|---|---|---|---|
+| `varying-e` | 20 | 11.71 s | 2.25 s | 10.54 s |
+| `varying-e` | 21 | 11.05 s | 2.15 s | 9.91 s |
+| `nB` | 20 | 11.65 s | 2.29 s | 10.50 s |
+| `nB` | 21 | 11.03 s | 2.19 s | 9.79 s |
+| `BQS` | 20 | 11.42 s | 2.45 s | 10.32 s |
+| `BQS` | 21 | 11.53 s | 2.37 s | 10.28 s |
+
+With 12 threads the speedup is 4.7–5.2 times, a little less than the 5.5
+times at constant ε. On one thread it is only about 1.1 times (1.6 times
+at constant ε). The 12-thread and 1-thread outputs are identical for
+every profile.
+
+Where the single-thread time goes (δf = 20; a 1-event run gives setup
+plus yields):
+
+| | Constant ε | `varying-e` | `BQS` |
+|---|---|---|---|
+| Setup: reading, `regulateEOS`, LRF transform | 0.38 s | 0.39 s | 0.61 s |
+| Yields of 321 species | 1.07 s | 3.96 s | 4.16 s |
+| Sampling the hadrons | 5.4 s | 6.2 s | 5.4 s |
+
+- The yield cache stops helping when T varies, and the yield loop is back
+  to about 4 s of computation. That part runs in parallel (about 0.7 s
+  on 12 threads), so the parallel speedup holds.
+- The momentum samplers recompute their cached CDF terms for nearly
+  every hadron, but that costs little: sampling takes about as long as
+  at constant ε.
+- The 4D lookups add about 0.2 s to the serial setup. With 12 threads the
+  setup (0.6–0.8 s) is the largest single part of a 2.4 s run.
+
+### Validation
+
+Before vs after, the same 121 observables as above, for each profile and
+δf kind:
+
+| Profile | δf 20: max \|z\|, rms z | δf 21: max \|z\|, rms z |
+|---|---|---|
+| `varying-e` | 2.54, 1.13 | 2.46, 0.98 |
+| `nB` | 2.31, 0.87 | 3.22, 1.04 |
+| `BQS` | 2.97, 1.13 | 3.36, 1.14 |
+
+Two of the 726 observables have |z| > 3, about what chance gives (≈2):
+Ξ ⟨y²⟩ for `nB`, δf 21, and π⁰ ⟨p_y⟩ for `BQS`, δf 21. They are
+different species, observables and surfaces. This does not test the open
+mismatch between the HRG4D table and the sampled gas
+([EoS4D_validation.md](EoS4D_validation.md)), which is the same before
+and after these changes.
+
 ## Things to know
 
 - **Same seed, different events.** A fixed `randomSeed` still gives
@@ -175,9 +246,8 @@ Scaling, kind 20 (same output at every thread count):
   about the pragmas, as `spin_polarization.cpp` already does (CMake skips
   OpenMP for AppleClang).
 - **Constant ε is the easy case.** When T varies from cell to cell, the
-  momentum sampler recomputes its cached CDF terms for nearly every
-  hadron, and the yield cache rarely hits. Neither cost shows up in this
-  benchmark.
+  yield cache rarely hits, and single-thread runs gain little (see the
+  section above). The parallel speedup holds.
 
 ## Open items
 
@@ -189,7 +259,15 @@ Scaling, kind 20 (same output at every thread count):
   a binary search over a table that combines three columns on every
   probe. Precombining the table per (m/T, μ/T) would only pay off when T
   is constant.
-- **Surface reading** (0.5 s) is now about a quarter of the run.
+- **Setup** (0.4–0.8 s) is serial and now a quarter to a third of the
+  run. The cells are independent, so `regulate_surface_cells` could run
+  in parallel. For EoS 20, the 11 `FourDLInterp` calls per cell each
+  recompute the same tilde variables and the 16 weights, and read the
+  table through bounds-checked `at()`. One call that interpolates all
+  fields at once would do that work once.
+- **Yields when T varies** (about 4 s of CPU per run). Per-cell factors
+  shared by all species, such as e^{μ_B/T}, e^{μ_S/T}, e^{μ_Q/T} and
+  1/T, could be computed once instead of once per species.
 - **Minor.** `getCENEOSBQSCoefficients` and
   `get22momNEOSBQSCoefficients` multiply the energy index by the
   energy-axis length instead of the n_B-axis length. Both are 200, so
