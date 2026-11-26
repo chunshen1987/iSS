@@ -90,7 +90,7 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     }
 
     bulk_deltaf_kind_ = paraRdr->getVal("bulk_deltaf_kind", 20);
-    deltaf_max_ratio_ = paraRdr->getVal("deltaf_max_ratio");
+    deltaf_max_ratio_ = paraRdr->getVal("deltaf_max_ratio", 1.0);
     deltaf_max_ratio_ = std::max(0., std::min(1., deltaf_max_ratio_));
 
     NEoS_deltaf_kind_ = -1;
@@ -202,7 +202,15 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
     }
 
     if (iEoS_MUSIC_ == 20) {
-        eos_4d_.initialize_dfCoeffs(NEoS_deltaf_kind_);
+        // the 4D delta f coefficients are interpolated per cell by
+        // read_FOdata (surf->visCoeffs), which only does so with regulateEOS
+        if (NEoS_deltaf_kind_ >= 0
+                && paraRdr->getVal("regulateEOS", 0) != 1) {
+            messager_ << "EOS_to_use = 20 with bulk_deltaf_kind = "
+                      << bulk_deltaf_kind_ << " requires regulateEOS = 1";
+            messager_.flush("error");
+            exit(1);
+        }
     } else {
         if (NEoS_deltaf_kind_ == 1) {
             load_CE_deltaf_NEOSBQS_table(table_path_ + "/deltaf_tables");
@@ -684,9 +692,9 @@ void FSSW::calculate_dN_dxtdy_for_one_particle_species(
         // bulk delta f contribution
         double bulkPi = 0.0;
         if (iEoS_MUSIC_ == 20) {
-            //eos_4d_.getDeltafCoeffs(surf->Edec, surf->Bn, surf->Qn, surf->Sn,
-            //                        visCoefficients);
-            visCoefficients = surf->visCoeffs;
+            if (NEoS_deltaf_kind_ >= 0) {
+                visCoefficients = surf->visCoeffs;
+            }
         } else {
             if (NEoS_deltaf_kind_ == 1) {
                 getCENEOSBQSCoefficients(surf->Edec, std::abs(surf->Bn),
@@ -1072,9 +1080,9 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 const FO_surf_LRF *surf = &FOsurf_ptr[FO_idx];
 
                 if (iEoS_MUSIC_ == 20) {
-                    //eos_4d_.getDeltafCoeffs(surf->Edec, surf->Bn, surf->Qn,
-                    //                        surf->Sn, visCoefficients);
-                    visCoefficients = surf->visCoeffs;
+                    if (NEoS_deltaf_kind_ >= 0) {
+                        visCoefficients = surf->visCoeffs;
+                    }
                 } else {
                     if (NEoS_deltaf_kind_ == 1) {
                         getCENEOSBQSCoefficients(surf->Edec, std::abs(surf->Bn),

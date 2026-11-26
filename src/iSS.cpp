@@ -332,9 +332,10 @@ void iSS::construct_Tmunu_from_particle_samples() {
                 getParticleQuantumNumbers(part_i.pid, Qparticle);
                 monval_cached = part_i.pid;
             }
+            // same order as FOsurf_Q_: (B, Q, S)
             netChargeArr[0] += Qparticle[0];        // net baryon
-            netChargeArr[1] += Qparticle[1];        // net strangeness
-            netChargeArr[2] += Qparticle[2];        // net electric charge
+            netChargeArr[1] += Qparticle[2];        // net electric charge
+            netChargeArr[2] += Qparticle[1];        // net strangeness
             double p[4] = {part_i.E, part_i.px, part_i.py, part_i.pz};
             for (int ii = 0; ii < 4; ii++)
                 for (int jj = 0; jj < 4; jj++)

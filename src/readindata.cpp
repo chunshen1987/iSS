@@ -100,6 +100,12 @@ read_FOdata::read_FOdata(ParameterReader* paraRdr_in, string path,
             messager.info("the hyper-surface includes net baryon density.");
         if (turn_on_diff == 1)
             messager.info("the hyper-surface includes baryon diffusion.");
+        if (include_vorticity_ && !surface_in_binary_) {
+            // only the binary readers fill vorticity_arr
+            messager.warning("vorticity arrays are only read from binary "
+                             "hyper-surfaces; ignoring output_vorticity.");
+            include_vorticity_ = false;
+        }
         if (include_vorticity_)
             messager.info("the hyper-surface includes vorticity arrays.");
     }
@@ -1064,8 +1070,7 @@ void read_FOdata::read_chemical_potentials_music(
 
 void read_FOdata::read_in_HRG_EOS() {
     cout << " -- Read in pure HRG EoS table...";
-    std::string eos_filename = (particle_table_path_
-                                + "/EOS_tables/");
+    std::string eos_filename = table_path_ + "/EOS_tables/";
     if (iEOS_MUSIC_ == 12) {
         eos_filename += "HRGNEOS_B-";
     } else if (iEOS_MUSIC_ == 14) {

@@ -106,18 +106,20 @@ void EOS_4D::FourDLInterp(const std::vector<float> &data,
     double muqfrac = (TildeVar[2] - muqtilde0)/dmuqtilde;
     double musfrac = (TildeVar[3] - mustilde0)/dmustilde;
 
-    // Calculate the weights associated to the sixteen surrounding point
+    // Calculate the weights associated to the sixteen surrounding point.
+    // The lower index is at most N - 2 so that its neighbour (index + 1)
+    // stays inside the table; at the upper edge the weight clamps to 1.
     int iT = static_cast<int>(Tfrac);
-    iT = std::max(0, std::min(N_T - 1, iT));
+    iT = std::max(0, std::min(N_T - 2, iT));
     int iT1 = iT + 1;
     int ib = static_cast<int>(mubfrac);
-    ib = std::max(0, std::min(N_mub - 1, ib));
+    ib = std::max(0, std::min(N_mub - 2, ib));
     int ib1 = ib + 1;
     int iq = static_cast<int>(muqfrac);
-    iq = std::max(0, std::min(N_muq - 1, iq));
+    iq = std::max(0, std::min(N_muq - 2, iq));
     int iq1 = iq + 1;
     int is = static_cast<int>(musfrac);
-    is = std::max(0, std::min(N_mus - 1, is));
+    is = std::max(0, std::min(N_mus - 2, is));
     int is1 = is + 1;
 
     float dx = std::max(0., std::min(1., Tfrac - iT));

@@ -21,7 +21,6 @@
 #include "Random.h"
 #include "pretty_ostream.h"
 #include "MomentumSamplerShell.h"
-#include "eos_4D.h"
 
 class FSSW {
  private:
@@ -98,7 +97,6 @@ class FSSW {
     double **deltaf_bulk_coeff_14mom_c1_tb_;
     double **deltaf_bulk_coeff_14mom_c2_tb_;
 
-    EOS_4D eos_4d_;
 
     // table parameter for bulk deltaf coefficient CE for NEOS BQS
     int deltaf_coeff_NEOSBQS_table_length_e_;
