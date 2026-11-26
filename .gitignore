@@ -12,3 +12,7 @@ particle_samples*.gz
 particle_samples*.bin
 particle_samples*.dat
 check*
+# downloaded 4D EoS and delta f tables (see the download_*.sh scripts)
+iSS_tables/EOS_tables/HRG4D/
+iSS_tables/deltaf_tables/urqmd/NEoS4D_*_deltafCoeff.bin
+._*
