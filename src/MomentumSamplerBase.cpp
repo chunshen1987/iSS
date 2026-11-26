@@ -19,10 +19,19 @@ void MomentumSamplerBase::update_cache(const double m_minus_mu_tilde) {
 
 
 double MomentumSamplerBase::Sample_a_momentum(double m, double T, double mu) {
+    return(Sample_a_momentum(m, T, mu, *ran_gen_ptr_));
+}
+
+
+double MomentumSamplerBase::Sample_a_momentum(double m, double T, double mu,
+                                              RandomUtil::Random &ran) {
     T = std::max(eps_, T);
     const double m_tilde = m/T;
     const double mu_tilde = mu/T;
-    if (std::abs((m_tilde - mu_tilde) - m_minus_mu_tilde_) > tol_)
+    // Reuse the cache only for an identical key. A tolerance would make the
+    // result depend on which particle this sampler drew before, i.e. on
+    // how events are spread over threads.
+    if ((m_tilde - mu_tilde) != m_minus_mu_tilde_)
         update_cache(m_tilde - mu_tilde);
     double m_term = (CDF_2_mtilde_ + 2.*mu_tilde*CDF_1_mtilde_
                      + (mu_tilde*mu_tilde - m_tilde*m_tilde/2.)*CDF_0_mtilde_);
@@ -47,14 +56,14 @@ double MomentumSamplerBase::Sample_a_momentum(double m, double T, double mu) {
     double E_sample = -1.;
     double accept_ratio = 1.;
     do {
-        double r = ran_gen_ptr_->rand_uniform()*CDF_max;
+        double r = ran.rand_uniform()*CDF_max;
         double Etilde_sample = inverse_CDF(r, idx_min, CDF_max, m_term,
                                            m_tilde, mu_tilde);
         // convert back to particle momentum
         E_sample = T*Etilde_sample + mu;
         p_sample = sqrt(E_sample*E_sample - m*m);
         accept_ratio = (p_sample/E_sample)/(1. - m*m/(2.*E_sample*E_sample));
-    } while (ran_gen_ptr_->rand_uniform() > accept_ratio);
+    } while (ran.rand_uniform() > accept_ratio);
     return(p_sample);
 }
 

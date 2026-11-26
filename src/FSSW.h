@@ -39,7 +39,8 @@ class FSSW {
     const AfterburnerType afterburner_type_;
 
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
-    std::shared_ptr<MomentumSamplerShell> momentum_sampler_ptr_;
+    //! one per OpenMP thread
+    std::vector<std::unique_ptr<MomentumSamplerShell>> momentum_samplers_;
 
     int number_of_repeated_sampling;
     int maximumSamplingEvents_;
@@ -225,7 +226,9 @@ class FSSW {
         const double Tdec, const int sign, const int baryon,
         const int strange, const int charge,
         const double f0, const std::vector<double> &bulkvisCoefficients);
+    //! sampler and ran must not be used by another thread at the same time
     int sample_momemtum_from_a_fluid_cell(
+        MomentumSamplerShell &sampler, RandomUtil::Random &ran,
         const double mass, const int sign,
         const int baryon, const int strange, const int charge,
         const FO_surf_LRF *surf,

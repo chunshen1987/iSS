@@ -27,6 +27,13 @@
 #include "arsenal.h"
 #include "Stopwatch.h"
 
+#ifdef _OPENMP
+    #include <omp.h>
+#else
+    #define omp_get_thread_num() 0
+    #define omp_get_max_threads() 1
+#endif
+
 using iSS_data::AMOUNT_OF_OUTPUT;
 using iSS_data::VecD4;
 using std::cout;
@@ -51,8 +58,6 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
                afterburner_type_(afterburner_type), FOsurf_ptr(FOsurf_ptr_in) {
 
     ran_gen_ptr = ran_gen;
-    momentum_sampler_ptr_ = std::shared_ptr<MomentumSamplerShell> (
-            new MomentumSamplerShell(ran_gen_ptr));
 
     // get info
     flag_PCE_ = flag_PCE;
@@ -1038,6 +1043,26 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
         }
     }
 
+    // Each event samples from its own stream, keyed by two draws from the
+    // main generator. A fixed randomSeed gives the same events for any
+    // number of threads, and repeated calls continue the main stream.
+    const std::uint32_t stream_key_hi = ran_gen_ptr->rand_uint32();
+    const std::uint32_t stream_key_lo = ran_gen_ptr->rand_uint32();
+    std::vector<std::unique_ptr<RandomUtil::Random>> event_ran;
+    event_ran.reserve(number_of_repeated_sampling);
+    for (int iev = 0; iev < number_of_repeated_sampling; iev++) {
+        event_ran.emplace_back(new RandomUtil::Random(
+                                    stream_key_hi, stream_key_lo, iev));
+    }
+    std::vector<long> number_to_sample(number_of_repeated_sampling, 0);
+
+    // The momentum samplers cache the last (m - mu)/T, so each thread
+    // needs its own.
+    const std::size_t number_of_threads = std::max(1, omp_get_max_threads());
+    while (momentum_samplers_.size() < number_of_threads) {
+        momentum_samplers_.emplace_back(new MomentumSamplerShell(ran_gen_ptr));
+    }
+
     // use "conventional" sampling
     // reusable variables
     // dN_dxtdy for 1 particle
@@ -1100,16 +1125,27 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
             print_progressbar(-1);
         }
 
-        for (long repeated_sampling_idx = 1; 
-             repeated_sampling_idx <= number_of_repeated_sampling;
-             repeated_sampling_idx++) {
-            long number_to_sample = determine_number_to_sample(
+        // The counts come from the serial generators, in event order.
+        for (int iev = 0; iev < number_of_repeated_sampling; iev++) {
+            number_to_sample[iev] = determine_number_to_sample(
                 dN, sampling_model, sampling_para1);
+        }
 
+        // Events are independent: each one only writes its own hadron list
+        // and draws from its own stream, so the samples do not depend on
+        // the number of threads.
+        #pragma omp parallel
+        {
+        MomentumSamplerShell &sampler = *momentum_samplers_[
+                                                    omp_get_thread_num()];
+        #pragma omp for schedule(dynamic)
+        for (int iev = 0; iev < number_of_repeated_sampling; iev++) {
+            RandomUtil::Random &ran = *event_ran[iev];
+            const long repeated_sampling_idx = iev + 1;
             long sample_idx = 1;
-            while (sample_idx <= number_to_sample) {
+            while (sample_idx <= number_to_sample[iev]) {
                 // first, sample eta and freeze-out cell index
-                long FO_idx = rand1D.rand();
+                long FO_idx = rand1D.rand(ran);
                 const FO_surf_LRF *surf = &FOsurf_ptr[FO_idx];
 
                 const auto &factors = cellFactors_[FO_idx];
@@ -1121,6 +1157,7 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 const double mu_PCE = flag_PCE_ == 1
                     ? surf->particle_mu_PCE[real_particle_idx] : 0.;
                 int status = sample_momemtum_from_a_fluid_cell(
+                                sampler, ran,
                                 mass, sign, baryon, strange, charge,
                                 surf, visCoefficients, deltaf_qmu_coeff,
                                 pT, phi, y_minus_eta_s, mu_PCE);
@@ -1130,12 +1167,10 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                 } else {
                     sample_idx++;
                 }
-                //number_of_success++; // to track success rate
 
                 double eta_s = surf->eta;
                 if (hydro_mode != 2) {
-                    double rap = (y_LB + (y_RB - y_LB)
-                                         *ran_gen_ptr->rand_uniform());
+                    double rap = y_LB + (y_RB - y_LB)*ran.rand_uniform();
                     eta_s = rap - y_minus_eta_s;
                 }
 
@@ -1151,6 +1186,7 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                     int status2 = 0;
                     do {
                         status2 = sample_momemtum_from_a_fluid_cell(
+                                sampler, ran,
                                 mass, sign, -baryon, -strange, -charge,
                                 surf, visCoefficients, deltaf_qmu_coeff,
                                 pT2, phi2, y_minus_eta_s2, conjugate_mu_PCE);
@@ -1160,13 +1196,8 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
                         mass, pT2, phi2, y_minus_eta_s2, eta_s);
                 }
             }
-
-            if (AMOUNT_OF_OUTPUT > 7) {
-                print_progressbar(
-                        static_cast<double>(repeated_sampling_idx)
-                                            /number_of_repeated_sampling);
-            }
         }
+        }  // omp parallel
         if (AMOUNT_OF_OUTPUT > 7) print_progressbar(1);
 
         sw.toc();
@@ -2043,6 +2074,7 @@ double FSSW::get_deltaf_bulk(
 
 
 int FSSW::sample_momemtum_from_a_fluid_cell(
+        MomentumSamplerShell &sampler, RandomUtil::Random &ran,
         const double mass, const int sign,
         const int baryon, const int strange, const int charge,
         const FO_surf_LRF *surf,
@@ -2082,8 +2114,8 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         // the rate is calculated
         // Basically it is "just Cooper-Frye"
 
-        const double p_mag = momentum_sampler_ptr_->Sample_a_momentum(
-                                                    mass, Tdec, mu, sign);
+        const double p_mag = sampler.Sample_a_momentum(mass, Tdec, mu, sign,
+                                                        ran);
         if (!(p_mag >= 0.)) {
             // rounding can make sqrt(E^2 - m^2) NaN; the direction loop
             // below would never accept it
@@ -2096,7 +2128,7 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
             ? (dsig0 + v_p*dsig_vec)*(dsig0 + v_p*dsig_vec)/(4.*v_p*dsig_vec)
             : dsig0);
         if (flux_average < h_max
-                && !(ran_gen_ptr->rand_uniform()*h_max < flux_average)) {
+                && !(ran.rand_uniform()*h_max < flux_average)) {
             tries++;
             continue;
         }
@@ -2104,15 +2136,15 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         const double flux_bound = dsig0 + v_p*dsig_vec;
         double px, py, pz, flux;
         do {
-            const double phi_candidate = 2*M_PI*ran_gen_ptr->rand_uniform();
-            const double cos_theta = 2.*ran_gen_ptr->rand_uniform() - 1.;
+            const double phi_candidate = 2*M_PI*ran.rand_uniform();
+            const double cos_theta = 2.*ran.rand_uniform() - 1.;
             const double pT_candidate = p_mag*sqrt(1. - cos_theta*cos_theta);
             px = pT_candidate*cos(phi_candidate);
             py = pT_candidate*sin(phi_candidate);
             pz = p_mag*cos_theta;
             flux = (  p0*surf->da_mu_LRF[0] + px*surf->da_mu_LRF[1]
                     + py*surf->da_mu_LRF[2] + pz*surf->da_mu_LRF[3])/p0;
-        } while (!(ran_gen_ptr->rand_uniform()*flux_bound < flux));
+        } while (!(ran.rand_uniform()*flux_bound < flux));
 
         double f0 = 1./(exp((p0 - mu)/Tdec) + sign);
 
@@ -2159,7 +2191,7 @@ int FSSW::sample_momemtum_from_a_fluid_cell(
         const double accept_prob = std::max(0., std::min(1.,
             (1. + deltaf_regulated)/deltaf_envelope_));
 
-        if (accept_prob >= 1. || ran_gen_ptr->rand_uniform() < accept_prob) {
+        if (accept_prob >= 1. || ran.rand_uniform() < accept_prob) {
             // accept the sample
             // now we need to boost the momentum to the lab frame
             VecD4 pLRF = {p0, px, py, pz};

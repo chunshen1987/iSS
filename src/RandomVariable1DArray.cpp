@@ -61,10 +61,15 @@ RandomVariable1DArray::~RandomVariable1DArray()
 
 //----------------------------------------------------------------------
 long RandomVariable1DArray::rand() {
+    return(rand(*ran_gen_ptr.lock()));
+}
+
+
+long RandomVariable1DArray::rand(RandomUtil::Random &ran) const {
 // Sample according to inverse CDF, which gives a (left, right) pair.
     const double first = (*invCDF)[0];
     const double value = first + (data_sum - first - 1e-15)
-                                 *ran_gen_ptr.lock()->rand_uniform();
+                                 *ran.rand_uniform();
     if (value < first || value > data_sum) {
         return binarySearch(invCDF, value);
     }

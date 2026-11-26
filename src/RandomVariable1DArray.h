@@ -20,6 +20,8 @@ class RandomVariable1DArray {
                           double=1e-30);
     ~RandomVariable1DArray();
     long rand();
+    //! the same, drawing from ran; safe to call from several threads
+    long rand(RandomUtil::Random &ran) const;
     double return_sum();
 };
 

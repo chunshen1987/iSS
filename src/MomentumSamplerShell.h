@@ -12,6 +12,7 @@ class MomentumSamplerShell {
  private:
      const double mtilde_1_;
      const double mtilde_2_;
+     std::shared_ptr<RandomUtil::Random> ran_gen_ptr_;
      std::shared_ptr<FermionMomentumSampler> fermion_sampler_0_;
      std::shared_ptr<FermionMomentumSampler> fermion_sampler_1_;
      std::shared_ptr<FermionMomentumSampler> fermion_sampler_2_;
@@ -24,6 +25,9 @@ class MomentumSamplerShell {
     ~MomentumSamplerShell() {};
 
     double Sample_a_momentum(double m, double T, double mu, int sign) const;
+    //! the same, drawing from ran
+    double Sample_a_momentum(double m, double T, double mu, int sign,
+                             RandomUtil::Random &ran) const;
 
 };
 

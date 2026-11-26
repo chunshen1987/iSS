@@ -66,6 +66,9 @@ class MomentumSamplerBase {
     void update_cache(const double m_minus_mu_tilde);
 
     double Sample_a_momentum(double m, double T, double mu);
+    //! the same, drawing from ran instead of ran_gen_ptr_
+    double Sample_a_momentum(double m, double T, double mu,
+                             RandomUtil::Random &ran);
 
     double inverse_CDF(const double r, const int idx_0,
                        const double CDF_max, const double m_term,
