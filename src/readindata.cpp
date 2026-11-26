@@ -600,8 +600,15 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
             } else {
                 surf_elem.Bn = 0.0;
             }
-            surf_elem.Qn = 0.;
-            surf_elem.Sn = 0.;
+            // the 4D EoS needs net electric charge and strangeness densities;
+            // they follow Bn, in the same order as in the binary format
+            if (turn_on_rhob == 1 && iEOS_MUSIC_ == 20) {
+                ss >> dummy; surf_elem.Qn = dummy;   // 1/fm^3
+                ss >> dummy; surf_elem.Sn = dummy;   // 1/fm^3
+            } else {
+                surf_elem.Qn = 0.;
+                surf_elem.Sn = 0.;
+            }
             if (turn_on_diff == 1) {
                 ss >> surf_elem.qmu0;
                 ss >> surf_elem.qmu1;
@@ -790,7 +797,6 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
                     surf_elem.vorticity_arr.push_back(array_loc[36+ii]);
             }
         } else {
-            // not adapted to rhoq and rhos at pos 30, 31.
             // freeze out position
             surfdat >> surf_elem.tau;
             surfdat >> surf_elem.xpt;
@@ -841,8 +847,15 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
             } else {
                 surf_elem.Bn = 0.0;
             }
-            surf_elem.Qn = 0.;
-            surf_elem.Sn = 0.;
+            // the 4D EoS needs net electric charge and strangeness densities;
+            // they follow Bn, in the same order as in the binary format
+            if (turn_on_rhob == 1 && iEOS_MUSIC_ == 20) {
+                surfdat >> dummy; surf_elem.Qn = dummy;   // 1/fm^3
+                surfdat >> dummy; surf_elem.Sn = dummy;   // 1/fm^3
+            } else {
+                surf_elem.Qn = 0.;
+                surf_elem.Sn = 0.;
+            }
             if (turn_on_diff == 1) {
                 surfdat >> surf_elem.qmu0;
                 surfdat >> surf_elem.qmu1;
