@@ -1928,36 +1928,45 @@ void FSSW::check_samples_in_memory() {
 void FSSW::perform_resonance_feed_down(
                     vector< vector<iSS_Hadron>* >* input_particle_list) {
     cout << "perform resonance decays... " << endl;
-    // loop over events
-    unsigned int nev = input_particle_list->size();
-    for (unsigned int ievent = 0; ievent < nev; ievent++) {
-        // create a temporary particle list
-        vector<iSS_Hadron> temp_list;
-        // copy all particles into the temp list
-        unsigned int Npart = (*input_particle_list)[ievent]->size();
-        for (unsigned int ipart = 0; ipart < Npart; ipart++) {
-            temp_list.push_back((*(*input_particle_list)[ievent])[ipart]);
-        }
-        (*input_particle_list)[ievent]->clear();
-        // perform resonance decays
-        for (unsigned int ipart = 0; ipart < temp_list.size(); ipart++) {
-            vector<iSS_Hadron> *daughter_list = new vector<iSS_Hadron>;
-            decayer_ptr_->perform_decays(&temp_list[ipart], daughter_list);
-            for (unsigned int idaughter = 0; idaughter < daughter_list->size();
-                    idaughter++) {
-                if (decayer_ptr_->check_particle_stable(
-                                        &(*daughter_list)[idaughter]) == 1) {
-                    (*input_particle_list)[ievent]->push_back(
-                                            (*daughter_list)[idaughter]);
+    Stopwatch sw;
+    sw.tic();
+    // Events decay independently, each with its own random stream keyed
+    // from the main generator as in the sampling, so the result does not
+    // depend on the number of threads.
+    const long nev = static_cast<long>(input_particle_list->size());
+    const std::uint32_t stream_key_hi = ran_gen_ptr->rand_uint32();
+    const std::uint32_t stream_key_lo = ran_gen_ptr->rand_uint32();
+    #pragma omp parallel
+    {
+    vector<iSS_Hadron> queue;      // particles still to decay
+    vector<iSS_Hadron> daughters;
+    #pragma omp for schedule(dynamic)
+    for (long ievent = 0; ievent < nev; ievent++) {
+        RandomUtil::Random ran(stream_key_hi, stream_key_lo,
+                               static_cast<std::uint32_t>(ievent));
+        vector<iSS_Hadron> &event = *(*input_particle_list)[ievent];
+        // the event's particles move to the queue; stable ones come back
+        // in the same order as before
+        queue.clear();
+        queue.swap(event);
+        event.reserve(2*queue.size());
+        for (std::size_t ipart = 0; ipart < queue.size(); ipart++) {
+            daughters.clear();
+            decayer_ptr_->perform_decays(&queue[ipart], daughters, ran);
+            for (auto &daughter : daughters) {
+                if (decayer_ptr_->check_particle_stable(&daughter) == 1) {
+                    event.push_back(daughter);
                 } else {
-                    temp_list.push_back((*daughter_list)[idaughter]);
+                    queue.push_back(daughter);
                 }
             }
-            daughter_list->clear();
-            delete daughter_list;
         }
-        temp_list.clear();
+        event.shrink_to_fit();
     }
+    }  // omp parallel
+    sw.toc();
+    cout << " -- perform_resonance_feed_down finished in " << sw.takeTime()
+         << " seconds." << endl;
 }
 
 

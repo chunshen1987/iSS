@@ -96,7 +96,9 @@ def compare(args):
         line = [f"{species:>6s}"]
         for key, (ma, da) in a[species].items():
             mb, db = b[species][key]
-            if da == 0 and db == 0:
+            # species absent from both samples, e.g. resonances after decays
+            if not np.all(np.isfinite([ma, da, mb, db])) or (da == 0
+                                                              and db == 0):
                 continue
             z = (ma - mb)/np.sqrt(da**2 + db**2)
             zs.append(z)
