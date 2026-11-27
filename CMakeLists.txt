@@ -35,7 +35,7 @@ option (link_with_lib "Link executable with the libarary" ON)
 option (unittest "Build Unit tests" OFF)
 
 if (unittest)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOCTEST_CONFIG_IMPLEMENT_WITH_MAIN")
+    enable_testing()
 else (unittest)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOCTEST_CONFIG_DISABLE")
 endif (unittest)

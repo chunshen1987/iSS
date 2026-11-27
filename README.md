@@ -3,6 +3,26 @@ iSS
 
 Monte Carlo sampler for particle distribution from Cooper-Frye freeze-out procedure
 
+Unit tests
+----------
+
+Build and run the focused C++ tests with CMake and CTest. They use the
+bundled doctest header and generate synthetic EoS tables in the build tree.
+
+```sh
+cmake -S . -B build -Dunittest=ON
+cmake --build build --parallel 2
+ctest --test-dir build --output-on-failure
+```
+
+The light-fermion momentum diagnostic currently fails against independent
+Fermi–Dirac quadrature. Run it directly from the repository root to reproduce
+the discrepancy.
+
+```sh
+build/src/unittest_numerics.e --test-case='Light fermion momentum*'
+```
+
 Resonance decays (`perform_decays = 1`)
 ---------------------------------------
 

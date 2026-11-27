@@ -27,8 +27,9 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake ..
+          cmake .. -Dunittest=ON
           make -j2
+          ctest --output-on-failure
           make install
       - name: Resonance decays conserve four-momentum
         run: |
