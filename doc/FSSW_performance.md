@@ -325,6 +325,8 @@ and after these changes.
   over all cells. With 12 threads it takes 0.75 s, of which 0.14 s is
   the serial inverse-CDF setup (`RandomVariable1DArray`) per species.
   Flattening the `double**` Bessel table made no difference.
+- **GPU.** A CUDA prototype of the yield loop and the case against a
+  CUDA or Metal backend for now: [GPU_feasibility.md](GPU_feasibility.md).
 - **Minor.** `getCENEOSBQSCoefficients` and
   `get22momNEOSBQSCoefficients` multiply the energy index by the
   energy-axis length instead of the n_B-axis length. Both are 200, so

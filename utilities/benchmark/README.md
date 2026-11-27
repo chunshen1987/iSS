@@ -1,7 +1,7 @@
 # FSSW benchmark scripts
 
 The scripts behind [doc/FSSW_performance.md](../../doc/FSSW_performance.md).
-They need Python 3 with numpy. Run them from the iSS repo root.
+The Python scripts need numpy; the CUDA prototype needs the CUDA toolkit. Run them from the iSS repo root.
 
 | Script | What it does |
 |---|---|
@@ -10,6 +10,7 @@ They need Python 3 with numpy. Run them from the iSS repo root.
 | `sample_stats.py summarize BIN JSON` | Reduces `particle_samples.bin` to per-species means and errors |
 | `sample_stats.py compare A.json B.json` | Prints the z-score of each observable, and the max and rms |
 | `run_benchmark.sh WORK_DIR OUT_DIR EXE...` | Times several executables, interleaved and repeated, and keeps a summary of each run |
+| `gpu_yield_bench.cu` | Standalone CUDA prototype of the FSSW yield loop (δf 20), timed against OpenMP; see [doc/GPU_feasibility.md](../../doc/GPU_feasibility.md). Build with `nvcc -O3 -std=c++17 -arch=sm_75 -Xcompiler -fopenmp,-O3 gpu_yield_bench.cu -o gpu_yield_bench` |
 
 ## Example
 
