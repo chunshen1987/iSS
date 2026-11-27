@@ -216,6 +216,62 @@ plus yields):
 - The 4D lookups add about 0.2 s to the serial setup. With 12 threads the
   setup (0.6–0.8 s) is the largest single part of a 2.4 s run.
 
+### Follow-up: the setup and the yields when T varies
+
+Two follow-up commits address the cost found above:
+
+- **EoS setup.** `regulate_surface_cells` runs over the cells with
+  OpenMP. The out-of-range warnings of the 2D lookup are collected and
+  printed after the loop, in cell order. For EoS 20 one call,
+  `EOS_4D::getThermalVariablesAndDeltafCoeffs`, interpolates all 11
+  fields with one set of tilde variables, corner indices and weights,
+  without `at()`. It uses the same weights and summation order as
+  `FourDLInterp`. On 10⁶ random points, inside and beyond the table, it
+  matches the separate calls bit for bit for both δf tables.
+- **Yields.** The cell keeps 1/T, and `calculate_dN_analytic` and
+  `interpolate_bessel` no longer divide: 1/n comes from a table, the
+  table position from a stored 1/Δx, and the post-processing multiplies
+  by T instead of dividing by β.
+
+The idea in the previous open item, computing the fugacities e^{μ/T}
+once per cell, was also tried. It made no measurable difference
+(10.46 → 10.42 s on one thread for `nB`), so it was left out, and
+e^{μ/T} is computed as before.
+
+Setup and yields of a 1-event run, δf = 20, best of three for the setup:
+
+| | Setup, before → after | Yields, 1 thread | Yields, 12 threads |
+|---|---|---|---|
+| Constant ε | 0.38 → 0.38 s | 1.07 → 0.96 s | 0.62 → 0.52 s |
+| `varying-e` | 0.38 → 0.38 s | 4.00 → 3.23 s | 0.79 → 0.75 s |
+| `nB` | 0.45 → 0.45 s | 4.20 → 3.34 s | 0.83 → 0.80 s |
+| `BQS` | 0.62 → 0.49 s (12 threads) | 4.17 → 3.33 s | 0.84 → 0.78 s |
+
+1000 events, before → after the follow-up:
+
+| Profile | δf | 12 threads | 1 thread |
+|---|---|---|---|
+| constant ε | 20 | 1.94 → 1.84 s | 6.70 → 6.55 s |
+| constant ε | 21 | 1.90 → 1.76 s | 6.23 → 6.13 s |
+| `varying-e` | 20 | 2.30 → 2.20 s | 10.45 → 9.66 s |
+| `varying-e` | 21 | 2.15 → 2.10 s | 9.87 → 9.08 s |
+| `nB` | 20 | 2.31 → 2.27 s | 10.63 → 9.74 s |
+| `nB` | 21 | 2.21 → 2.16 s | 9.83 → 9.11 s |
+| `BQS` | 20 | 2.48 → 2.24 s | 10.51 → 9.44 s |
+| `BQS` | 21 | 2.40 → 2.21 s | 10.35 → 9.57 s |
+
+- The yields lose about 20% of their single-thread time, and runs on one
+  thread get 7–10% faster when T varies. With 12 threads the yield loop
+  was already short, and the gain is 2–10%.
+- The setup is not dominated by `regulateEOS`. Running it in parallel
+  changes nothing for EoS 9 and 14. For EoS 20 it saves 0.13 s; the rest
+  is reading the surface and the 176 MB of 4D tables, and the LRF
+  transform.
+- The total yields of all 321 species agree with the previous code to
+  every printed digit. Removing the divisions changes the rounding, so
+  the samples are not byte-identical. For
+  each profile the output is the same on 1 and 12 threads.
+
 ### Validation
 
 Before vs after, the same 121 observables as above, for each profile and
@@ -229,7 +285,10 @@ Before vs after, the same 121 observables as above, for each profile and
 
 Two of the 726 observables have |z| > 3, about what chance gives (≈2):
 Ξ ⟨y²⟩ for `nB`, δf 21, and π⁰ ⟨p_y⟩ for `BQS`, δf 21. They are
-different species, observables and surfaces. This does not test the open
+different species, observables and surfaces. The follow-up commits,
+against the code before them (seeds 3 and 5), on all four surfaces:
+max |z| 1.91–3.03, rms z 0.83–1.11, one of 968 observables above 3.
+This does not test the open
 mismatch between the HRG4D table and the sampled gas
 ([EoS4D_validation.md](EoS4D_validation.md)), which is the same before
 and after these changes.
@@ -259,15 +318,13 @@ and after these changes.
   a binary search over a table that combines three columns on every
   probe. Precombining the table per (m/T, μ/T) would only pay off when T
   is constant.
-- **Setup** (0.4–0.8 s) is serial and now a quarter to a third of the
-  run. The cells are independent, so `regulate_surface_cells` could run
-  in parallel. For EoS 20, the 11 `FourDLInterp` calls per cell each
-  recompute the same tilde variables and the 16 weights, and read the
-  table through bounds-checked `at()`. One call that interpolates all
-  fields at once would do that work once.
-- **Yields when T varies** (about 4 s of CPU per run). Per-cell factors
-  shared by all species, such as e^{μ_B/T}, e^{μ_S/T}, e^{μ_Q/T} and
-  1/T, could be computed once instead of once per species.
+- **Setup** (0.4–0.5 s) is serial reading: the surface, and for EoS 20
+  the 176 MB of 4D tables. The δf tables are read one float at a time
+  into six arrays.
+- **Yields when T varies** (3.2 s of CPU). The loop runs once per species
+  over all cells. With 12 threads it takes 0.75 s, of which 0.14 s is
+  the serial inverse-CDF setup (`RandomVariable1DArray`) per species.
+  Flattening the `double**` Bessel table made no difference.
 - **Minor.** `getCENEOSBQSCoefficients` and
   `get22momNEOSBQSCoefficients` multiply the energy index by the
   energy-axis length instead of the n_B-axis length. Both are 200, so

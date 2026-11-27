@@ -90,6 +90,7 @@ class FSSW {
     //! the per-cell inputs of calculate_dN_dxtdy_for_one_particle_species
     struct YieldCell {
         float Tdec, muB, muS, muQ, dsigma0, bulkPi;
+        double beta;                         // 1/Tdec, shared by all species
         std::array<double, 6> coefficients;  // visCoefficients, zero padded
     };
     std::vector<YieldCell> yieldCells_;
@@ -136,6 +137,7 @@ class FSSW {
     int sf_tb_length;
     static constexpr int sf_expint_truncate_order = 10;
     double** sf_bessel_Kn;
+    double sf_inverse_dx_ = 0.;  // 1/sf_dx
     double** sf_expint_En;
 
     int flag_output_samples_into_files;
@@ -176,8 +178,9 @@ class FSSW {
     void combine_samples_to_gzip_file();
     void combine_samples_to_binary_file();
 
+    //! beta = 1/Temperature, which the caller keeps per cell
     void calculate_dN_analytic(const particle_info* particle, double mu,
-                               double Temperature,
+                               double Temperature, double beta,
                                std::array<double, 6> &results);
 
     // the following variables need to be set first in order to
