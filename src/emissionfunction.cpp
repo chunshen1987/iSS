@@ -644,8 +644,6 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
 
     double prefactor = 1.0/(8.0*(M_PI*M_PI*M_PI))/hbarC/hbarC/hbarC;
 
-    std::array<double, 3> bulkvisCoefficients = {0.0};
-
     // for intermedia results
     //cout << "initializing intermedia variables... ";
     double dN_pTdpTdphidy_tab[pT_tab_length][phi_tab_length];
@@ -669,6 +667,41 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
     }
     const int rapidity_bins = boost_invariant_ ? y_minus_eta_tab_length : 1;
 
+    // These factors depend on the cell and species across all momentum bins.
+    struct CellFactors {
+        double mu;
+        double bulkPi;
+        std::array<double, 3> bulkCoefficients;
+        double shearPrefactor;
+        double diffusionCoefficient;
+        double diffusionPrefactor;
+    };
+    std::vector<CellFactors> cellFactors(FO_length);
+    for (long l = 0; l < FO_length; ++l) {
+        const auto &surf = (*FOsurf_ptr)[l];
+        auto &factors = cellFactors[l];
+        factors.mu = baryon*surf.muB + strange*surf.muS + charge*surf.muQ;
+        if (flag_PCE_ == 1) {
+            factors.mu += surf.particle_mu_PCE[particle_idx];
+        }
+        const double Tdec = surf.Tdec;
+        const double Edec = surf.Edec;
+        const double Pdec = surf.Pdec;
+        if (INCLUDE_DELTAF) {
+            factors.shearPrefactor = 1.0/(2.0*Tdec*Tdec*(Edec + Pdec));
+        }
+        if (INCLUDE_BULK_DELTAF == 1) {
+            factors.bulkPi = bulk_deltaf_kind == 0 ? surf.bulkPi
+                                                   : surf.bulkPi/hbarC;
+            getbulkvisCoefficients(surf.Tdec, factors.bulkCoefficients);
+        }
+        if (INCLUDE_DIFFUSION_DELTAF == 1) {
+            factors.diffusionCoefficient = get_deltaf_qmu_coeff(surf.Tdec,
+                                                                surf.muB);
+            factors.diffusionPrefactor = surf.Bn/(Edec + Pdec);
+        }
+    }
+
     //---------------------------
     // THE main summation loop
     //---------------------------
@@ -690,21 +723,13 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
             for (long l=0; l<FO_length; l++) {
                 const FO_surf *surf = &(*FOsurf_ptr)[l];
 
-                double Tdec = surf->Tdec;
-                double Pdec = surf->Pdec;
-                double Edec = surf->Edec;
-
-                double tau = surf->tau;
-                double gammaT = surf->u0;
-                double ux = surf->u1;
-                double uy = surf->u2;
-                double tau_ueta = surf->u3;
-
-                double mu = baryon*surf->muB + strange*surf->muS + charge*surf->muQ;
-                if (flag_PCE_ == 1) {
-                    double mu_PCE = surf->particle_mu_PCE[particle_idx];
-                    mu += mu_PCE;
-                }
+                const auto &factors = cellFactors[l];
+                const double Tdec = surf->Tdec;
+                const double tau = surf->tau;
+                const double gammaT = surf->u0;
+                const double ux = surf->u1;
+                const double uy = surf->u2;
+                const double tau_ueta = surf->u3;
 
                 double da0 = surf->da0;
                 double da1 = surf->da1;
@@ -720,40 +745,6 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
                 double pi22 = surf->pi22;
                 double pi23 = surf->pi23;
                 double pi33 = surf->pi33;
-                double bulkPi = 0.0;
-                double deltaf_prefactor = 0.0;
-                if (INCLUDE_DELTAF) {
-                    deltaf_prefactor = 1.0/(2.0*Tdec*Tdec*(Edec+Pdec));
-                }
-                if (INCLUDE_BULK_DELTAF == 1) {
-                    if (bulk_deltaf_kind == 0) {
-                        bulkPi = surf->bulkPi;
-                    } else {
-                        bulkPi = surf->bulkPi/hbarC;   // unit in fm^-4 
-                    }
-                    getbulkvisCoefficients(Tdec, bulkvisCoefficients);
-                }
-
-                // diffusion delta f
-                double qmu0 = 0.0;
-                double qmu1 = 0.0;
-                double qmu2 = 0.0;
-                double qmu3 = 0.0;
-                double deltaf_qmu_coeff = 1.0;
-                double prefactor_qmu = 0.0;
-                if (INCLUDE_DIFFUSION_DELTAF == 1) {
-                    qmu0 = surf->qmu0;
-                    qmu1 = surf->qmu1;
-                    qmu2 = surf->qmu2;
-                    qmu3 = surf->qmu3;
-
-                    double mu_B = surf->muB;
-                    deltaf_qmu_coeff = get_deltaf_qmu_coeff(Tdec, mu_B);
-
-                    double rho_B = surf->Bn;
-                    prefactor_qmu = rho_B/(Edec + Pdec);  // 1/GeV
-                }
-
                 for (int k=0; k<rapidity_bins; k++) {
                     // A 3+1D cell already represents a surface element in eta.
                     // Evaluate it at y = 0, so y - eta_s = -eta_s.
@@ -765,7 +756,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
                         ? hypertrig_y_minus_eta_table[k][1] : -surf->sinh_eta);
 
                     double pdotu = pt*gammaT - px*ux - py*uy - pz*tau_ueta;
-                    double expon = (pdotu - mu) / Tdec;
+                    double expon = (pdotu - factors.mu) / Tdec;
                     double f0 = 1./(exp(expon)+sign);
 
                     double pdsigma = pt*da0 + px*da1 + py*da2 + pz*da3/tau;
@@ -779,20 +770,22 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy(int particle_idx) {
                             + px*px*pi11 + 2.0*px*py*pi12 + 2.0*px*pz*pi13
                             + py*py*pi22 + 2.0*py*pz*pi23
                             + pz*pz*pi33);
-                        delta_f_shear = (1 - sign*f0)*Wfactor*deltaf_prefactor;
+                        delta_f_shear = ((1 - sign*f0)*Wfactor
+                                         *factors.shearPrefactor);
                     }
 
                     double delta_f_bulk = get_deltaf_bulk(
-                        mass, pdotu, bulkPi, Tdec, sign, f0,
-                        bulkvisCoefficients);
+                        mass, pdotu, factors.bulkPi, Tdec, sign, f0,
+                        factors.bulkCoefficients);
 
                     double delta_f_qmu = 0.0;
                     if (INCLUDE_DIFFUSION_DELTAF == 1) {
                         double qmufactor = (
-                                    pt*qmu0 - px*qmu1 - py*qmu2 - pz*qmu3);
+                                    pt*surf->qmu0 - px*surf->qmu1 - py*surf->qmu2
+                                    - pz*surf->qmu3);
                         delta_f_qmu = ((1. - sign*f0)
-                                       *(prefactor_qmu - baryon/pdotu)
-                                       *qmufactor/deltaf_qmu_coeff);
+                                       *(factors.diffusionPrefactor - baryon/pdotu)
+                                       *qmufactor/factors.diffusionCoefficient);
                     }
 
                     double result;

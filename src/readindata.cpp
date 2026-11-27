@@ -632,15 +632,12 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
     long n_negative_flux = 0;
     double flux_total = 0., flux_negative = 0.;
     long line_number = 0;
+    std::vector<float> array_loc(surface_in_binary_ ? fluid_cell_size : 0);
     while (true) {
         FO_surf surf_elem;
         if (surface_in_binary_) {
-            std::vector<float> array_loc(fluid_cell_size, 0.0);
-            for (int ii = 0; ii < fluid_cell_size; ii++) {
-                float temp = 0.;
-                surfdat.read(reinterpret_cast<char*>(&temp), sizeof(float));
-                array_loc[ii] = temp;
-            }
+            if (!surfdat.read(reinterpret_cast<char*>(array_loc.data()),
+                              array_loc.size()*sizeof(float))) break;
             surf_elem.tau = array_loc[0];
             surf_elem.xpt = array_loc[1];
             surf_elem.ypt = array_loc[2];
@@ -687,7 +684,6 @@ void read_FOdata::read_FOsurfdat_MUSIC_boost_invariant(
                 for (int ii = 0; ii < 38; ii++)
                     surf_elem.vorticity_arr.push_back(array_loc[36+ii]);
             }
-            if (!surfdat) break;
         } else {
             if (!read_MUSIC_text_cell(surfdat, filename,
                                       line_number, surf_elem)) break;
@@ -825,15 +821,12 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
     long n_negative_flux = 0;
     double flux_total = 0., flux_negative = 0.;
     long line_number = 0;
+    std::vector<float> array_loc(surface_in_binary_ ? fluid_cell_size : 0);
     while (true) {
         FO_surf surf_elem;
         if (surface_in_binary_) {
-            std::vector<float> array_loc(fluid_cell_size, 0.0);
-            for (int i = 0; i < fluid_cell_size; i++) {
-                float temp = 0.;
-                surfdat.read(reinterpret_cast<char*>(&temp), sizeof(float));
-                array_loc[i] = temp;
-            }
+            if (!surfdat.read(reinterpret_cast<char*>(array_loc.data()),
+                              array_loc.size()*sizeof(float))) break;
             surf_elem.tau = array_loc[0];
             surf_elem.xpt = array_loc[1];
             surf_elem.ypt = array_loc[2];
@@ -880,7 +873,6 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
                 for (int ii = 0; ii < 38; ii++)
                     surf_elem.vorticity_arr.push_back(array_loc[36+ii]);
             }
-            if (!surfdat) break;
         } else {
             if (!read_MUSIC_text_cell(surfdat, filename,
                                       line_number, surf_elem)) break;
@@ -916,30 +908,33 @@ void read_FOdata::read_FOsurfdat_MUSIC(std::vector<FO_surf> &surf_ptr,
 
 
 void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
-    double pi_init[4][4];
-    double pi_reg[4][4];
-    double u_flow[4];
-
     if (regulateEOS_) {
         messager.info("Regulate local temperature with pure HRG EoS.");
     }
 
-    for (auto &surf_i: surf_ptr) {
+    // The cells are independent. The EoS lookups only read the tables,
+    // and the warnings are printed after the loop, in cell order.
+    const long number_of_cells = static_cast<long>(surf_ptr.size());
+    std::vector<char> out_of_range(surf_ptr.size(), 0);
+    #pragma omp parallel for schedule(static)
+    for (long icell = 0; icell < number_of_cells; icell++) {
+        auto &surf_i = surf_ptr[icell];
+        double pi_init[4][4];
+        double pi_reg[4][4];
+        double u_flow[4];
         if (regulateEOS_) {
             std::vector<float> eosVar;    // {P, T, muB, muS, muQ}
             std::vector<double> visCoefficients;
             int status = -1;
             if (iEOS_MUSIC_ == 20) {
-                //status = getValuesFromHRGEOS3D(surf_i.Edec, surf_i.Bn,
-                //                               surf_i.Qn, eosVar);
-                eos_4d_.getThermalVariables(surf_i.Edec, surf_i.Bn,
-                                            surf_i.Qn, surf_i.Sn, eosVar);
-                eos_4d_.getDeltafCoeffs(surf_i.Edec, surf_i.Bn, surf_i.Qn,
-                                         surf_i.Sn, visCoefficients);
+                eos_4d_.getThermalVariablesAndDeltafCoeffs(
+                    surf_i.Edec, surf_i.Bn, surf_i.Qn, surf_i.Sn,
+                    eosVar, visCoefficients);
                 status = 0;
             } else {
                 status = getValuesFromHRGEOS(
                         surf_i.Edec, std::abs(surf_i.Bn), eosVar);
+                if (status != 0) out_of_range[icell] = 1;
                 if (surf_i.Bn < 0.) {
                     eosVar[2] = - eosVar[2];
                     eosVar[3] = - eosVar[3];
@@ -1042,6 +1037,13 @@ void read_FOdata::regulate_surface_cells(std::vector<FO_surf> &surf_ptr) {
             surf_i.vorticity_arr[32] = pi_reg[2][3];
             surf_i.vorticity_arr[33] = pi_reg[3][3];
         }
+    }
+
+    for (std::size_t icell = 0; icell < surf_ptr.size(); icell++) {
+        if (!out_of_range[icell]) continue;
+        messager << "ed is out of range: ed = " << surf_ptr[icell].Edec
+                 << " GeV/fm^3. Can not regulate this fluid cell!";
+        messager.flush("warning");
     }
 }
 
@@ -1518,11 +1520,9 @@ int read_FOdata::getValuesFromHRGEOS(const double ed, const double nB,
     if (HRGEOS_.size()/nBlen < 2) return -1;
     const double HRGEOS_e0 = HRGEOS_.front()[0];
     const double HRGEOS_de = HRGEOS_[nBlen][0] - HRGEOS_e0;
+    // the caller reports cells out of range (this runs in parallel)
     if (!std::isfinite(ed) || !std::isfinite(nB)
             || ed < HRGEOS_e0 || ed > HRGEOS_.back()[0]) {
-        messager << "ed is out of range: ed = " << ed << " GeV/fm^3. ";
-        messager << "Can not regulate this fluid cell!";
-        messager.flush("warning");
         return(-1);
     }
     const double last_interval = HRGEOS_.size()/nBlen - 2;

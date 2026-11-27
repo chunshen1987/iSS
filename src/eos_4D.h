@@ -62,6 +62,12 @@ class EOS_4D {
                       bool compute_derivatives=false) const;
     void get_tilde_variables(double e, double nb, double nq, double ns,
                              std::array<float, 4> &TildeVar) const;
+
+    // Interpolates several tables at one point, sharing the cell index
+    // and the 16 weights. Each value equals FourDLInterp's ResArr[0].
+    void FourDLInterpMany(const std::vector<const std::vector<float>*> &data,
+                          const std::array<float, 4> &TildeVar,
+                          float *results) const;
     pretty_ostream messenger;
 
  public:
@@ -83,6 +89,13 @@ class EOS_4D {
     void getDeltafCoeffs(const double epsilon, const double rhob,
                          const double rhoq, const double rhos,
                          std::vector<double> &deltafVec) const;
+
+    //! getThermalVariables and getDeltafCoeffs in one lookup. deltafVec is
+    //! left empty when no delta f coefficients were read. Thread safe.
+    void getThermalVariablesAndDeltafCoeffs(
+        const double epsilon, const double rhob, const double rhoq,
+        const double rhos, std::vector<float> &thermalVec,
+        std::vector<double> &deltafVec) const;
 };
 
 #endif  // SRC_EOS_4D_H_

@@ -22,14 +22,14 @@ particle_decay::particle_decay(shared_ptr<RandomUtil::Random> ran_gen,
 }
 
 particle_decay::~particle_decay() {
-    if (n_unreachable_ > 0) {
-        cerr << "[Warning] particle_decay: " << n_unreachable_
+    if (n_unreachable_.load() > 0) {
+        cerr << "[Warning] particle_decay: " << n_unreachable_.load()
              << " resonances were below all of their decay channels and"
              << " were kept as final particles" << endl;
     }
-    if (n_mass_fallback_ > 0) {
+    if (n_mass_fallback_.load() > 0) {
         cerr << "[Warning] particle_decay: daughter masses of "
-             << n_mass_fallback_ << " decays were set without sampling"
+             << n_mass_fallback_.load() << " decays were set without sampling"
              << endl;
     }
     for (unsigned int i = 0; i < resonance_table.size(); i++) {
@@ -233,7 +233,7 @@ int particle_decay::check_particle_stable(iSS_Hadron *part) {
     if (idx < 0) return(0);  // perform_decays() stops on it
     if (resonance_table[idx]->stable == 1) return(1);
     if (!has_reachable_channel(idx, part->mass)) {
-        n_unreachable_++;
+        n_unreachable_.fetch_add(1, std::memory_order_relaxed);
         return(1);
     }
     return(0);
@@ -305,6 +305,40 @@ void boost(double vx, double vy, double vz,
     px += coef*vx;
     py += coef*vy;
     pz += coef*vz;
+}
+
+//! The mass at which to decay the mother: that of its stored four-momentum.
+//! iSS_Hadron keeps E and p in float, so for a mother with Lorentz factor
+//! gamma, sqrt(E^2 - p^2) differs from its mass by about gamma^2 times the
+//! float precision (1e-3 at gamma = 100).  Daughters that share this mass
+//! in the rest frame add up to the mother's four-momentum.  Right at a
+//! threshold, where it may be below the daughters' masses, the mother's
+//! mass is kept.
+double rest_frame_mass(const iSS_Hadron &mother, double daughter_masses) {
+    const double E = mother.E;
+    const double p2 = (static_cast<double>(mother.px)*mother.px
+                       + static_cast<double>(mother.py)*mother.py
+                       + static_cast<double>(mother.pz)*mother.pz);
+    const double m2 = E*E - p2;
+    if (m2 > daughter_masses*daughter_masses) return sqrt(m2);
+    return mother.mass;
+}
+
+//! Boosts (E, px, py, pz) from the rest frame of the mother, of mass M, to
+//! the frame where it has its stored four-momentum P.  Written with P/M,
+//! not the velocity, so that it keeps its precision at large gamma; a set
+//! of daughters with total (M, 0) ends up with total P.
+void boost_from_rest_frame(const iSS_Hadron &mother, double M, double &E,
+                           double &px, double &py, double &pz) {
+    const double PE = mother.E;
+    const double Px = mother.px, Py = mother.py, Pz = mother.pz;
+    const double Pp = Px*px + Py*py + Pz*pz;
+    const double E_lab = (PE*E + Pp)/M;
+    const double coef = (E + Pp/(PE + M))/M;
+    E = E_lab;
+    px += coef*Px;
+    py += coef*Py;
+    pz += coef*Pz;
 }
 
 }  // namespace
@@ -471,7 +505,8 @@ bool particle_decay::has_reachable_channel(int idx, double M) const {
 //! tail through which the channel is reached; stable and narrow daughters
 //! keep their pole masses.
 void particle_decay::sample_daughter_masses(double M,
-        const ChannelKinematics &channel, vector<double> &masses) {
+        const ChannelKinematics &channel, vector<double> &masses,
+        RandomUtil::Random &ran) {
     const int n = masses.size();
     const double M_top = M - kMassMargin;
     vector<double> lo(n), hi(n);
@@ -492,7 +527,7 @@ void particle_decay::sample_daughter_masses(double M,
                 double half_width = 0.5*resonance_table[d]->width;
                 double a = atan2(lo[k] - m0, half_width);
                 double b = atan2(hi[k] - m0, half_width);
-                double theta = a + (b - a)*ran_gen_ptr->rand_uniform();
+                double theta = a + (b - a)*ran.rand_uniform();
                 trial[k] = std::min(std::max(m0 + half_width*tan(theta),
                                              lo[k]), hi[k]);
             }
@@ -505,7 +540,7 @@ void particle_decay::sample_daughter_masses(double M,
     }
     // the allowed region is far in the tails: share the energy above the
     // lowest masses equally among the unstable daughters
-    n_mass_fallback_++;
+    n_mass_fallback_.fetch_add(1, std::memory_order_relaxed);
     int n_broad = 0;
     for (int k = 0; k < n; k++)
         if (is_broad(channel.daughter_index[k])) n_broad++;
@@ -533,6 +568,13 @@ void particle_decay::sample_daughter_masses(double M,
 //! sequence; four and five use perform_n_body_decay().
 void particle_decay::perform_decays(
             iSS_Hadron *mother, vector<iSS_Hadron>* daughter_list) {
+    perform_decays(mother, *daughter_list, *ran_gen_ptr);
+}
+
+
+void particle_decay::perform_decays(iSS_Hadron *mother,
+                                    vector<iSS_Hadron> &daughter_list,
+                                    RandomUtil::Random &ran) {
     const int idx = find_index(mother->pid);
     if (idx < 0) {
         cout << "[Error] particle_decay::perform_decays: particle "
@@ -542,13 +584,17 @@ void particle_decay::perform_decays(
     const particle_info *mother_decay_info = resonance_table[idx];
     if (mother_decay_info->stable == 1) {
         // the particle is a stable particle
-        daughter_list->push_back(*mother);
+        daughter_list.push_back(*mother);
         return;
     }
     const double M = mother->mass;
     const vector<ChannelKinematics> &kin = channel_kinematics_[idx];
     const int N_decay_channel = mother_decay_info->decays;
-    vector<double> weight(N_decay_channel, 0.);
+    // per-thread buffers: a decay would otherwise allocate three vectors
+    static thread_local vector<double> weight;
+    static thread_local vector<double> masses;
+    static thread_local vector<iSS_Hadron> daughters;
+    weight.assign(N_decay_channel, 0.);
     double total = 0.;
     for (int i = 0; i < N_decay_channel; i++) {
         const decay_channel_info *ch = mother_decay_info->decay_channels[i];
@@ -560,10 +606,10 @@ void particle_decay::perform_decays(
     }
     if (total <= 0.) {
         // counted by check_particle_stable()
-        daughter_list->push_back(*mother);
+        daughter_list.push_back(*mother);
         return;
     }
-    double target = ran_gen_ptr->rand_uniform();
+    double target = ran.rand_uniform();
     if (std::abs(total - 1.) > 1e-12) target *= total;
     int picked = -1;
     double cumulated_branching_ratio = 0.;
@@ -577,29 +623,29 @@ void particle_decay::perform_decays(
                                 mother_decay_info->decay_channels[picked]);
     const ChannelKinematics &channel = kin[picked];
     const int N_decay_part = std::abs(picked_channel->decay_Npart);
-    vector<double> masses(N_decay_part);
+    masses.resize(N_decay_part);
     for (int k = 0; k < N_decay_part; k++) {
         masses[k] = static_cast<float>(
                         resonance_table[channel.daughter_index[k]]->mass);
     }
     if (!(M > channel.threshold_pole)) {
-        sample_daughter_masses(M, channel, masses);
+        sample_daughter_masses(M, channel, masses, ran);
     }
-    vector<iSS_Hadron> daughters(N_decay_part);
+    daughters.assign(N_decay_part, iSS_Hadron());
     for (int k = 0; k < N_decay_part; k++) {
         daughters[k].pid = picked_channel->decay_part[k];
         daughters[k].mass = masses[k];
     }
     if (N_decay_part == 2) {
-        perform_two_body_decay(mother, &daughters[0], &daughters[1]);
+        perform_two_body_decay(mother, &daughters[0], &daughters[1], ran);
     } else if (N_decay_part == 3) {
         perform_three_body_decay(mother, &daughters[0], &daughters[1],
-                                 &daughters[2]);
+                                 &daughters[2], ran);
     } else {
-        perform_n_body_decay(mother, daughters);
+        perform_n_body_decay(mother, daughters, ran);
     }
     for (int k = 0; k < N_decay_part; k++) {
-        daughter_list->push_back(daughters[k]);
+        daughter_list.push_back(daughters[k]);
     }
 }
 
@@ -611,22 +657,23 @@ void particle_decay::perform_decays(
 //! a two-body decay isotropic in the rest frame of M_k.  The daughters
 //! share the mother's decay point, as in the two- and three-body routines.
 void particle_decay::perform_n_body_decay(iSS_Hadron *mother,
-                                          vector<iSS_Hadron> &daughters) {
+                                          vector<iSS_Hadron> &daughters,
+                                          RandomUtil::Random &ran) {
     const int n = daughters.size();
-    const double M = mother->mass;
     vector<double> m(n);
     double m_sum = 0.;
     for (int k = 0; k < n; k++) {
         m[k] = daughters[k].mass;
         m_sum += m[k];
     }
-    if (M <= m_sum) {
+    if (mother->mass <= m_sum) {
         cout << "Error:particle_decay::perform_n_body_decay: "
-             << "the decay of " << mother->pid << " (M = " << M
+             << "the decay of " << mother->pid << " (M = " << mother->mass
              << ") into " << n << " daughters of total mass " << m_sum
              << " is closed" << endl;
         exit(1);
     }
+    const double M = rest_frame_mass(*mother, m_sum);
     const double T = M - m_sum;
     // largest possible weight
     double w_max = 1.;
@@ -641,7 +688,7 @@ void particle_decay::perform_n_body_decay(iSS_Hadron *mother,
     do {
         r[0] = 0.;
         r[n - 1] = 1.;
-        for (int k = 1; k < n - 1; k++) r[k] = ran_gen_ptr->rand_uniform();
+        for (int k = 1; k < n - 1; k++) r[k] = ran.rand_uniform();
         std::sort(r.begin() + 1, r.end() - 1);
         double sum = 0.;
         for (int k = 0; k < n; k++) {
@@ -653,14 +700,14 @@ void particle_decay::perform_n_body_decay(iSS_Hadron *mother,
             p_star[k] = breakup_momentum(M_inv[k], M_inv[k - 1], m[k]);
             w *= p_star[k];
         }
-    } while (ran_gen_ptr->rand_uniform()*w_max > w);
+    } while (ran.rand_uniform()*w_max > w);
 
     // build up the daughters in the rest frame of the first k + 1 of them
     vector<double> E(n), px(n), py(n), pz(n);
     for (int k = 1; k < n; k++) {
-        double cos_theta = 2.*ran_gen_ptr->rand_uniform() - 1.;
+        double cos_theta = 2.*ran.rand_uniform() - 1.;
         double sin_theta = sqrt(1. - cos_theta*cos_theta);
-        double phi = 2.*M_PI*ran_gen_ptr->rand_uniform();
+        double phi = 2.*M_PI*ran.rand_uniform();
         double ux = sin_theta*cos(phi);
         double uy = sin_theta*sin(phi);
         double uz = cos_theta;
@@ -687,13 +734,13 @@ void particle_decay::perform_n_body_decay(iSS_Hadron *mother,
     double M_width = get_particle_width(mother);
     if (M_width > 1e-10) {
         double tau = mother->E/M*1./M_width;
-        life_time = -tau*log(ran_gen_ptr->rand_uniform())*0.19733;  // fm
+        life_time = -tau*log(ran.rand_uniform())*0.19733;  // fm
     }
     double vx = mother->px/mother->E;
     double vy = mother->py/mother->E;
     double vz = mother->pz/mother->E;
     for (int k = 0; k < n; k++) {
-        boost(vx, vy, vz, E[k], px[k], py[k], pz[k]);
+        boost_from_rest_frame(*mother, M, E[k], px[k], py[k], pz[k]);
         daughters[k].E = E[k];
         daughters[k].px = px[k];
         daughters[k].py = py[k];
@@ -728,6 +775,14 @@ double particle_decay::get_particle_mass(int POI_monval) {
 void particle_decay::perform_two_body_decay(iSS_Hadron *mother,
                                             iSS_Hadron *daughter1,
                                             iSS_Hadron *daughter2) {
+    perform_two_body_decay(mother, daughter1, daughter2, *ran_gen_ptr);
+}
+
+
+void particle_decay::perform_two_body_decay(iSS_Hadron *mother,
+                                            iSS_Hadron *daughter1,
+                                            iSS_Hadron *daughter2,
+                                            RandomUtil::Random &ran) {
     double M_pole = mother->mass;
     double M_width = get_particle_width(mother);
     double m1 = daughter1->mass;
@@ -740,13 +795,13 @@ void particle_decay::perform_two_body_decay(iSS_Hadron *mother,
         exit(1);
     }
     //double M_sampled = sample_breit_wigner(M_pole, M_width, M_min);
-    double M_sampled = M_pole;
+    const double M_sampled = rest_frame_mass(*mother, M_min);
     double temp = M_sampled*M_sampled - m1*m1 - m2*m2;
     double p_lrf = sqrt(temp*temp - 4*m1*m1*m2*m2)/(2*M_sampled);
 
     // randomly pick emission angle
-    double phi = ran_gen_ptr->rand_uniform()*2*M_PI;
-    double cos_theta = 2.*(ran_gen_ptr->rand_uniform() - 0.5);
+    double phi = ran.rand_uniform()*2*M_PI;
+    double cos_theta = 2.*(ran.rand_uniform() - 0.5);
     double sin_theta = sqrt(1. - cos_theta*cos_theta);
 
     // compute daughter particles' energy and momentum in the rest frame
@@ -759,32 +814,25 @@ void particle_decay::perform_two_body_decay(iSS_Hadron *mother,
     double p2_lrf_y = -p1_lrf_y;
     double p2_lrf_z = -p1_lrf_z;
     
-    // compute mother velocity
-    double vx = mother->px/mother->E;
-    double vy = mother->py/mother->E;
-    double vz = mother->pz/mother->E;
-
-    // perform the boost
-    double v2 = vx*vx + vy*vy + vz*vz;
-    double gamma = 1./sqrt(1. - v2);
-    // (gamma - 1)/v^2 in a form that also works for a mother at rest.
-    const double boost_factor = gamma*gamma/(gamma + 1.);
-    double vp1 = vx*p1_lrf_x + vy*p1_lrf_y + vz*p1_lrf_z;
-    double vp2 = vx*p2_lrf_x + vy*p2_lrf_y + vz*p2_lrf_z;
-    daughter1->E = gamma*(E1_lrf + vp1);
-    daughter1->px = p1_lrf_x + (boost_factor*vp1 + gamma*E1_lrf)*vx;
-    daughter1->py = p1_lrf_y + (boost_factor*vp1 + gamma*E1_lrf)*vy;
-    daughter1->pz = p1_lrf_z + (boost_factor*vp1 + gamma*E1_lrf)*vz;
-    daughter2->E = gamma*(E2_lrf + vp2);
-    daughter2->px = p2_lrf_x + (boost_factor*vp2 + gamma*E2_lrf)*vx;
-    daughter2->py = p2_lrf_y + (boost_factor*vp2 + gamma*E2_lrf)*vy;
-    daughter2->pz = p2_lrf_z + (boost_factor*vp2 + gamma*E2_lrf)*vz;
+    // boost to the frame of the mother's four-momentum
+    boost_from_rest_frame(*mother, M_sampled, E1_lrf, p1_lrf_x, p1_lrf_y,
+                          p1_lrf_z);
+    boost_from_rest_frame(*mother, M_sampled, E2_lrf, p2_lrf_x, p2_lrf_y,
+                          p2_lrf_z);
+    daughter1->E = E1_lrf;
+    daughter1->px = p1_lrf_x;
+    daughter1->py = p1_lrf_y;
+    daughter1->pz = p1_lrf_z;
+    daughter2->E = E2_lrf;
+    daughter2->px = p2_lrf_x;
+    daughter2->py = p2_lrf_y;
+    daughter2->pz = p2_lrf_z;
 
     double life_time = 1e10;
     if (M_width > 1e-10) {
         // compute life-time = gamma*1/\Gamma
         double tau0 = mother->E/(M_sampled)*1./(M_width);
-        life_time = -tau0*log(ran_gen_ptr->rand_uniform())*0.19733;  // convert to fm
+        life_time = -tau0*log(ran.rand_uniform())*0.19733;  // convert to fm
     }
 
     daughter1->t = mother->t + life_time;
@@ -805,6 +853,16 @@ void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
                                               iSS_Hadron *daughter1,
                                               iSS_Hadron *daughter2,
                                               iSS_Hadron *daughter3) {
+    perform_three_body_decay(mother, daughter1, daughter2, daughter3,
+                             *ran_gen_ptr);
+}
+
+
+void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
+                                              iSS_Hadron *daughter1,
+                                              iSS_Hadron *daughter2,
+                                              iSS_Hadron *daughter3,
+                                              RandomUtil::Random &ran) {
     double M_pole = mother->mass;
     double M_width = get_particle_width(mother);
     double m1 = daughter1->mass;
@@ -822,13 +880,13 @@ void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
         exit(1);
     }
     //double M_sampled = sample_breit_wigner(M_pole, M_width, M_min);
-    double M_sampled = M_pole;
+    const double M_sampled = rest_frame_mass(*mother, M_min);
     // generate lrf E1, E2, and theta12 using accept and reject method
     double E1_lrf, E2_lrf, E3_lrf, p1_lrf, p2_lrf, cos12_lrf;
     do {
         do {
-            E1_lrf = ran_gen_ptr->rand_uniform()*(M_sampled - m1 - m2 - m3) + m1;
-            E2_lrf = ran_gen_ptr->rand_uniform()*(M_sampled - m1 - m2 - m3) + m2;
+            E1_lrf = ran.rand_uniform()*(M_sampled - m1 - m2 - m3) + m1;
+            E2_lrf = ran.rand_uniform()*(M_sampled - m1 - m2 - m3) + m2;
         } while (E1_lrf + E2_lrf > M_sampled);
         p1_lrf = sqrt(E1_lrf*E1_lrf - m1*m1);
         p2_lrf = sqrt(E2_lrf*E2_lrf - m2*m2);
@@ -842,7 +900,7 @@ void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
     double life_time = 1e10;
     if (M_width > 1e-10) {
         double tau = mother->E/(M_sampled)*1./M_width;
-        life_time = -tau*log(ran_gen_ptr->rand_uniform())*0.19733;  // convert unit to fm
+        life_time = -tau*log(ran.rand_uniform())*0.19733;  // convert unit to fm
     }
     // compute the decay position
     double decay_time = mother->t + life_time;
@@ -855,9 +913,9 @@ void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
     double tp2_lrf_z = p2_lrf*cos12_lrf;
     double tp3_lrf_x = - tp2_lrf_x;
     double tp3_lrf_z = - (p1_lrf + tp2_lrf_z); 
-    double phi = 2.*M_PI*ran_gen_ptr->rand_uniform();
-    double ksi = 2.*M_PI*ran_gen_ptr->rand_uniform();
-    double cos_theta = 2.*ran_gen_ptr->rand_uniform() - 1.0;
+    double phi = 2.*M_PI*ran.rand_uniform();
+    double ksi = 2.*M_PI*ran.rand_uniform();
+    double cos_theta = 2.*ran.rand_uniform() - 1.0;
 
     double sin_phi = sin(phi);
     double cos_phi = cos(phi);
@@ -885,38 +943,35 @@ void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
     E3_lrf = sqrt(m3*m3 + p3_lrf_x*p3_lrf_x
                   + p3_lrf_y*p3_lrf_y + p3_lrf_z*p3_lrf_z);
 
-    double vx = mother->px/mother->E;
-    double vy = mother->py/mother->E;
-    double vz = mother->pz/mother->E;
-    double v2 = vx*vx + vy*vy + vz*vz;
-    double gamma = 1./sqrt(1. - v2);
-    const double boost_factor = gamma*gamma/(gamma + 1.);
-    double vp1 = vx*p1_lrf_x + vy*p1_lrf_y + vz*p1_lrf_z;
-    double vp2 = vx*p2_lrf_x + vy*p2_lrf_y + vz*p2_lrf_z;
-    double vp3 = vx*p3_lrf_x + vy*p3_lrf_y + vz*p3_lrf_z;
+    boost_from_rest_frame(*mother, M_sampled, E1_lrf, p1_lrf_x, p1_lrf_y,
+                          p1_lrf_z);
+    boost_from_rest_frame(*mother, M_sampled, E2_lrf, p2_lrf_x, p2_lrf_y,
+                          p2_lrf_z);
+    boost_from_rest_frame(*mother, M_sampled, E3_lrf, p3_lrf_x, p3_lrf_y,
+                          p3_lrf_z);
 
-    daughter1->E = gamma*(E1_lrf + vp1);
-    daughter1->px = p1_lrf_x + (boost_factor*vp1 + gamma*E1_lrf)*vx;
-    daughter1->py = p1_lrf_y + (boost_factor*vp1 + gamma*E1_lrf)*vy;
-    daughter1->pz = p1_lrf_z + (boost_factor*vp1 + gamma*E1_lrf)*vz;
+    daughter1->E = E1_lrf;
+    daughter1->px = p1_lrf_x;
+    daughter1->py = p1_lrf_y;
+    daughter1->pz = p1_lrf_z;
     daughter1->t = decay_time;
     daughter1->x = decay_x;
     daughter1->y = decay_y;
     daughter1->z = decay_z;
 
-    daughter2->E = gamma*(E2_lrf + vp2);
-    daughter2->px = p2_lrf_x + (boost_factor*vp2 + gamma*E2_lrf)*vx;
-    daughter2->py = p2_lrf_y + (boost_factor*vp2 + gamma*E2_lrf)*vy;
-    daughter2->pz = p2_lrf_z + (boost_factor*vp2 + gamma*E2_lrf)*vz;
+    daughter2->E = E2_lrf;
+    daughter2->px = p2_lrf_x;
+    daughter2->py = p2_lrf_y;
+    daughter2->pz = p2_lrf_z;
     daughter2->t = decay_time;
     daughter2->x = decay_x;
     daughter2->y = decay_y;
     daughter2->z = decay_z;
 
-    daughter3->E = gamma*(E3_lrf + vp3);
-    daughter3->px = p3_lrf_x + (boost_factor*vp3 + gamma*E3_lrf)*vx;
-    daughter3->py = p3_lrf_y + (boost_factor*vp3 + gamma*E3_lrf)*vy;
-    daughter3->pz = p3_lrf_z + (boost_factor*vp3 + gamma*E3_lrf)*vz;
+    daughter3->E = E3_lrf;
+    daughter3->px = p3_lrf_x;
+    daughter3->py = p3_lrf_y;
+    daughter3->pz = p3_lrf_z;
     daughter3->t = decay_time;
     daughter3->x = decay_x;
     daughter3->y = decay_y;
@@ -929,6 +984,13 @@ void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
 //! distribution
 double particle_decay::sample_breit_wigner(double mass, double width,
                                            double M_min) {
+    return sample_breit_wigner(mass, width, M_min, *ran_gen_ptr);
+}
+
+
+double particle_decay::sample_breit_wigner(double mass, double width,
+                                           double M_min,
+                                           RandomUtil::Random &ran) {
     // this function sample the Breit Wigner distribution for the mass
     // particle mass sampled is >= M_min
     // From Wiki: https://en.wikipedia.org/wiki/Cauchy_distribution
@@ -940,7 +1002,7 @@ double particle_decay::sample_breit_wigner(double mass, double width,
     // compute the minimum probability given by M_min
     double p_min = atan2((M_min - mass), width/2.)/M_PI + 0.5;
     // generate a random number from p_min to 1
-    double y = (1. - p_min)*ran_gen_ptr->rand_uniform() + p_min;
+    double y = (1. - p_min)*ran.rand_uniform() + p_min;
     // compute the corresponding sampled mass
     double mass_sampled = mass + width/2.*tan(M_PI*(y - 0.5));
     return(mass_sampled);

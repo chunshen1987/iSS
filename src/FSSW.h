@@ -11,6 +11,7 @@
 #include <vector>
 #include <array>
 #include <memory>
+#include <unordered_map>
 
 #include "Table.h"
 #include "TableFunction.h"
@@ -24,6 +25,10 @@
 
 class FSSW {
  private:
+    void interpolate_bessel(double arg, int first_order, int last_order,
+                            std::array<double, 3> &results);
+    void fill_expint(double arg, double *results);
+
     int hydro_mode;   // switch for (2+1)-d or (3+1)-d hypersurface
     int flag_PCE_;
 
@@ -34,7 +39,8 @@ class FSSW {
     const AfterburnerType afterburner_type_;
 
     std::shared_ptr<RandomUtil::Random> ran_gen_ptr;
-    std::shared_ptr<MomentumSamplerShell> momentum_sampler_ptr_;
+    //! one per OpenMP thread
+    std::vector<std::unique_ptr<MomentumSamplerShell>> momentum_samplers_;
 
     int number_of_repeated_sampling;
     int maximumSamplingEvents_;
@@ -51,6 +57,7 @@ class FSSW {
     int iEoS_MUSIC_;
 
     double deltaf_max_ratio_;
+    double deltaf_envelope_;  // 1 + deltaf_max_ratio_, or 1 without delta f
     double bulk_pressure_for_deltaf(double bulk_pressure) const;
     double regulate_deltaf(double deltaf) const;
     double integrate_bulk_deltaf(const particle_info &particle, double mu,
@@ -68,10 +75,25 @@ class FSSW {
 
     // list for information for all particles
     std::vector<particle_info> particles;
+    std::unordered_map<int, int> particleIndex_;
 
     // list for information for all fluid cells
     long FO_length;
     const std::vector<FO_surf_LRF> &FOsurf_ptr;
+
+    struct CellFactors {
+        std::vector<double> visCoefficients;
+        double diffusionCoefficient = 1.;
+    };
+    std::vector<CellFactors> cellFactors_;
+
+    //! the per-cell inputs of calculate_dN_dxtdy_for_one_particle_species
+    struct YieldCell {
+        float Tdec, muB, muS, muQ, dsigma0, bulkPi;
+        double beta;                         // 1/Tdec, shared by all species
+        std::array<double, 6> coefficients;  // visCoefficients, zero padded
+    };
+    std::vector<YieldCell> yieldCells_;
 
     inline long determine_number_to_sample(
                     double dN, int model=1, double para1=0);
@@ -113,8 +135,9 @@ class FSSW {
     // arrays to speed up computing particle yield
     double sf_dx, sf_x_min, sf_x_max;
     int sf_tb_length;
-    int sf_expint_truncate_order;
+    static constexpr int sf_expint_truncate_order = 10;
     double** sf_bessel_Kn;
+    double sf_inverse_dx_ = 0.;  // 1/sf_dx
     double** sf_expint_En;
 
     int flag_output_samples_into_files;
@@ -155,8 +178,9 @@ class FSSW {
     void combine_samples_to_gzip_file();
     void combine_samples_to_binary_file();
 
+    //! beta = 1/Temperature, which the caller keeps per cell
     void calculate_dN_analytic(const particle_info* particle, double mu,
-                               double Temperature,
+                               double Temperature, double beta,
                                std::array<double, 6> &results);
 
     // the following variables need to be set first in order to
@@ -205,11 +229,13 @@ class FSSW {
         const double Tdec, const int sign, const int baryon,
         const int strange, const int charge,
         const double f0, const std::vector<double> &bulkvisCoefficients);
+    //! sampler and ran must not be used by another thread at the same time
     int sample_momemtum_from_a_fluid_cell(
+        MomentumSamplerShell &sampler, RandomUtil::Random &ran,
         const double mass, const int sign,
         const int baryon, const int strange, const int charge,
         const FO_surf_LRF *surf,
-        const std::vector<double> visCoefficients,
+        const std::vector<double> &visCoefficients,
         const double deltaf_qmu_coeff,
         double &pT, double &phi, double &y_minus_eta_s, double mu_PCE = 0.);
     void add_one_sampled_particle(

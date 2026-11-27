@@ -3,6 +3,7 @@
 #include "eos_4D.h"
 #include "data_struct.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -348,6 +349,58 @@ void EOS_4D::FourDLInterp(const std::vector<float> &data,
 }
 
 
+void EOS_4D::FourDLInterpMany(
+        const std::vector<const std::vector<float>*> &data,
+        const std::array<float, 4> &TildeVar, float *results) const {
+    // Same index, weights and summation order as FourDLInterp.
+    double Tfrac = (TildeVar[0] - Ttilde0)/dTtilde;
+    double mubfrac = (TildeVar[1] - mubtilde0)/dmubtilde;
+    double muqfrac = (TildeVar[2] - muqtilde0)/dmuqtilde;
+    double musfrac = (TildeVar[3] - mustilde0)/dmustilde;
+
+    int iT = static_cast<int>(Tfrac);
+    iT = std::max(0, std::min(N_T - 2, iT));
+    int ib = static_cast<int>(mubfrac);
+    ib = std::max(0, std::min(N_mub - 2, ib));
+    int iq = static_cast<int>(muqfrac);
+    iq = std::max(0, std::min(N_muq - 2, iq));
+    int is = static_cast<int>(musfrac);
+    is = std::max(0, std::min(N_mus - 2, is));
+
+    float dx = std::max(0., std::min(1., Tfrac - iT));
+    float dy = std::max(0., std::min(1., mubfrac - ib));
+    float dz = std::max(0., std::min(1., muqfrac - iq));
+    float dt = std::max(0., std::min(1., musfrac - is));
+
+    // the corners in FourDLInterp's summation order, as (T, b, q, s)
+    static const int corner[16][4] = {
+        {0, 0, 0, 0}, {1, 1, 1, 1}, {1, 0, 0, 0},
+        {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1},
+        {1, 0, 0, 1}, {0, 1, 0, 1}, {0, 0, 1, 1},
+        {1, 1, 0, 0}, {1, 0, 1, 0}, {0, 1, 1, 0},
+        {0, 1, 1, 1}, {1, 0, 1, 1}, {1, 1, 0, 1},
+        {1, 1, 1, 0}};
+    const float fx[2] = {1 - dx, dx};
+    const float fy[2] = {1 - dy, dy};
+    const float fz[2] = {1 - dz, dz};
+    const float ft[2] = {1 - dt, dt};
+    std::array<float, 16> weight;
+    std::array<int, 16> idx;
+    for (int c = 0; c < 16; ++c) {
+        const int *k = corner[c];
+        weight[c] = fx[k[0]] * fy[k[1]] * fz[k[2]] * ft[k[3]];
+        idx[c] = index(iT + k[0], ib + k[1], iq + k[2], is + k[3]);
+    }
+    // the indices are clamped to the table above
+    for (std::size_t i = 0; i < data.size(); ++i) {
+        const float *table = data[i]->data();
+        float value = weight[0] * table[idx[0]];
+        for (int c = 1; c < 16; ++c) value += weight[c] * table[idx[c]];
+        results[i] = value;
+    }
+}
+
+
 void EOS_4D::get_tilde_variables(
         double e, double rhob, double rhoq, double rhos,
         std::array<float, 4> &TildeVar) const {
@@ -453,6 +506,32 @@ void EOS_4D::getDeltafCoeffs(const double epsilon, const double rhob,
     for (unsigned int i = 0; i < dfCoeffs_.size(); ++i) {
         FourDLInterp(dfCoeffs_[i], TildeVar, ResArr);
         deltafVec[i] = static_cast<double>(ResArr[0]);
+    }
+}
+
+
+void EOS_4D::getThermalVariablesAndDeltafCoeffs(
+        const double epsilon, const double rhob, const double rhoq,
+        const double rhos, std::vector<float> &thermalVec,
+        std::vector<double> &deltafVec) const {
+    std::array<float, 4> TildeVar{};
+    get_tilde_variables(epsilon, rhob, rhoq, rhos, TildeVar);
+    // the order of getThermalVariables: {P, T, muB, muS, muQ}
+    std::vector<const std::vector<float>*> tables = {
+        &pressure_vec, &temp_vec, &mub_vec, &mus_vec, &muq_vec};
+    for (const auto &coefficient : dfCoeffs_) tables.push_back(&coefficient);
+    std::array<float, 11> values;
+    FourDLInterpMany(tables, TildeVar, values.data());
+
+    thermalVec.resize(5);
+    thermalVec[0] = std::max(1e-15, static_cast<double>(values[0]));
+    thermalVec[1] = std::max(1e-15, static_cast<double>(values[1]));
+    thermalVec[2] = values[2];
+    thermalVec[3] = values[3];
+    thermalVec[4] = values[4];
+    deltafVec.resize(dfCoeffs_.size());
+    for (std::size_t i = 0; i < dfCoeffs_.size(); ++i) {
+        deltafVec[i] = static_cast<double>(values[5 + i]);
     }
 }
 

@@ -30,6 +30,12 @@ jobs:
           cmake ..
           make -j2
           make install
+      - name: Resonance decays conserve four-momentum
+        run: |
+          g++ -std=c++11 -O2 -Wall -Isrc tests/TestResonanceDecayAtRest.cpp \
+              src/particle_decay.cpp src/Random.cpp \
+              -o TestResonanceDecayAtRest.e
+          ./TestResonanceDecayAtRest.e
       - name: Sampling Test static ideal
         run: |
           python3 -m venv venv

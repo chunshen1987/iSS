@@ -17,16 +17,14 @@ FermionMomentumSampler::FermionMomentumSampler(
     double dE_tilde = 0.02;
     int npoints = (E_tilde_max - E_tilde_min)/dE_tilde + 1;
     Etilde_.resize(npoints);
-    CDF_0_.resize(npoints);
-    CDF_1_.resize(npoints);
-    CDF_2_.resize(npoints);
+    cdfTable_.resize(npoints);
     tb_len_ = npoints;
     for (int i = 0; i < npoints; i++) {
         const double E_tilde_local = E_tilde_min + i*dE_tilde;
         Etilde_[i] = E_tilde_local;
-        CDF_0_[i] = CDF_0(E_tilde_local);
-        CDF_1_[i] = CDF_1(E_tilde_local);
-        CDF_2_[i] = CDF_2(E_tilde_local);
+        cdfTable_[i][0] = CDF_0(E_tilde_local);
+        cdfTable_[i][1] = CDF_1(E_tilde_local);
+        cdfTable_[i][2] = CDF_2(E_tilde_local);
     }
 }
 
@@ -60,15 +58,7 @@ double FermionMomentumSampler::CDF_1(const double Etilde) const {
 
 double FermionMomentumSampler::CDF_1(const double Etilde,
                                      const double mtilde) const {
-    double res = 0.;
-    double sign = 1.;
-    for (int n = 0; n < trunc_order_; n++) {
-        int n1 = n + 1;
-        res += (sign/(n1*n1)*exp(-mtilde*n)*(
-            (mtilde*n1 + 1) - exp((mtilde - Etilde)*n1)*(Etilde*n1 + 1)));
-        sign *= -1.;
-    }
-    return(res);
+    return evaluate_cdf_terms<true, false, true>(Etilde, mtilde, trunc_order_)[0];
 }
 
 
@@ -79,13 +69,10 @@ double FermionMomentumSampler::CDF_2(const double Etilde) const {
 
 double FermionMomentumSampler::CDF_2(const double Etilde,
                                      const double mtilde) const {
-    double res = 0.;
-    for (int n = 0; n < trunc_order_; n++) {
-        int n1 = n + 1;
-        res += (1./(n1*n1*n1)*exp(-mtilde*n)*(
-              (mtilde*n1*(mtilde*n1 + 2) + 2)
-            - exp((mtilde - Etilde)*n1)*(Etilde*n1*(Etilde*n1 + 2) + 2))
-        );
-    }
-    return(res);
+    return evaluate_cdf_terms<false, true>(Etilde, mtilde, trunc_order_)[1];
+}
+
+
+std::array<double, 2> FermionMomentumSampler::CDF_12(double Etilde) const {
+    return evaluate_cdf_terms<true, true, true>(Etilde, m0_, trunc_order_);
 }

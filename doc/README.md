@@ -10,6 +10,8 @@ cleaned up the issues found in review.
 | [EoS4D_validation.md](EoS4D_validation.md) | End-to-end tests of `EOS_to_use = 20` and the open mismatch between the HRG4D table and the sampled hadron gas |
 | [surface_text_format.md](surface_text_format.md) | Column layout of MUSIC freeze-out surfaces (binary and text) and the matching MUSIC change for Qn, Sn |
 | [PR6_review.md](PR6_review.md) | Review of pull request #6 (n-body decays), which targets `XSCAPE` |
+| [FSSW_performance.md](FSSW_performance.md) | Benchmark of FSSW on a 300K-cell surface (δf 20, 21), the profile, and the four optimization commits on `optimization` |
+| [GPU_feasibility.md](GPU_feasibility.md) | Whether to port FSSW to CUDA or Metal: what a GPU could replace, a CUDA prototype of the yield loop, and why no backend was written |
 
 Unless a report says otherwise, "the CI tests" means the 8 scripts
 `tests/RunAutoTest{Ideal1-4,Viscous1-4}.sh`, run from the repo root

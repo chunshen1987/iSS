@@ -31,12 +31,12 @@ mkdir -p build && cd build && cmake .. && make -j8 && make install && cd ..
 Tests are end-to-end sampling checks on a single fluid cell (the same ones CI runs in `.github/workflows/BuildTest.yml`). Run them from the repo root after `make install`:
 
 ```bash
-bash tests/RunAutoTestIdeal1.sh      # Ideal1-4, Viscous1-4
+bash tests/RunAutoTestIdeal1.sh      # one script per test: RunAutoTest{Ideal,Viscous}{1..4}.sh
 ```
 
 - Each script copies a `tests/music_input_<EOS>` to `tests/music_input` and runs `iSS.e` on a `tests/test*OneFluidCell*.dat` surface. Then `tests/TestOutputFiles.py` (needs numpy) checks that the mean residual in `checkReconstructedTmunu.dat` is below 1e-3.
 - The test parameter files set `perform_checks = 1`, which compares T^{μν} and charge currents rebuilt from the samples against the surface.
-- All tests use `MC_sampling = 4` (FSSW) and `perform_decays = 0`. Neither the resonance-decay code nor the older `EmissionFunctionArray` path is covered, so check changes to those by hand (e.g. `./iSS.e tests/iSS_parameters.dat tests <surface> perform_decays=1`).
+- All sampling tests use `MC_sampling = 4` (FSSW) and `perform_decays = 0`. CI also builds and runs `tests/TestResonanceDecayAtRest.cpp` (`g++ -std=c++11 -Isrc tests/TestResonanceDecayAtRest.cpp src/particle_decay.cpp src/Random.cpp`, run from the repo root), which checks four-momentum conservation of single decays at rest and at γ up to 300. Sampling followed by decays, and the older `EmissionFunctionArray` path, are not covered, so check changes to those by hand (e.g. `./iSS.e tests/iSS_parameters.dat tests <surface> perform_decays=1`).
 - The Viscous tests take several minutes each and use about 3.5 GB of RAM.
 
 ## Architecture
@@ -53,7 +53,7 @@ The flow is `main.cpp` → `iSS::shell()` (`iSS.cpp`):
 3. **Delta f**: `bulk_deltaf_kind` selects the model.
    - `0`/`1`/`11` are 14-moment, RTA and OSU.
    - `20`/`21` are the WSU 22-moment and Chapman-Enskog coefficients for NEoS-BQS. These come from `iSS_tables/deltaf_tables/<afterburner>/`, or from the 4D binary coefficient files via `EOS_4D` when the 4D EoS is used.
-4. **Decays**: with `perform_decays = 1`, `particle_decay` uses `pdg-urqmd_v3.3+.dat`, `pdg-s95pv1.dat` or `pdg-SMASH.dat`. Its callers (`FSSW::decay_one_primary`, and the feed-down loops in `FSSW.cpp`/`emissionfunction.cpp`) re-queue every daughter that `check_particle_stable` reports as unstable. FSSW skips decays for SMASH.
+4. **Decays**: with `perform_decays = 1`, `particle_decay` uses `pdg-urqmd_v3.3+.dat`, `pdg-s95pv1.dat` or `pdg-SMASH.dat`. Its callers, the feed-down loops in `FSSW.cpp` and `emissionfunction.cpp`, re-queue every daughter that `check_particle_stable` reports as unstable. FSSW decays events in parallel, one random stream per event, through the `perform_decays` overload that takes the generator. FSSW skips decays for SMASH.
 5. **Other options**: `calculate_polarization` → `SpinPolarization` (needs vorticity arrays in the surface); `include_spectators` → `Spectators`; `local_charge_conservation`.
 
 `iSS` can also be used as a library (`libiSS.so`) by frameworks such as JETSCAPE/XSCAPE. They call `shell()` and read results through `get_number_of_sampled_events`, `get_hadron` and the related getters.

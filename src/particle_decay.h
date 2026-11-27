@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <string>
+#include <atomic>
 #include <memory>
 #include <unordered_map>
 
@@ -32,8 +33,9 @@ class particle_decay {
     std::vector<std::vector<ChannelKinematics>> channel_kinematics_;
     std::vector<double> lowest_mass_;
     std::unordered_map<int, int> table_index_;
-    long n_unreachable_ = 0;
-    long n_mass_fallback_ = 0;
+    // counted from parallel decays
+    std::atomic<long> n_unreachable_{0};
+    std::atomic<long> n_mass_fallback_{0};
 
     //! fills table_index_, lowest_mass_ and channel_kinematics_
     void prepare_channel_kinematics();
@@ -43,7 +45,8 @@ class particle_decay {
     bool channel_reachable(const ChannelKinematics &channel, double M) const;
     bool has_reachable_channel(int idx, double M) const;
     void sample_daughter_masses(double M, const ChannelKinematics &channel,
-                                std::vector<double> &masses);
+                                std::vector<double> &masses,
+                                RandomUtil::Random &ran);
 
  public:
     particle_decay(std::shared_ptr<RandomUtil::Random> ran_gen,
@@ -81,26 +84,45 @@ class particle_decay {
     void perform_decays(iSS_Hadron *mother,
                         std::vector<iSS_Hadron>* daughter_list);
 
+    //! The same, appending to daughter_list and drawing from ran. The
+    //! table is only read, so several threads can decay at once, each
+    //! with its own generator.
+    void perform_decays(iSS_Hadron *mother,
+                        std::vector<iSS_Hadron> &daughter_list,
+                        RandomUtil::Random &ran);
+
 
     //! This function perform two body decay
     void perform_two_body_decay(iSS_Hadron *mother,
                                 iSS_Hadron *daughter1,
                                 iSS_Hadron *daughter2);
+    void perform_two_body_decay(iSS_Hadron *mother,
+                                iSS_Hadron *daughter1,
+                                iSS_Hadron *daughter2,
+                                RandomUtil::Random &ran);
 
     //! This function perform 3 body decays
     void perform_three_body_decay(iSS_Hadron *mother,
                                   iSS_Hadron *daughter1,
                                   iSS_Hadron *daughter2,
                                   iSS_Hadron *daughter3);
+    void perform_three_body_decay(iSS_Hadron *mother,
+                                  iSS_Hadron *daughter1,
+                                  iSS_Hadron *daughter2,
+                                  iSS_Hadron *daughter3,
+                                  RandomUtil::Random &ran);
 
     //! Uniform n-body phase-space decay (Raubold-Lynch / GENBOD); used for
     //! channels with four or five daughters
     void perform_n_body_decay(iSS_Hadron *mother,
-                              std::vector<iSS_Hadron> &daughters);
+                              std::vector<iSS_Hadron> &daughters,
+                              RandomUtil::Random &ran);
 
     //! This function sample mother particle mass according to breit-wigner
     //! distribution
     double sample_breit_wigner(double mass, double width, double M_min);
+    double sample_breit_wigner(double mass, double width, double M_min,
+                               RandomUtil::Random &ran);
 };
 
 #endif  // SRC_particle_decay_h_
