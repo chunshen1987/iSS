@@ -36,7 +36,7 @@ bash tests/RunAutoTestIdeal1.sh      # one script per test: RunAutoTest{Ideal,Vi
 
 - Each script copies a `tests/music_input_<EOS>` to `tests/music_input` and runs `iSS.e` on a `tests/test*OneFluidCell*.dat` surface. Then `tests/TestOutputFiles.py` (needs numpy) checks that the mean residual in `checkReconstructedTmunu.dat` is below 1e-3.
 - The test parameter files set `perform_checks = 1`, which compares T^{μν} and charge currents rebuilt from the samples against the surface.
-- All tests use `MC_sampling = 4` (FSSW) and `perform_decays = 0`. Neither the resonance-decay code nor the older `EmissionFunctionArray` path is covered, so check changes to those by hand (e.g. `./iSS.e tests/iSS_parameters.dat tests <surface> perform_decays=1`).
+- All sampling tests use `MC_sampling = 4` (FSSW) and `perform_decays = 0`. CI also builds and runs `tests/TestResonanceDecayAtRest.cpp` (`g++ -std=c++11 -Isrc tests/TestResonanceDecayAtRest.cpp src/particle_decay.cpp src/Random.cpp`, run from the repo root), which checks four-momentum conservation of single decays at rest and at γ up to 300. Sampling followed by decays, and the older `EmissionFunctionArray` path, are not covered, so check changes to those by hand (e.g. `./iSS.e tests/iSS_parameters.dat tests <surface> perform_decays=1`).
 - The Viscous tests take several minutes each and use about 3.5 GB of RAM.
 
 ## Architecture

@@ -335,8 +335,8 @@ On 1, 2, 6 and 12 threads the decay step takes 0.90, 0.48, 0.19 and
 - **Old path.** `MC_sampling = 2` with decays on a CI cell (20 events,
   518K final hadrons) gives the same file before and after.
 - **Buffers.** Reusing the buffers does not change the output.
-- **Decays at rest.** `tests/TestResonanceDecayAtRest.cpp`, which CI does
-  not run, passes.
+- **Decays at rest.** `tests/TestResonanceDecayAtRest.cpp` passes. CI
+  now runs it, see below.
 - **CI tests.** All 8 pass (they run without decays).
 - **Four-momentum.** With the same seed, a run without decays gives
   exactly the primaries that the run with decays decays. Per event, the
@@ -404,7 +404,8 @@ above 3), and the decay step still takes 0.14 s.
 `tests/TestResonanceDecayAtRest.cpp` now also decays ρ, ω, Δ⁺⁺ and K*
 at γ = 3, 30 and 300 and requires the daughters to add up to the
 mother's four-momentum to 10⁻⁶ of E. The old code fails it (ρ at
-γ = 30: 23.0709 against 23.07 GeV).
+γ = 30: 23.0709 against 23.07 GeV). The CI workflow builds and runs it
+after building iSS.
 
 About 0.4% of the final particles are still off their mass shell by more
 than 1 MeV. Those are high-energy particles and photons, for which
@@ -429,9 +430,9 @@ in `iSS_Hadron` would change this.
 
 ## Open items
 
-- **Decays in CI.** The CI tests run without decays, and
-  `tests/TestResonanceDecayAtRest.cpp` is not built by CMake or run in
-  CI.
+- **Decays in CI.** CI runs `tests/TestResonanceDecayAtRest.cpp`, which
+  checks single decays. The sampling tests still run without decays, so
+  no CI test samples a surface and decays the result.
 - **The |p| draw** (`MomentumSamplerBase::inverse_CDF`, about 130 ns) is
   a binary search over a table that combines three columns on every
   probe. Precombining the table per (m/T, μ/T) would only pay off when T
