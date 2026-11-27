@@ -85,8 +85,8 @@ The best case is about 2.2 s → 0.8 s on this benchmark. Against that:
   the CPU path, and it can only be built and tested on macOS.
 - The CI runners have no GPU, so a GPU backend would go untested in CI,
   and every physics change would have to be made in three places.
-- Resonance decays (`perform_decays = 1`) still run serially on the CPU
-  and would not be helped.
+- Resonance decays (`perform_decays = 1`) run on the CPU. They now run
+  in parallel over events (0.14 s of a 2.1 s run on 12 threads).
 
 ## When to revisit
 

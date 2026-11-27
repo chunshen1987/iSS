@@ -293,6 +293,58 @@ mismatch between the HRG4D table and the sampled gas
 ([EoS4D_validation.md](EoS4D_validation.md)), which is the same before
 and after these changes.
 
+## Resonance decays
+
+With `perform_decays = 1`, FSSW decays the sampled resonances after
+sampling, in `perform_resonance_feed_down`. This step used to run
+serially. On the constant-ε benchmark it took about 1.3 s, 40% of a
+12-thread run, and it doubled the peak memory.
+
+The events now decay in parallel:
+
+- `particle_decay` has overloads of `perform_decays` and of the two-,
+  three- and n-body routines that take the random generator as an
+  argument. The old signatures forward to the shared generator, so the
+  `EmissionFunctionArray` path (`MC_sampling` 1–3) is unchanged. The two
+  warning counters are atomic.
+- Each event decays with its own stream, `Random(key_hi, key_lo, iev)`,
+  keyed from two draws of the main generator after sampling, as in the
+  sampling itself. The output does not depend on the number of threads.
+- The event's list moves into a per-thread queue instead of being
+  copied. The daughter list and the buffers of `perform_decays` are
+  reused instead of being allocated for every particle.
+
+1000 events, δf = 20, with decays (5.4k primaries and 9.1k final hadrons
+per event):
+
+| Surface | Threads | Before | After | Decay step after |
+|---|---|---|---|---|
+| constant ε | 12 | 3.18 s, 812 MB | 2.07 s, 537 MB | 0.14 s |
+| constant ε | 1 | 7.84 s, 640 MB | 7.51 s, 492 MB | 0.83 s |
+| `BQS` | 12 | 3.59 s, 811 MB | 2.50 s, 540 MB | 0.14 s |
+| `BQS` | 1 | 10.72 s, 646 MB | 10.27 s, 489 MB | 0.81 s |
+
+On 1, 2, 6 and 12 threads the decay step takes 0.90, 0.48, 0.19 and
+0.16 s (before reusing the buffers), and the output is the same.
+
+### Validation
+
+- **Statistics.** Final-state samples, before vs after (seeds 3 and 5):
+  101 observables of the species that survive the decays, max |z| 1.94
+  (constant ε) and 2.44 (`BQS`), rms z 0.86 and 1.05, none above 3.
+- **Old path.** `MC_sampling = 2` with decays on a CI cell (20 events,
+  518K final hadrons) gives the same file before and after.
+- **Buffers.** Reusing the buffers does not change the output.
+- **Decays at rest.** `tests/TestResonanceDecayAtRest.cpp`, which CI does
+  not run, passes.
+- **CI tests.** All 8 pass (they run without decays).
+- **Four-momentum.** With the same seed, a run without decays gives
+  exactly the primaries that the run with decays decays. Per event, the
+  total E changes by 0.1 GeV (median) and at most 0.47 GeV, out of
+  43 TeV, and p_z by up to 0.63 GeV. The code before these changes gives
+  the same size (0.34 and 0.49 GeV at most), so this is not new. See the
+  open items.
+
 ## Things to know
 
 - **Same seed, different events.** A fixed `randomSeed` still gives
@@ -310,10 +362,17 @@ and after these changes.
 
 ## Open items
 
-- **Resonance decays** (`perform_decays = 1`) still run serially after
-  sampling, and the CI tests do not cover them. They could now take most
-  of the run time. The same per-event streams would let them run in
-  parallel.
+- **Four-momentum in decays.** The decays change an event's total
+  energy by about 2·10⁻⁶ (0.1 GeV of 43 TeV), which is more than
+  rounding the stored float momenta would give. It is the same before
+  and after the parallel decays. A per-decay check would show which
+  channels or which mass treatment causes it. About 0.2% of the final
+  particles are off their mass shell by more than 1 MeV. Those are
+  high-energy particles and photons, where E² − p² in float loses the
+  mass, so that part is only output precision.
+- **Decays in CI.** The CI tests run without decays, and
+  `tests/TestResonanceDecayAtRest.cpp` is not built by CMake or run in
+  CI.
 - **The |p| draw** (`MomentumSamplerBase::inverse_CDF`, about 130 ns) is
   a binary search over a table that combines three columns on every
   probe. Precombining the table per (m/T, μ/T) would only pay off when T
