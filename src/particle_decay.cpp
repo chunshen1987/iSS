@@ -307,6 +307,40 @@ void boost(double vx, double vy, double vz,
     pz += coef*vz;
 }
 
+//! The mass at which to decay the mother: that of its stored four-momentum.
+//! iSS_Hadron keeps E and p in float, so for a mother with Lorentz factor
+//! gamma, sqrt(E^2 - p^2) differs from its mass by about gamma^2 times the
+//! float precision (1e-3 at gamma = 100).  Daughters that share this mass
+//! in the rest frame add up to the mother's four-momentum.  Right at a
+//! threshold, where it may be below the daughters' masses, the mother's
+//! mass is kept.
+double rest_frame_mass(const iSS_Hadron &mother, double daughter_masses) {
+    const double E = mother.E;
+    const double p2 = (static_cast<double>(mother.px)*mother.px
+                       + static_cast<double>(mother.py)*mother.py
+                       + static_cast<double>(mother.pz)*mother.pz);
+    const double m2 = E*E - p2;
+    if (m2 > daughter_masses*daughter_masses) return sqrt(m2);
+    return mother.mass;
+}
+
+//! Boosts (E, px, py, pz) from the rest frame of the mother, of mass M, to
+//! the frame where it has its stored four-momentum P.  Written with P/M,
+//! not the velocity, so that it keeps its precision at large gamma; a set
+//! of daughters with total (M, 0) ends up with total P.
+void boost_from_rest_frame(const iSS_Hadron &mother, double M, double &E,
+                           double &px, double &py, double &pz) {
+    const double PE = mother.E;
+    const double Px = mother.px, Py = mother.py, Pz = mother.pz;
+    const double Pp = Px*px + Py*py + Pz*pz;
+    const double E_lab = (PE*E + Pp)/M;
+    const double coef = (E + Pp/(PE + M))/M;
+    E = E_lab;
+    px += coef*Px;
+    py += coef*Py;
+    pz += coef*Pz;
+}
+
 }  // namespace
 
 
@@ -626,20 +660,20 @@ void particle_decay::perform_n_body_decay(iSS_Hadron *mother,
                                           vector<iSS_Hadron> &daughters,
                                           RandomUtil::Random &ran) {
     const int n = daughters.size();
-    const double M = mother->mass;
     vector<double> m(n);
     double m_sum = 0.;
     for (int k = 0; k < n; k++) {
         m[k] = daughters[k].mass;
         m_sum += m[k];
     }
-    if (M <= m_sum) {
+    if (mother->mass <= m_sum) {
         cout << "Error:particle_decay::perform_n_body_decay: "
-             << "the decay of " << mother->pid << " (M = " << M
+             << "the decay of " << mother->pid << " (M = " << mother->mass
              << ") into " << n << " daughters of total mass " << m_sum
              << " is closed" << endl;
         exit(1);
     }
+    const double M = rest_frame_mass(*mother, m_sum);
     const double T = M - m_sum;
     // largest possible weight
     double w_max = 1.;
@@ -706,7 +740,7 @@ void particle_decay::perform_n_body_decay(iSS_Hadron *mother,
     double vy = mother->py/mother->E;
     double vz = mother->pz/mother->E;
     for (int k = 0; k < n; k++) {
-        boost(vx, vy, vz, E[k], px[k], py[k], pz[k]);
+        boost_from_rest_frame(*mother, M, E[k], px[k], py[k], pz[k]);
         daughters[k].E = E[k];
         daughters[k].px = px[k];
         daughters[k].py = py[k];
@@ -761,7 +795,7 @@ void particle_decay::perform_two_body_decay(iSS_Hadron *mother,
         exit(1);
     }
     //double M_sampled = sample_breit_wigner(M_pole, M_width, M_min);
-    double M_sampled = M_pole;
+    const double M_sampled = rest_frame_mass(*mother, M_min);
     double temp = M_sampled*M_sampled - m1*m1 - m2*m2;
     double p_lrf = sqrt(temp*temp - 4*m1*m1*m2*m2)/(2*M_sampled);
 
@@ -780,26 +814,19 @@ void particle_decay::perform_two_body_decay(iSS_Hadron *mother,
     double p2_lrf_y = -p1_lrf_y;
     double p2_lrf_z = -p1_lrf_z;
     
-    // compute mother velocity
-    double vx = mother->px/mother->E;
-    double vy = mother->py/mother->E;
-    double vz = mother->pz/mother->E;
-
-    // perform the boost
-    double v2 = vx*vx + vy*vy + vz*vz;
-    double gamma = 1./sqrt(1. - v2);
-    // (gamma - 1)/v^2 in a form that also works for a mother at rest.
-    const double boost_factor = gamma*gamma/(gamma + 1.);
-    double vp1 = vx*p1_lrf_x + vy*p1_lrf_y + vz*p1_lrf_z;
-    double vp2 = vx*p2_lrf_x + vy*p2_lrf_y + vz*p2_lrf_z;
-    daughter1->E = gamma*(E1_lrf + vp1);
-    daughter1->px = p1_lrf_x + (boost_factor*vp1 + gamma*E1_lrf)*vx;
-    daughter1->py = p1_lrf_y + (boost_factor*vp1 + gamma*E1_lrf)*vy;
-    daughter1->pz = p1_lrf_z + (boost_factor*vp1 + gamma*E1_lrf)*vz;
-    daughter2->E = gamma*(E2_lrf + vp2);
-    daughter2->px = p2_lrf_x + (boost_factor*vp2 + gamma*E2_lrf)*vx;
-    daughter2->py = p2_lrf_y + (boost_factor*vp2 + gamma*E2_lrf)*vy;
-    daughter2->pz = p2_lrf_z + (boost_factor*vp2 + gamma*E2_lrf)*vz;
+    // boost to the frame of the mother's four-momentum
+    boost_from_rest_frame(*mother, M_sampled, E1_lrf, p1_lrf_x, p1_lrf_y,
+                          p1_lrf_z);
+    boost_from_rest_frame(*mother, M_sampled, E2_lrf, p2_lrf_x, p2_lrf_y,
+                          p2_lrf_z);
+    daughter1->E = E1_lrf;
+    daughter1->px = p1_lrf_x;
+    daughter1->py = p1_lrf_y;
+    daughter1->pz = p1_lrf_z;
+    daughter2->E = E2_lrf;
+    daughter2->px = p2_lrf_x;
+    daughter2->py = p2_lrf_y;
+    daughter2->pz = p2_lrf_z;
 
     double life_time = 1e10;
     if (M_width > 1e-10) {
@@ -853,7 +880,7 @@ void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
         exit(1);
     }
     //double M_sampled = sample_breit_wigner(M_pole, M_width, M_min);
-    double M_sampled = M_pole;
+    const double M_sampled = rest_frame_mass(*mother, M_min);
     // generate lrf E1, E2, and theta12 using accept and reject method
     double E1_lrf, E2_lrf, E3_lrf, p1_lrf, p2_lrf, cos12_lrf;
     do {
@@ -916,38 +943,35 @@ void particle_decay::perform_three_body_decay(iSS_Hadron *mother,
     E3_lrf = sqrt(m3*m3 + p3_lrf_x*p3_lrf_x
                   + p3_lrf_y*p3_lrf_y + p3_lrf_z*p3_lrf_z);
 
-    double vx = mother->px/mother->E;
-    double vy = mother->py/mother->E;
-    double vz = mother->pz/mother->E;
-    double v2 = vx*vx + vy*vy + vz*vz;
-    double gamma = 1./sqrt(1. - v2);
-    const double boost_factor = gamma*gamma/(gamma + 1.);
-    double vp1 = vx*p1_lrf_x + vy*p1_lrf_y + vz*p1_lrf_z;
-    double vp2 = vx*p2_lrf_x + vy*p2_lrf_y + vz*p2_lrf_z;
-    double vp3 = vx*p3_lrf_x + vy*p3_lrf_y + vz*p3_lrf_z;
+    boost_from_rest_frame(*mother, M_sampled, E1_lrf, p1_lrf_x, p1_lrf_y,
+                          p1_lrf_z);
+    boost_from_rest_frame(*mother, M_sampled, E2_lrf, p2_lrf_x, p2_lrf_y,
+                          p2_lrf_z);
+    boost_from_rest_frame(*mother, M_sampled, E3_lrf, p3_lrf_x, p3_lrf_y,
+                          p3_lrf_z);
 
-    daughter1->E = gamma*(E1_lrf + vp1);
-    daughter1->px = p1_lrf_x + (boost_factor*vp1 + gamma*E1_lrf)*vx;
-    daughter1->py = p1_lrf_y + (boost_factor*vp1 + gamma*E1_lrf)*vy;
-    daughter1->pz = p1_lrf_z + (boost_factor*vp1 + gamma*E1_lrf)*vz;
+    daughter1->E = E1_lrf;
+    daughter1->px = p1_lrf_x;
+    daughter1->py = p1_lrf_y;
+    daughter1->pz = p1_lrf_z;
     daughter1->t = decay_time;
     daughter1->x = decay_x;
     daughter1->y = decay_y;
     daughter1->z = decay_z;
 
-    daughter2->E = gamma*(E2_lrf + vp2);
-    daughter2->px = p2_lrf_x + (boost_factor*vp2 + gamma*E2_lrf)*vx;
-    daughter2->py = p2_lrf_y + (boost_factor*vp2 + gamma*E2_lrf)*vy;
-    daughter2->pz = p2_lrf_z + (boost_factor*vp2 + gamma*E2_lrf)*vz;
+    daughter2->E = E2_lrf;
+    daughter2->px = p2_lrf_x;
+    daughter2->py = p2_lrf_y;
+    daughter2->pz = p2_lrf_z;
     daughter2->t = decay_time;
     daughter2->x = decay_x;
     daughter2->y = decay_y;
     daughter2->z = decay_z;
 
-    daughter3->E = gamma*(E3_lrf + vp3);
-    daughter3->px = p3_lrf_x + (boost_factor*vp3 + gamma*E3_lrf)*vx;
-    daughter3->py = p3_lrf_y + (boost_factor*vp3 + gamma*E3_lrf)*vy;
-    daughter3->pz = p3_lrf_z + (boost_factor*vp3 + gamma*E3_lrf)*vz;
+    daughter3->E = E3_lrf;
+    daughter3->px = p3_lrf_x;
+    daughter3->py = p3_lrf_y;
+    daughter3->pz = p3_lrf_z;
     daughter3->t = decay_time;
     daughter3->x = decay_x;
     daughter3->y = decay_y;

@@ -340,10 +340,77 @@ On 1, 2, 6 and 12 threads the decay step takes 0.90, 0.48, 0.19 and
 - **CI tests.** All 8 pass (they run without decays).
 - **Four-momentum.** With the same seed, a run without decays gives
   exactly the primaries that the run with decays decays. Per event, the
-  total E changes by 0.1 GeV (median) and at most 0.47 GeV, out of
-  43 TeV, and p_z by up to 0.63 GeV. The code before these changes gives
-  the same size (0.34 and 0.49 GeV at most), so this is not new. See the
-  open items.
+  total E changed by 0.1 GeV (median) and at most 0.47 GeV, out of
+  43 TeV, and p_z by up to 0.63 GeV. The code before these changes gave
+  the same size (0.34 and 0.49 GeV at most). The next section finds the
+  cause and fixes it.
+
+### Four-momentum conservation in decays
+
+Each decay routine built the daughters in the mother's rest frame with
+total energy `mother->mass`, then boosted them with v = p/E and
+γ = 1/√(1 − v²) from the mother's stored E and p. Both steps lose
+precision for a fast mother, because `iSS_Hadron` stores E and p as
+floats:
+
+- **The velocity was computed in float.** `mother->px/mother->E` divides
+  two floats. At large γ, 1 − v is small, and γ = 1/√(1 − v²) inherits
+  the rounding of v amplified by about γ². A φ exactly on shell at
+  E = 64 GeV lost 0.002 GeV in every decay.
+- **The stored mother is off its mass shell.** Rounding E and p to float
+  moves √(E² − p²) away from the mass by about γ² times the float
+  precision (10⁻³ at γ = 100–300). Daughters that share `mother->mass` in
+  the rest frame then carry (M/√(E² − p²))·(E, p) instead of (E, p).
+
+Both errors grow as γ². In the benchmark, resonances at |y| up to about
+5 reach γ = 50–100 and more.
+
+The fix (in `particle_decay.cpp`, for the two-, three- and n-body
+routines):
+
+- Decay at the mass of the stored four-momentum, `rest_frame_mass`:
+  √(E² − p²) in double, which is exact for float inputs. Right at a
+  threshold, where it may fall below the daughters' masses, the mother's
+  mass is kept. Channel selection still uses `mother->mass`.
+- Boost with P/M instead of the velocity, `boost_from_rest_frame`:
+  E′ = (E_P·E* + P·p*)/M and p′ = p* + P·[E* + P·p*/(E_P + M)]/M.
+  Daughters with total (M, 0) then add up to P, with no 1 − v
+  cancellation.
+
+The random draws are unchanged; only the kinematics move, at the γ²·ε
+level.
+
+Per decay, ρ, K*, Δ⁺⁺, ω and φ with random directions, 20000 decays of
+each species per γ range (100000 per row):
+
+| γ | Mean \|ΔE\|/E before | after | max \|ΔE\| before | after |
+|---|---|---|---|---|
+| 1–2 | 5.4·10⁻⁸ | 1.1·10⁻⁸ | 9.5·10⁻⁷ GeV | 1.2·10⁻⁷ GeV |
+| 10–30 | 1.1·10⁻⁵ | 1.2·10⁻⁸ | 3.9·10⁻³ GeV | 1.9·10⁻⁶ GeV |
+| 30–100 | 1.1·10⁻⁴ | 1.3·10⁻⁸ | 0.11 GeV | 4.1·10⁻⁶ GeV |
+| 100–300 | 1.1·10⁻³ | 1.3·10⁻⁸ | 3.1 GeV | 1.5·10⁻⁵ GeV |
+
+After the fix, what is left is the float rounding of the stored
+daughters, the same at every γ.
+
+Per event on the `BQS` surface (100 events, same seed with and without
+decays), the change of the total E went from a median of 0.1 GeV
+(at most 0.47 GeV) to 1.5·10⁻⁵ GeV (at most 5.8·10⁻⁵ GeV), and of p_z
+from at most 0.63 GeV to 6·10⁻⁵ GeV. That is below the float rounding
+of an event, about 0.003 GeV. The final-state samples agree statistically
+with the code before the fix (101 observables, max |z| 2.80–2.86, none
+above 3), and the decay step still takes 0.14 s.
+
+`tests/TestResonanceDecayAtRest.cpp` now also decays ρ, ω, Δ⁺⁺ and K*
+at γ = 3, 30 and 300 and requires the daughters to add up to the
+mother's four-momentum to 10⁻⁶ of E. The old code fails it (ρ at
+γ = 30: 23.0709 against 23.07 GeV).
+
+About 0.4% of the final particles are still off their mass shell by more
+than 1 MeV. Those are high-energy particles and photons, for which
+E² − p² computed from the stored floats loses the mass. Their E and p
+are each accurate to the float precision; only double-precision storage
+in `iSS_Hadron` would change this.
 
 ## Things to know
 
@@ -362,14 +429,6 @@ On 1, 2, 6 and 12 threads the decay step takes 0.90, 0.48, 0.19 and
 
 ## Open items
 
-- **Four-momentum in decays.** The decays change an event's total
-  energy by about 2·10⁻⁶ (0.1 GeV of 43 TeV), which is more than
-  rounding the stored float momenta would give. It is the same before
-  and after the parallel decays. A per-decay check would show which
-  channels or which mass treatment causes it. About 0.2% of the final
-  particles are off their mass shell by more than 1 MeV. Those are
-  high-energy particles and photons, where E² − p² in float loses the
-  mass, so that part is only output precision.
 - **Decays in CI.** The CI tests run without decays, and
   `tests/TestResonanceDecayAtRest.cpp` is not built by CMake or run in
   CI.
