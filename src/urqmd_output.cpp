@@ -1,4 +1,5 @@
 #include "urqmd_output.h"
+#include "urqmd_event.h"
 
 #include <algorithm>
 #include <cmath>
@@ -6,11 +7,10 @@
 #include <cstring>
 #include <iomanip>
 #include <locale>
-#include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <unordered_map>
 
-#include "gsl/gsl_rng.h"
 #include "sample_output.h"
 
 namespace iSS_data {
@@ -25,7 +25,7 @@ struct ParticleType {
     int twice_isospin;
 };
 
-ParticleType urqmd_type(int pdg, const std::string &filename) {
+const std::unordered_map<long long, ParticleType> &particle_types() {
     // PDG mapping from osc2u/src/pdg2ityp.f (Steffen A. Bass).
     static const std::unordered_map<long long, ParticleType> types = {
         // Neutron
@@ -164,6 +164,11 @@ ParticleType urqmd_type(int pdg, const std::string &filename) {
         { 10421, {134, -1}}, { 10411, {134,  1}},
         // J
     };
+    return types;
+}
+
+ParticleType urqmd_type(int pdg) {
+    const auto &types = particle_types();
     auto match = types.find(pdg);
     if (match != types.end()) return match->second;
     if (pdg < 0) {
@@ -172,7 +177,7 @@ ParticleType urqmd_type(int pdg, const std::string &filename) {
             return {-match->second.type, -match->second.twice_isospin};
         }
     }
-    sample_output_error(filename, ("unsupported PDG ID " + std::to_string(pdg)).c_str());
+    throw std::invalid_argument("unsupported PDG ID " + std::to_string(pdg));
 }
 
 int electric_charge(const ParticleType &particle) {
@@ -381,13 +386,21 @@ bool is_baryon(const EventParticle &particle) {
     return std::abs(particle.type.type) <= max_baryon_type;
 }
 
-void write_particle(std::ostream &out, const EventParticle &particle,
-                    gsl_rng *rng, const std::string &filename) {
+void validate_sample(const iSS_Hadron &sample, const ParticleType &type) {
+    const float values[] = {sample.t, sample.x, sample.y, sample.z, sample.E,
+                            sample.px, sample.py, sample.pz, sample.mass};
+    for (float value : values) {
+        if (!std::isfinite(value)) throw std::invalid_argument("nonfinite particle record");
+    }
+    if (!(sample.E > 0.) || !(sample.mass >= 0.)
+        || (sample.mass == 0. && decay_width(std::abs(type.type)) > 0.)) {
+        throw std::invalid_argument("invalid particle energy or mass");
+    }
+}
+
+UrqmdParticle convert_particle(const EventParticle &particle, gsl_rng *rng) {
     const auto &sample = *particle.sample;
     const double width = decay_width(std::abs(particle.type.type));
-    if (!(sample.E > 0.) || (width > 0. && !(sample.mass > 0.))) {
-        sample_output_error(filename, "invalid particle energy or resonance mass");
-    }
     double decay_time = 1e34;
     if (width > 1e-10) {
         // Match osc2u's single-precision ran2 draw and time dilation.
@@ -412,24 +425,83 @@ void write_particle(std::ostream &out, const EventParticle &particle,
         z -= sample.pz/energy*time;
         time = 0.;
     }
+    return {time, x, y, z, energy, sample.px, sample.py, sample.pz,
+            sample.mass, decay_time, sample.t, 0., particle.type.type,
+            particle.type.twice_isospin, electric_charge(particle.type)};
+}
+
+void write_particle(std::ostream &out, const UrqmdParticle &particle) {
     const double values[] = {
-        time, x, y, z, energy, sample.px, sample.py, sample.pz, sample.mass,
+        particle.t, particle.x, particle.y, particle.z, particle.energy,
+        particle.px, particle.py, particle.pz, particle.mass,
     };
-    for (double value : values) {
-        if (!std::isfinite(value)) sample_output_error(filename, "nonfinite particle record");
-        write_exponential(out, value, 16, 8);
-    }
-    out << std::setw(11) << particle.type.type
-        << std::setw(3) << particle.type.twice_isospin
-        << std::setw(3) << electric_charge(particle.type)
+    for (double value : values) write_exponential(out, value, 16, 8);
+    out << std::setw(11) << particle.type
+        << std::setw(3) << particle.twice_isospin
+        << std::setw(3) << particle.charge
         << std::setw(9) << 0 << std::setw(5) << 0 << std::setw(10) << 99;
-    write_exponential(out, decay_time, 16, 8);
-    write_exponential(out, sample.t, 16, 8);
-    write_exponential(out, 0., 16, 8);
+    write_exponential(out, particle.decay_time, 16, 8);
+    write_exponential(out, particle.formation_time, 16, 8);
+    write_exponential(out, particle.cross_section_factor, 16, 8);
     out << '\n';
 }
 
 }  // namespace
+
+UrqmdEventConverter::UrqmdEventConverter()
+    : rng_(gsl_rng_alloc(gsl_rng_ran2), gsl_rng_free) {
+    gsl_rng_set(rng_.get(), 123987);
+    gsl_rng_get(rng_.get());  // osc2u's SSEED discards the first draw.
+}
+
+std::vector<UrqmdParticle> UrqmdEventConverter::convert(
+        const std::vector<iSS_Hadron> &event) {
+    if (event.size() > max_particles) {
+        throw std::invalid_argument("event exceeds UrQMD's 100000 particle limit");
+    }
+    std::vector<EventParticle> ordered;
+    ordered.reserve(event.size());
+    for (const auto &sample : event) {
+        const auto type = urqmd_type(sample.pid);
+        validate_sample(sample, type);
+        ordered.push_back({&sample, type});
+    }
+    std::stable_partition(ordered.begin(), ordered.end(), is_baryon);
+
+    std::vector<UrqmdParticle> particles;
+    particles.reserve(event.size());
+    for (const auto &particle : ordered) {
+        particles.push_back(convert_particle(particle, rng_.get()));
+    }
+    return particles;
+}
+
+int urqmd_pdg_id(int type, int twice_isospin) {
+    // Types above 1000 encode the original PYTHIA PDG ID with an offset.
+    if (type > 1000) return type - 1000;
+    if (type < -1000) return type + 1000;
+
+    // Use the same PDG assignments as input. In particular, the legacy UrQMD
+    // pdgid table omits several resonances and has duplicate kaon IDs.
+    using Isospins = std::unordered_map<int, int>;
+    static const auto pdg_ids = [] {
+        std::unordered_map<int, Isospins> ids;
+        for (const auto &entry : particle_types()) {
+            ids[entry.second.type].emplace(entry.second.twice_isospin, entry.first);
+        }
+        return ids;
+    }();
+    const auto multiplet = pdg_ids.find(std::abs(type));
+    if (multiplet != pdg_ids.end()) {
+        const auto state = multiplet->second.find(type < 0 ? -twice_isospin
+                                                             : twice_isospin);
+        if (state != multiplet->second.end()) {
+            return type < 0 ? -state->second : state->second;
+        }
+    }
+    throw std::runtime_error("unknown UrQMD type " + std::to_string(type)
+                             + " with twice isospin " + std::to_string(twice_isospin));
+}
 
 void write_urqmd_samples(const std::string &filename,
                          const std::string &oscar_header_filename,
@@ -439,27 +511,16 @@ void write_urqmd_samples(const std::string &filename,
     std::ofstream out(filename);
     if (!out) sample_output_error(filename, "cannot open file");
     out.imbue(std::locale::classic());
-    std::unique_ptr<gsl_rng, decltype(&gsl_rng_free)> rng(
-        gsl_rng_alloc(gsl_rng_ran2), gsl_rng_free);
-    gsl_rng_set(rng.get(), 123987);
-    gsl_rng_get(rng.get());  // osc2u's SSEED discards the first draw.
-
-    std::vector<EventParticle> particles;
+    UrqmdEventConverter converter;
     for (std::size_t event_index = 0; event_index < events.size(); ++event_index) {
         const auto &event = *events[event_index];
         if (event.empty()) continue;  // UrQMD initializes its clock from particle 1.
-        if (event.size() > max_particles) {
-            sample_output_error(filename, "event exceeds UrQMD's 100000 particle limit");
-        }
-        particles.clear();
-        particles.reserve(event.size());
-        for (const auto &sample : event) {
-            particles.push_back({&sample, urqmd_type(sample.pid, filename)});
-        }
-        std::stable_partition(particles.begin(), particles.end(), is_baryon);
-        write_header(out, collision, first_event + event_index, particles.size());
-        for (const auto &particle : particles) {
-            write_particle(out, particle, rng.get(), filename);
+        try {
+            const auto particles = converter.convert(event);
+            write_header(out, collision, first_event + event_index, particles.size());
+            for (const auto &particle : particles) write_particle(out, particle);
+        } catch (const std::invalid_argument &error) {
+            sample_output_error(filename, error.what());
         }
         if (!out) sample_output_error(filename, "write failed");
     }

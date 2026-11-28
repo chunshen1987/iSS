@@ -52,6 +52,7 @@ class EmissionFunctionArray {
     bool positive_y_minus_eta_table_only;
 
     ParameterReader *paraRdr; // used to pass-in parameters
+    bool run_urqmd_in_memory_;
     bool use_urqmd_format_;
     int USE_OSCAR_FORMAT;
     int USE_GZIP_FORMAT;

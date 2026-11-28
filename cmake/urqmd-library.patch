@@ -1,0 +1,211 @@
+--- a/urqmd.f
++++ b/urqmd.f
+@@ -1,6 +1,6 @@
+ c $Id: urqmd.f,v 1.25 2007/01/30 14:50:32 bleicher Exp $
+ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+-      program UrQMD
++      subroutine iss_urqmd_cascade(collisions)
+ c
+ c      Authors : The UrQMD collaboration
+ c                S.A. Bass, M. Belkacem, M. Bleicher, M. Brandstetter,
+@@ -28,85 +28,20 @@
+       include 'comres.f'
+       include 'options.f'
+       include 'colltab.f'
+-      include 'inputs.f'
+       include 'newpart.f'
+-      include 'boxinc.f'
+-c
+-      integer i,j,k,steps,ii,ocharge,ncharge, mc, mp, noc, it1,it2
+-      real*8 sqrts,otime,xdummy,st
++c
++      integer i,j,k,steps,ii,ocharge,ncharge,it1,it2
++      integer collisions
++      real*8 sqrts,xdummy,st
+       logical isstable
+       integer stidx,CTOsave
+       real*8 Ekinbar, Ekinmes, ESky2, ESky3, EYuk, ECb, EPau
+       common /energies/ Ekinbar, Ekinmes, ESky2, ESky3, EYuk, ECb, EPau
+       integer cti1sav,cti2sav
+
+-c
+-c     numerical/technical initialisation
+-c
+-      call uinit(0)
+-c
+-c  Main program
+-c
+-
+-      mc=0
+-      mp=0
+-      noc=0
+-c
+-c loop over all events
+-c
+-      do 10 event=1,nevents
+-c     start event here
+-c
+-
+-c     time is the system time at the BEGINNING of every timestep
+-      time = 0.0
+-
+-c     initialize random number generator
+-c     call auto-seed generator only for first event and if no seed was fixed
+-      if(.not.firstseed.and.(.not.fixedseed)) then
+-         ranseed=-(1*abs(ranseed))
+-         call sseed(ranseed)
+-      else
+-         firstseed=.false.
+-      endif
+-
+-      write(6,*)'event# ',event,ranseed
+-
+-c
+-c     initialisation of physics quantities
+-c
+-      call init
+-cbb if we are reading old events, check the success of the read-in:
+-      if (CTOption(40).ne.0.and.(.not.success)) then
+-        exit
+-      endif
+-
+-c old time if an old fort.14 is used
+-      if(CTOption(40).ne.0)time=acttime
+-
+-c output preparation
+-
+-c write headers to file
+-      call output(13)
+-      call output(14)
+-      call output(15)
+-      call output(16)
+-      if(event.eq.1) then
+-        call output(17)
+-        call osc_header
+-        call osc99_header
+-      endif
+-      call osc99_event(-1)
+-
+-c for CTOption(4)=1 : output of initialization configuration
+-      if(CTOption(4).eq.1)call file14out(0)
+-
+-c     participant/spectator model:
+-      if(CTOption(28).ne.0) call rmspec(0.5d0*bimp,-(0.5d0*bimp))
+-
+-c     compute time of output
+-      otime = outsteps*dtimestep
+-
++c     The C bridge has already initialized this event.
++      collisions=0
++
+ c reset time step counter
+       steps = 0
+
+@@ -176,7 +111,7 @@
+
+ c increment "dirty" collision counter
+             if(cti2(k).gt.0)then !scatter
+-               mc=mc+1
++               collisions=collisions+1
+             endif
+ c     perform scattering/decay
+             cti1sav = cti1(k)
+@@ -265,15 +200,6 @@
+
+          end if ! (eos.ne.0)
+
+-c     perform output if desired
+-         if(mod(steps,outsteps).eq.0.and.steps.lt.nsteps)then
+-            if(CTOption(28).eq.2)call spectrans(otime)
+-            call file14out(steps)
+-           if(CTOption(55).eq.1)then
+-            call osc_vis(steps)
+-           endif
+-         endif ! output handling
+-
+  20   continue ! time step loop
+
+
+@@ -281,7 +207,7 @@
+         acttime=time
+ c optional decay of all unstable particles before final output
+ c DANGER: pauli-blocked decays are not performed !!!
+-         if(CTOption(18).eq.0) then
++         if(CTOption(18).eq.0.and.npart.gt.0) then
+ c no do-loop is used because npart changes in loop-structure
+             i=0
+             nct=0
+@@ -312,42 +238,6 @@
+             endif
+ c     check next particle
+             if(i.lt.npart) goto 40
++            CTOption(10)=CTOsave
+          endif ! final decay
+-         CTOption(10)=CTOsave
+-c final output
+-
+-           if(CTOption(28).eq.2)call spectrans(otime)
+-
+-         call file13out(nsteps)
+-         if(CTOption(50).eq.0)then
+-          call file14out(nsteps)
+-         end if
+-         call file16out
+-         if(CTOption(50).eq.0.and.CTOption(55).eq.0)then
+-          call osc_event
+-         end if
+-         if(CTOption(50).eq.0.and.CTOption(55).eq.1)then
+-          call osc_vis(nsteps)
+-         end if
+-         call osc99_event(1)
+-         call osc99_eoe
+-         call nice_event
+-
+-         mp=mp+npart
+-         if(ctag.eq.0)then
+-           write(*,*)'(W) No collision in event ',event
+-           noc=noc+1
+-         endif
+-
+-c     end of event loop
+- 10   continue
+-
+-      write(6,301)'no. of collisions = ',mc/dble(nevents),' (per event)'
+-      write(6,301)'final particles   = ',mp/dble(nevents),' (per event)'
+-      write(6,302)'empty events      : ', noc,noc*1d2/dble(nevents)
+- 301  format(a19,f8.1,a12)
+- 302  format(a19,i8,' = ',f5.1,'%')
+       end
+-
+-
+-
+--- a/init.f
++++ b/init.f
+@@ -113,13 +113,18 @@
+         integer nnuc
+         parameter (nnuc=11)
+         save isrt,ipbm
+-        logical bcorr
++        logical bcorr,reset_only
+         common /ini/ bcorr
+
+         integer i,flagy
+         real*8 alf,regula
+ c momenta
+        real*8 mx,my,mz
++      reset_only=.false.
++      goto 19
++      entry iss_urqmd_reset_event
++      reset_only=.true.
++ 19   continue
+ c important: never change!
+       npart = 0
+       npold = 0
+@@ -192,6 +197,7 @@
+  20   continue
+
+
++      if(reset_only) return
+       if(CTOption(40).ne.0) then
+          call getoldevent
+          return

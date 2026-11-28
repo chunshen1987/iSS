@@ -33,6 +33,12 @@ endif()
 
 option (link_with_lib "Link executable with the libarary" ON)
 option (unittest "Build Unit tests" OFF)
+option (ISS_ENABLE_URQMD "Build the UrQMD in-memory transport interface" OFF)
+
+if (ISS_ENABLE_URQMD)
+    include(cmake/UrQMD.cmake)
+    enable_testing()
+endif ()
 
 if (unittest)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDOCTEST_CONFIG_IMPLEMENT_WITH_MAIN")

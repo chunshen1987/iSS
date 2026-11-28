@@ -462,6 +462,8 @@ void FSSW::shell() {
 
     computeAvgTotalEnergyMomentum();
 
+    if (paraRdr->getVal("run_urqmd_in_memory", 0) != 0) return;
+
     if (use_urqmd_format_) {
         iSS_data::write_urqmd_samples("fort.14", OSCAR_header_filename_, *Hadron_list);
     } else if (USE_OSCAR_FORMAT) {

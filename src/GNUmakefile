@@ -28,13 +28,13 @@ SRC		=	main.cpp Random.cpp arsenal.cpp ParameterReader.cpp \
 			RandomVariable1DArray.cpp RandomVariable2DArray.cpp \
 			TableFunction.cpp Table.cpp \
 			emissionfunction.cpp readindata.cpp particle_decay.cpp \
-			iSS.cpp urqmd_output.cpp
+			iSS.cpp urqmd_output.cpp urqmd_transport.cpp
 
 INC		=   Random.h arsenal.h ParameterReader.h \
 			RandomVariable1DArray.h RandomVariable2DArray.h \
 			TableFunction.h Table.h \
 			emissionfunction.h readindata.h Stopwatch.h \
-            particle_decay.h iSS_hadron.h iSS.h urqmd_output.h
+            particle_decay.h iSS_hadron.h iSS.h urqmd_output.h urqmd_event.h urqmd_transport.h
 
 # -------------------------------------------------
 

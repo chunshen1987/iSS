@@ -14,6 +14,8 @@
 #include "FSSW.h"
 #include "spin_polarization.h"
 
+class UrqmdTransport;
+
 class iSS {
  private:
     const std::string path_;
@@ -43,6 +45,7 @@ class iSS {
     pretty_ostream messager;
 
     bool has_samples_for_checks();
+    void evolve_urqmd_events(UrqmdTransport &transport);
 
  public:
     iSS(std::string path, std::string table_path="iSS_tables",

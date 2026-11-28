@@ -1,6 +1,9 @@
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <iomanip>
+#include <stdexcept>
+#include <utility>
 
 #include "Table.h"
 #include "arsenal.h"
@@ -9,6 +12,7 @@
 #include "data_struct.h"
 #include "Histogram.h"
 #include "sample_output.h"
+#include "urqmd_transport.h"
 
 using iSS_data::Vec4;
 
@@ -49,6 +53,16 @@ void iSS::clear() {
 
 int iSS::shell() {
     const double sampling_mode = paraRdr_ptr->getVal("MC_sampling");
+    if (paraRdr_ptr->getVal("run_urqmd_in_memory", 0) != 0) {
+        if (!UrqmdTransport::available()) {
+            messager.error("In-memory UrQMD requires a build with ISS_ENABLE_URQMD=ON");
+            return 1;
+        }
+        if (sampling_mode == 0) {
+            messager.error("In-memory UrQMD requires MC_sampling = 1 through 4");
+            return 1;
+        }
+    }
     if (sampling_mode != 4 && paraRdr_ptr->exist("perform_checks")
             && paraRdr_ptr->getVal("perform_checks") == 1) {
         messager.error("perform_checks = 1 requires MC_sampling = 4");
@@ -94,13 +108,7 @@ int iSS::shell() {
     // v_n (EmissionFunctionArray::shell) without sampling particles
     if (sampling_mode != 0 || calculate_vn) {
         set_random_seed();
-        status = generate_samples();
-        if (status != 0) {
-            messager << "Some errors happened in generating particle samples";
-            messager.flush("error");
-            exit(-1);
-        }
-        return(0);
+        return generate_samples();
     }
     return(0);
 }
@@ -192,6 +200,32 @@ void iSS::set_random_seed(int randomSeed_in) {
 
 
 int iSS::generate_samples() {
+    std::unique_ptr<UrqmdTransport> transport;
+    if (paraRdr_ptr->getVal("run_urqmd_in_memory", 0) != 0) {
+        const double sampling_mode = paraRdr_ptr->getVal("MC_sampling");
+        const double seed = paraRdr_ptr->getVal("urqmd_seed", 123987);
+        try {
+            if (!(sampling_mode >= 1 && sampling_mode <= 4)
+                || sampling_mode != std::floor(sampling_mode)) {
+                throw std::invalid_argument("in-memory UrQMD requires MC_sampling = 1 through 4");
+            }
+            if (afterburner_type_ != AfterburnerType::UrQMD) {
+                throw std::invalid_argument("in-memory UrQMD requires afterburner_type = 1");
+            }
+            if (!(seed >= 1 && seed <= std::numeric_limits<int>::max())
+                || seed != std::floor(seed)) {
+                throw std::invalid_argument("urqmd_seed must be a positive integer");
+            }
+            transport.reset(new UrqmdTransport(
+                paraRdr_ptr->getVal("urqmd_duration", 8000.),
+                paraRdr_ptr->getVal("urqmd_max_step", 8000.),
+                static_cast<int>(seed)));
+        } catch (const std::exception &error) {
+            messager.error(error.what());
+            return 1;
+        }
+    }
+
     // skip others except for these particle
     Table chosen_particles;
     if (afterburner_type_ == AfterburnerType::SMASH) {
@@ -225,7 +259,40 @@ int iSS::generate_samples() {
                 path_, table_path_, afterburner_type_));
         efa_->shell();
     }
-    return(0);
+    if (transport) {
+        if (paraRdr_ptr->getVal("perform_checks", 0) == 1) perform_checks();
+        try {
+            evolve_urqmd_events(*transport);
+        } catch (const std::exception &error) {
+            messager.error(error.what());
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void iSS::evolve_urqmd_events(UrqmdTransport &transport) {
+    messager.info("Running UrQMD transport in memory ...");
+    std::vector<std::vector<iSS_Hadron>*> events;
+    const int count = get_number_of_sampled_events();
+    events.reserve(count);
+    long long collisions = 0;
+    for (int iev = 0; iev < count; ++iev) {
+        auto *event = get_hadron_list_iev(iev);
+        auto final = transport.evolve(*event);
+        collisions += final.collision_attempts;
+        *event = std::move(final.particles);
+        events.push_back(event);
+    }
+    messager << "UrQMD processed " << count << " samples with "
+             << collisions << " collision attempts.";
+    messager.flush("info");
+
+    if (paraRdr_ptr->getVal("use_gzip_format") != 0) {
+        iSS_data::write_gzip_samples("particle_samples.gz", events);
+    } else if (paraRdr_ptr->getVal("use_binary_format") != 0) {
+        iSS_data::write_binary_samples("particle_samples.bin", events);
+    }
 }
 
 

@@ -65,7 +65,8 @@ int main(int argc, char** argv) {
 
     int testFlag = static_cast<int>(
             iSsampler.paraRdr_ptr->getVal("perform_checks", 0));
-    if (testFlag == 1)
+    if (status == 0 && testFlag == 1
+        && iSsampler.paraRdr_ptr->getVal("run_urqmd_in_memory", 0) == 0)
         iSsampler.perform_checks();
 
     if (status == 0)

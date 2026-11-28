@@ -41,3 +41,45 @@ describes Au+Au at 100 GeV per nucleon in the equal-speed frame. As in
 `osc2u`, the impact parameter is zero and the frame setting describes the
 sampled momenta. The writer back-propagates the hadrons to time zero and
 records their original hadronization times for UrQMD.
+
+In-memory UrQMD transport
+------------------------
+
+Build the optional UrQMD 3.4 interface with GNU Fortran and `patch`.
+The build uses `urqmd_code/urqmd/src` by default. Set `ISS_URQMD_SOURCE_DIR`
+at configure time to use another copy of those sources.
+
+```sh
+cmake -S . -B build -DISS_ENABLE_URQMD=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+ctest --test-dir build --output-on-failure
+```
+
+Set `run_urqmd_in_memory = 1` and `afterburner_type = 1` in
+`iSS_parameters.dat`. This works with `MC_sampling = 1` through `4`.
+iSS hands each sampled event to the linked cascade and replaces it with the
+transported particles. The iSS event getters return the final momenta
+and positions at the end of transport. Enabled sampler checks run before
+transport.
+
+The mode skips OSCAR, file 14, and per-species sample files. If enabled,
+`use_gzip_format` or `use_binary_format` writes the final event list in the
+usual iSS format. Set both to `0` for memory-only events. UrQMD can still
+read or create its initialization table cache (`tables.dat`).
+
+`urqmd_duration` and `urqmd_max_step` are in fm/c and default to `8000`.
+`urqmd_seed` sets the first event's seed and defaults to `123987`. The
+linked cascade uses UrQMD's default physics options and the supplied
+burner file's `ctp 22 1.0` setting. It evolves particles in the frame of
+the input samples.
+
+C++ callers can link the UrQMD-enabled `libiSS` and include the event wrapper
+from `src`. The wrapper serializes access to UrQMD's shared Fortran state.
+
+```cpp
+#include "urqmd_transport.h"
+
+UrqmdTransport transport(20.0, 5.0, 123987);
+auto result = transport.evolve(sample);  // sample is a std::vector<iSS_Hadron>
+// result.particles contains the final event.
+```

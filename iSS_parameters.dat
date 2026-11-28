@@ -35,6 +35,10 @@ output_samples_into_files = 0  # output particle samples into individual files
                                # for individual particle species
 store_samples_in_memory = 1  # flag to store particle samples in memory
 use_UrQMD_format = 0         # write UrQMD input to fort.14 (takes priority over other event formats)
+run_urqmd_in_memory = 0      # pass events to the linked UrQMD cascade (ISS_ENABLE_URQMD build)
+urqmd_duration = 8000        # cascade duration in fm/c
+urqmd_max_step = 8000        # maximum cascade timestep in fm/c
+urqmd_seed = 123987          # first UrQMD transport seed
 use_OSCAR_format = 0         # output results in OSCAR format
 use_OSCAR2013 = 0            # output results in OSCAR 2013 format (need use_OSCAR_format == 1)
 use_gzip_format = 0          # output results in gzip format (only works with

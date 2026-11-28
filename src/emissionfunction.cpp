@@ -87,8 +87,10 @@ EmissionFunctionArray::EmissionFunctionArray(
         boost_invariant_ = true;
     }
 
-    use_urqmd_format_         = paraRdr->getVal("use_UrQMD_format", 0) != 0;
-    USE_OSCAR_FORMAT         = paraRdr->getVal("use_OSCAR_format");
+    run_urqmd_in_memory_ = paraRdr->getVal("run_urqmd_in_memory", 0) != 0;
+    use_urqmd_format_ = !run_urqmd_in_memory_
+                       && paraRdr->getVal("use_UrQMD_format", 0) != 0;
+    USE_OSCAR_FORMAT         = !run_urqmd_in_memory_ && paraRdr->getVal("use_OSCAR_format");
     USE_GZIP_FORMAT          = paraRdr->getVal("use_gzip_format");
     USE_BINARY_FORMAT        = paraRdr->getVal("use_binary_format");
     INCLUDE_DELTAF           = paraRdr->getVal("include_deltaf_shear");
@@ -104,17 +106,17 @@ EmissionFunctionArray::EmissionFunctionArray(
     local_charge_conservation = paraRdr->getVal("local_charge_conservation");
     number_of_repeated_sampling = paraRdr->getVal("number_of_repeated_sampling");
 
-    flag_output_samples_into_files = (
-                            paraRdr->getVal("output_samples_into_files"));
+    flag_output_samples_into_files = run_urqmd_in_memory_ ? 0
+        : paraRdr->getVal("output_samples_into_files");
     flag_store_samples_in_memory = paraRdr->getVal("store_samples_in_memory");
-    if (MC_sampling != 2 && !use_urqmd_format_) {
+    if (MC_sampling != 2 && !use_urqmd_format_ && !run_urqmd_in_memory_) {
         messager << "store_samples_in_memory is only supported for "
                  << "MC_sample == 2!";
         messager.flush("warning");
         flag_store_samples_in_memory = 0;
     }
 
-    if (use_urqmd_format_) {
+    if (use_urqmd_format_ || run_urqmd_in_memory_) {
         flag_store_samples_in_memory = MC_sampling >= 1 && MC_sampling <= 3;
     }
     if (flag_store_samples_in_memory == 1) {
@@ -1312,14 +1314,20 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
     std::stringstream samples_control_filename;
     samples_control_filename << path_ << "/samples_control_"
                              << particle->monval << ".dat";
-    remove(samples_control_filename.str().c_str());
-    ofstream of_control(samples_control_filename.str().c_str());
+    ofstream of_control;
+    if (!run_urqmd_in_memory_) {
+        remove(samples_control_filename.str().c_str());
+        of_control.open(samples_control_filename.str().c_str());
+    }
 
     // the sample file contains the actual samples
     std::stringstream samples_filename;
     samples_filename << path_ << "/samples_" << particle->monval << ".dat";
-    remove(samples_filename.str().c_str());
-    ofstream of_sample(samples_filename.str().c_str());
+    ofstream of_sample;
+    if (!run_urqmd_in_memory_) {
+        remove(samples_filename.str().c_str());
+        of_sample.open(samples_filename.str().c_str());
+    }
 
     // buffers are used to speed up the output process
     char line_buffer[500]; // only used in text mode
@@ -1344,14 +1352,16 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
          sampling_idx++) {
         long number_to_sample = determine_number_to_sample(
                                         dN, sampling_model, sampling_para1);
-        // write to control file
-        snprintf(line_buffer, 500, "%lu\n", number_to_sample);
-        control_str_buffer << line_buffer;
-        control_writing_signal++;
-        if (control_writing_signal == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
-            of_control << control_str_buffer.str();
-            control_str_buffer.str("");
-            control_writing_signal=0;
+        if (!run_urqmd_in_memory_) {
+            // write to control file
+            snprintf(line_buffer, 500, "%lu\n", number_to_sample);
+            control_str_buffer << line_buffer;
+            control_writing_signal++;
+            if (control_writing_signal == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
+                of_control << control_str_buffer.str();
+                control_str_buffer.str("");
+                control_writing_signal=0;
+            }
         }
 
         long y_minus_eta_s_idx, FO_idx;
@@ -1537,10 +1547,11 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
             double vx = ux/gammaT;
             double vy = uy/gammaT;
 
-            if (use_urqmd_format_) {
+            if (use_urqmd_format_ || run_urqmd_in_memory_) {
                 store_sample(sampling_idx, particle->monval, mass, E,
                              px, py, p_z, t, surf->xpt, surf->ypt, z);
             }
+            if (run_urqmd_in_memory_) continue;
 
             // write to sample file
             if (!USE_OSCAR_FORMAT)
@@ -1587,47 +1598,49 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
     of_sample.close();
     if (AMOUNT_OF_OUTPUT>0) print_progressbar(1);
 
-    ofstream of_sample_format(samples_format_filename.c_str());
-    // Be careful that ParameterReader class convert all strings to lower case
-    // so do NOT use variable names that differ only by cases!
-    if (!USE_OSCAR_FORMAT)
-    {
-        of_sample_format
-        << "Total_number_of_columns = " << 18 << endl
-        << "FZ_cell_idx = " << 1 << endl
-        << "tau = " << 2 << endl
-        << "FZ_x = " << 3 << endl
-        << "FZ_y = " << 4 << endl
-        << "y_minus_eta_s = " << 5 << endl
-        << "pT = " << 6 << endl
-        << "phi = " << 7 << endl
-        << "surf_da0 = " << 8 << endl
-        << "surf_da1 = " << 9 << endl
-        << "surf_da2 = " << 10 << endl
-        << "surf_vx = " << 11 << endl
-        << "surf_vy = " << 12 << endl
-        << "y = " << 13 << endl
-        << "eta_s = " << 14 << endl
-        << "E = " << 15 << endl
-        << "p_z = " << 16 << endl
-        << "t = " << 17 << endl
-        << "z = " << 18 << endl;
+    if (!run_urqmd_in_memory_) {
+        ofstream of_sample_format(samples_format_filename.c_str());
+        // Be careful that ParameterReader class convert all strings to lower case
+        // so do NOT use variable names that differ only by cases!
+        if (!USE_OSCAR_FORMAT)
+        {
+            of_sample_format
+            << "Total_number_of_columns = " << 18 << endl
+            << "FZ_cell_idx = " << 1 << endl
+            << "tau = " << 2 << endl
+            << "FZ_x = " << 3 << endl
+            << "FZ_y = " << 4 << endl
+            << "y_minus_eta_s = " << 5 << endl
+            << "pT = " << 6 << endl
+            << "phi = " << 7 << endl
+            << "surf_da0 = " << 8 << endl
+            << "surf_da1 = " << 9 << endl
+            << "surf_da2 = " << 10 << endl
+            << "surf_vx = " << 11 << endl
+            << "surf_vy = " << 12 << endl
+            << "y = " << 13 << endl
+            << "eta_s = " << 14 << endl
+            << "E = " << 15 << endl
+            << "p_z = " << 16 << endl
+            << "t = " << 17 << endl
+            << "z = " << 18 << endl;
+        }
+        if (USE_OSCAR_FORMAT)
+        {
+            of_sample_format
+            << "Total_number_of_columns = " << 9 << endl
+            << "t = " << 9 << endl
+            << "FZ_x = " << 6 << endl
+            << "FZ_y = " << 7 << endl
+            << "z = " << 8 << endl
+            << "E = " << 4 << endl
+            << "px = " << 1 << endl
+            << "py = " << 2 << endl
+            << "p_z = " << 3 << endl
+            << "mass =" << 5 << endl;
+        }
+        of_sample_format.close();
     }
-    if (USE_OSCAR_FORMAT)
-    {
-        of_sample_format
-        << "Total_number_of_columns = " << 9 << endl
-        << "t = " << 9 << endl
-        << "FZ_x = " << 6 << endl
-        << "FZ_y = " << 7 << endl
-        << "z = " << 8 << endl
-        << "E = " << 4 << endl
-        << "px = " << 1 << endl
-        << "py = " << 2 << endl
-        << "p_z = " << 3 << endl
-        << "mass =" << 5 << endl;
-    }
-    of_sample_format.close();
 
     sw.toc();
     messager << "Sampling finished in " << sw.takeTime() << " seconds.";
@@ -1754,14 +1767,20 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     std::stringstream samples_control_filename;
     samples_control_filename << path_ << "/samples_control_"
                              << particle->monval << ".dat";
-    remove(samples_control_filename.str().c_str());
-    ofstream of_control(samples_control_filename.str().c_str());
+    ofstream of_control;
+    if (!run_urqmd_in_memory_) {
+        remove(samples_control_filename.str().c_str());
+        of_control.open(samples_control_filename.str().c_str());
+    }
 
     // the sample file contains the actual samples
     std::stringstream samples_filename;
     samples_filename << path_ << "/samples_" << particle->monval << ".dat";
-    remove(samples_filename.str().c_str());
-    ofstream of_sample(samples_filename.str().c_str());
+    ofstream of_sample;
+    if (!run_urqmd_in_memory_) {
+        remove(samples_filename.str().c_str());
+        of_sample.open(samples_filename.str().c_str());
+    }
 
     // buffers are used to speed up the output process
     char line_buffer[500]; // only used in text mode
@@ -1792,14 +1811,16 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
          sampling_idx++) {
         long number_to_sample = determine_number_to_sample(
                                     dN, sampling_model, sampling_para1);
-        // write to control file
-        snprintf(line_buffer, 500, "%lu\n", number_to_sample);
-        control_str_buffer << line_buffer;
-        control_writing_signal++;
-        if (control_writing_signal == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
-            of_control << control_str_buffer.str();
-            control_str_buffer.str("");
-            control_writing_signal=0;
+        if (!run_urqmd_in_memory_) {
+            // write to control file
+            snprintf(line_buffer, 500, "%lu\n", number_to_sample);
+            control_str_buffer << line_buffer;
+            control_writing_signal++;
+            if (control_writing_signal == iSS_data::NUMBER_OF_LINES_TO_WRITE) {
+                of_control << control_str_buffer.str();
+                control_str_buffer.str("");
+                control_writing_signal=0;
+            }
         }
 
         long pT_idx, phi_idx;
@@ -2054,10 +2075,11 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
             double z = surf->tau*sinh(eta_s);
             double t = surf->tau*cosh(eta_s);
 
-            if (use_urqmd_format_) {
+            if (use_urqmd_format_ || run_urqmd_in_memory_) {
                 store_sample(sampling_idx, particle->monval, mass, E,
                              px, py, p_z, t, surf->xpt, surf->ypt, z);
             }
+            if (run_urqmd_in_memory_) continue;
 
             // write to sample file
             if (!USE_OSCAR_FORMAT) {
@@ -2110,44 +2132,46 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     cout << endl << "Average number of violations: " 
          << float(total_violation)/number_of_repeated_sampling/dN << endl;
 
-    ofstream of_sample_format(samples_format_filename.c_str());
-    // Be careful that ParameterReader class convert all strings to lower case
-    // so do NOT use variable names that differ only by cases!
-    if (!USE_OSCAR_FORMAT) {
-        of_sample_format
-        << "Total_number_of_columns = " << 18 << endl
-        << "FZ_cell_idx = " << 1 << endl
-        << "tau = " << 2 << endl
-        << "FZ_x = " << 3 << endl
-        << "FZ_y = " << 4 << endl
-        << "y_minus_eta_s = " << 5 << endl
-        << "pT = " << 6 << endl
-        << "phi = " << 7 << endl
-        << "surf_da0 = " << 8 << endl
-        << "surf_da1 = " << 9 << endl
-        << "surf_da2 = " << 10 << endl
-        << "surf_vx = " << 11 << endl
-        << "surf_vy = " << 12 << endl
-        << "y = " << 13 << endl
-        << "eta_s = " << 14 << endl
-        << "E = " << 15 << endl
-        << "p_z = " << 16 << endl
-        << "t = " << 17 << endl
-        << "z = " << 18 << endl;
-    } else {
-        of_sample_format
-        << "Total_number_of_columns = " << 9 << endl
-        << "t = " << 9 << endl
-        << "FZ_x = " << 6 << endl
-        << "FZ_y = " << 7 << endl
-        << "z = " << 8 << endl
-        << "E = " << 4 << endl
-        << "px = " << 1 << endl
-        << "py = " << 2 << endl
-        << "p_z = " << 3 << endl
-        << "mass =" << 5 << endl;
+    if (!run_urqmd_in_memory_) {
+        ofstream of_sample_format(samples_format_filename.c_str());
+        // Be careful that ParameterReader class convert all strings to lower case
+        // so do NOT use variable names that differ only by cases!
+        if (!USE_OSCAR_FORMAT) {
+            of_sample_format
+            << "Total_number_of_columns = " << 18 << endl
+            << "FZ_cell_idx = " << 1 << endl
+            << "tau = " << 2 << endl
+            << "FZ_x = " << 3 << endl
+            << "FZ_y = " << 4 << endl
+            << "y_minus_eta_s = " << 5 << endl
+            << "pT = " << 6 << endl
+            << "phi = " << 7 << endl
+            << "surf_da0 = " << 8 << endl
+            << "surf_da1 = " << 9 << endl
+            << "surf_da2 = " << 10 << endl
+            << "surf_vx = " << 11 << endl
+            << "surf_vy = " << 12 << endl
+            << "y = " << 13 << endl
+            << "eta_s = " << 14 << endl
+            << "E = " << 15 << endl
+            << "p_z = " << 16 << endl
+            << "t = " << 17 << endl
+            << "z = " << 18 << endl;
+        } else {
+            of_sample_format
+            << "Total_number_of_columns = " << 9 << endl
+            << "t = " << 9 << endl
+            << "FZ_x = " << 6 << endl
+            << "FZ_y = " << 7 << endl
+            << "z = " << 8 << endl
+            << "E = " << 4 << endl
+            << "px = " << 1 << endl
+            << "py = " << 2 << endl
+            << "p_z = " << 3 << endl
+            << "mass =" << 5 << endl;
+        }
+        of_sample_format.close();
     }
-    of_sample_format.close();
 
     // delete the intermedia variables (very important)
     for (int i=0; i<pT_tab4Sampling_length; i++)
@@ -2555,7 +2579,8 @@ void EmissionFunctionArray::shell() {
     int calculate_vn = paraRdr->getVal("calculate_vn");
     int historic_format = paraRdr->getVal("use_historic_flow_output_format");
 
-    if (use_urqmd_format_ && (MC_sampling == 1 || MC_sampling == 3)) {
+    if ((use_urqmd_format_ || run_urqmd_in_memory_)
+        && (MC_sampling == 1 || MC_sampling == 3)) {
         for (long i = 0; i < number_of_repeated_sampling; ++i) {
             Hadron_list->push_back(new vector<iSS_Hadron>);
         }
@@ -2617,7 +2642,8 @@ void EmissionFunctionArray::shell() {
             && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
         }
-        if (!use_urqmd_format_ && flag_store_samples_in_memory == 1) {
+        if (!use_urqmd_format_ && !run_urqmd_in_memory_
+            && flag_store_samples_in_memory == 1) {
             if (USE_OSCAR_FORMAT) {
                 combine_samples_to_OSCAR();
             } else if (USE_GZIP_FORMAT) {
@@ -3383,7 +3409,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         std::stringstream samples_control_filename;
         samples_control_filename << path_ << "/samples_control_"
                                  << particle->monval << ".dat";
-        remove(samples_control_filename.str().c_str());
+        if (!run_urqmd_in_memory_) remove(samples_control_filename.str().c_str());
         ofstream of_control;
         if (flag_output_samples_into_files == 1) {
             of_control.open(samples_control_filename.str().c_str(),
@@ -3393,7 +3419,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         // the sample file contains the actual samples
         std::stringstream samples_filename;
         samples_filename << path_ << "/samples_" << particle->monval << ".dat";
-        remove(samples_filename.str().c_str());
+        if (!run_urqmd_in_memory_) remove(samples_filename.str().c_str());
         ofstream of_sample;
         if (flag_output_samples_into_files == 1) {
             of_sample.open(samples_filename.str().c_str(),
@@ -4465,6 +4491,12 @@ std::string EmissionFunctionArray::add_one_sampled_particle(
     const double z = surf->tau*sinh(eta_s);
     const double t = surf->tau*cosh(eta_s);
 
+    if (flag_store_samples_in_memory == 1) {
+        store_sample(repeated_sampling_idx, particle_monval, mass, E,
+                     px, py, p_z, t, surf->xpt, surf->ypt, z);
+    }
+    if (run_urqmd_in_memory_) return {};
+
     // write to sample file
     if (!USE_OSCAR_FORMAT) {
         snprintf(line_buffer, 500,
@@ -4483,10 +4515,6 @@ std::string EmissionFunctionArray::add_one_sampled_particle(
     }
     text_string = line_buffer;
 
-    if (flag_store_samples_in_memory == 1) {
-        store_sample(repeated_sampling_idx, particle_monval, mass, E,
-                     px, py, p_z, t, surf->xpt, surf->ypt, z);
-    }
     return(text_string);
 }
 

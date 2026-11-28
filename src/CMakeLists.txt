@@ -18,6 +18,7 @@ set (SOURCES
     MomentumSamplerBase.cpp
     FSSW.cpp
     urqmd_output.cpp
+    urqmd_transport.cpp
     spin_polarization.cpp
     Histogram.cpp
     Spectators.cpp
@@ -28,6 +29,10 @@ if (APPLE)
     set_target_properties (${lib_name} PROPERTIES COMPILE_FLAGS "-DAPPLE")
 endif (APPLE)
 target_link_libraries (${lib_name} ${LIBS} ${ZLIB_LIBRARIES})
+if (ISS_ENABLE_URQMD)
+    target_compile_definitions(${lib_name} PRIVATE ISS_WITH_URQMD)
+    target_link_libraries(${lib_name} iss_urqmd_fortran Threads::Threads)
+endif ()
 
 if (link_with_lib)
     add_executable(${exe_name} main.cpp)
@@ -35,6 +40,10 @@ if (link_with_lib)
 else (link_with_lib)
     add_executable(${exe_name} main.cpp ${SOURCES})
     target_link_libraries (${exe_name} ${LIBS} ${ZLIB_LIBRARIES})
+    if (ISS_ENABLE_URQMD)
+        target_compile_definitions(${exe_name} PRIVATE ISS_WITH_URQMD)
+        target_link_libraries(${exe_name} iss_urqmd_fortran Threads::Threads)
+    endif ()
 endif (link_with_lib)
 
 if (APPLE)
@@ -53,3 +62,22 @@ if (unittest)
             LIBRARY DESTINATION lib
             ARCHIVE DESTINATION lib/static)
 endif (unittest)
+
+if (ISS_ENABLE_URQMD)
+    add_executable(test_urqmd_transport ../tests/TestUrQMDTransport.cpp)
+    target_include_directories(test_urqmd_transport PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(test_urqmd_transport ${lib_name})
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/urqmd-test")
+    add_test(NAME urqmd_transport
+             COMMAND test_urqmd_transport
+             WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/urqmd-test")
+    set_tests_properties(urqmd_transport PROPERTIES ENVIRONMENT "URQMD_TAB=tables.dat")
+
+    find_program(ISS_PYTHON_EXECUTABLE python3)
+    if (ISS_PYTHON_EXECUTABLE)
+        add_test(NAME urqmd_in_memory_cli
+                 COMMAND "${ISS_PYTHON_EXECUTABLE}"
+                         "${PROJECT_SOURCE_DIR}/tests/TestUrQMDTransport.py"
+                         $<TARGET_FILE:${exe_name}>)
+    endif ()
+endif ()
