@@ -21,6 +21,7 @@
 #include <array>
 
 #include "sample_output.h"
+#include "urqmd_output.h"
 #include "data_struct.h"
 #include "readindata.h"
 #include "emissionfunction.h"
@@ -86,6 +87,7 @@ EmissionFunctionArray::EmissionFunctionArray(
         boost_invariant_ = true;
     }
 
+    use_urqmd_format_         = paraRdr->getVal("use_UrQMD_format", 0) != 0;
     USE_OSCAR_FORMAT         = paraRdr->getVal("use_OSCAR_format");
     USE_GZIP_FORMAT          = paraRdr->getVal("use_gzip_format");
     USE_BINARY_FORMAT        = paraRdr->getVal("use_binary_format");
@@ -105,13 +107,16 @@ EmissionFunctionArray::EmissionFunctionArray(
     flag_output_samples_into_files = (
                             paraRdr->getVal("output_samples_into_files"));
     flag_store_samples_in_memory = paraRdr->getVal("store_samples_in_memory");
-    if (MC_sampling != 2) {
+    if (MC_sampling != 2 && !use_urqmd_format_) {
         messager << "store_samples_in_memory is only supported for "
                  << "MC_sample == 2!";
         messager.flush("warning");
         flag_store_samples_in_memory = 0;
     }
 
+    if (use_urqmd_format_) {
+        flag_store_samples_in_memory = MC_sampling >= 1 && MC_sampling <= 3;
+    }
     if (flag_store_samples_in_memory == 1) {
         Hadron_list = new vector< vector<iSS_Hadron>* >;
     }
@@ -384,10 +389,8 @@ EmissionFunctionArray::~EmissionFunctionArray() {
     }
 
     if (flag_store_samples_in_memory == 1) {
-        for (unsigned int i = 0; i < Hadron_list->size(); i++) {
-            (*Hadron_list)[i]->clear();
-        }
-        Hadron_list->clear();
+        for (auto *event : *Hadron_list) delete event;
+        delete Hadron_list;
     }
 
     if (flag_perform_decays == 1) {
@@ -1534,6 +1537,11 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
             double vx = ux/gammaT;
             double vy = uy/gammaT;
 
+            if (use_urqmd_format_) {
+                store_sample(sampling_idx, particle->monval, mass, E,
+                             px, py, p_z, t, surf->xpt, surf->ypt, z);
+            }
+
             // write to sample file
             if (!USE_OSCAR_FORMAT)
             {
@@ -2046,6 +2054,11 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
             double z = surf->tau*sinh(eta_s);
             double t = surf->tau*cosh(eta_s);
 
+            if (use_urqmd_format_) {
+                store_sample(sampling_idx, particle->monval, mass, E,
+                             px, py, p_z, t, surf->xpt, surf->ypt, z);
+            }
+
             // write to sample file
             if (!USE_OSCAR_FORMAT) {
                 snprintf(line_buffer, 500,
@@ -2542,6 +2555,11 @@ void EmissionFunctionArray::shell() {
     int calculate_vn = paraRdr->getVal("calculate_vn");
     int historic_format = paraRdr->getVal("use_historic_flow_output_format");
 
+    if (use_urqmd_format_ && (MC_sampling == 1 || MC_sampling == 3)) {
+        for (long i = 0; i < number_of_repeated_sampling; ++i) {
+            Hadron_list->push_back(new vector<iSS_Hadron>);
+        }
+    }
     int perform_sampling_during_calculation = 0;
     if (MC_sampling == 3) {
         if (!boost_invariant_) {
@@ -2586,7 +2604,7 @@ void EmissionFunctionArray::shell() {
 
     if (MC_sampling == 1) {
         calculate_dN_dxtdetady_and_sample_4all();
-        if (USE_OSCAR_FORMAT) {
+        if (!use_urqmd_format_ && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
         }
     } else if (MC_sampling == 2) {
@@ -2595,10 +2613,11 @@ void EmissionFunctionArray::shell() {
         if (flag_perform_decays == 1) {
             perform_resonance_feed_down(Hadron_list);
         }
-        if (flag_output_samples_into_files == 1 && USE_OSCAR_FORMAT) {
+        if (!use_urqmd_format_ && flag_output_samples_into_files == 1
+            && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
         }
-        if (flag_store_samples_in_memory == 1) {
+        if (!use_urqmd_format_ && flag_store_samples_in_memory == 1) {
             if (USE_OSCAR_FORMAT) {
                 combine_samples_to_OSCAR();
             } else if (USE_GZIP_FORMAT) {
@@ -2616,9 +2635,13 @@ void EmissionFunctionArray::shell() {
                 sample_using_dN_pTdpTdphidy();
             }
         }
-        if (USE_OSCAR_FORMAT) {
+        if (!use_urqmd_format_ && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
         }
+    }
+    if (use_urqmd_format_ && MC_sampling >= 1 && MC_sampling <= 3) {
+        iSS_data::write_urqmd_samples("fort.14", OSCAR_header_filename,
+                                     *Hadron_list, MC_sampling == 2 ? 0 : 1);
     }
     if (filter_sampling_surface) {
         FOsurf_ptr = full_surface;
@@ -4461,19 +4484,15 @@ std::string EmissionFunctionArray::add_one_sampled_particle(
     text_string = line_buffer;
 
     if (flag_store_samples_in_memory == 1) {
-        iSS_Hadron *temp_hadron = new iSS_Hadron;
-        temp_hadron->pid        = particle_monval;
-        temp_hadron->mass       = mass;
-        temp_hadron->E          = E;
-        temp_hadron->px         = px;
-        temp_hadron->py         = py;
-        temp_hadron->pz         = p_z;
-        temp_hadron->t          = t;
-        temp_hadron->x          = surf->xpt;
-        temp_hadron->y          = surf->ypt;
-        temp_hadron->z          = z;
-        (*Hadron_list)[repeated_sampling_idx-1]->push_back(
-                                                    *temp_hadron);
+        store_sample(repeated_sampling_idx, particle_monval, mass, E,
+                     px, py, p_z, t, surf->xpt, surf->ypt, z);
     }
     return(text_string);
+}
+
+void EmissionFunctionArray::store_sample(long event_index, int pid, float mass,
+                                        float energy, float px, float py, float pz,
+                                        float t, float x, float y, float z) {
+    (*Hadron_list)[event_index - 1]->push_back(
+        {pid, mass, energy, px, py, pz, t, x, y, z});
 }

@@ -52,6 +52,7 @@ class EmissionFunctionArray {
     bool positive_y_minus_eta_table_only;
 
     ParameterReader *paraRdr; // used to pass-in parameters
+    bool use_urqmd_format_;
     int USE_OSCAR_FORMAT;
     int USE_GZIP_FORMAT;
     int USE_BINARY_FORMAT;
@@ -186,6 +187,8 @@ class EmissionFunctionArray {
 
     void shell();  // it all starts here...
 
+    void store_sample(long event_index, int pid, float mass, float energy,
+                      float px, float py, float pz, float t, float x, float y, float z);
     void combine_samples_to_OSCAR();
     std::string OSCAR_header_filename, OSCAR_output_filename;
     void combine_samples_to_gzip_file();

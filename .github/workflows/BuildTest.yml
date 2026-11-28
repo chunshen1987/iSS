@@ -30,6 +30,8 @@ jobs:
           cmake ..
           make -j2
           make install
+      - name: Check direct UrQMD output
+        run: python3 tests/TestUrQMDOutput.py
       - name: Resonance decays conserve four-momentum
         run: |
           g++ -std=c++11 -O2 -Wall -Isrc tests/TestResonanceDecayAtRest.cpp \

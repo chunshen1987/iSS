@@ -22,3 +22,22 @@ of daughters (how
 its absolute value. Two- and three-body channels use the original routines and
 random-number sequence; four- and five-body ones are uniform in phase space
 (Raubold-Lynch).
+
+Direct UrQMD output
+-------------------
+
+Set `use_UrQMD_format = 1` to write sampled events in UrQMD's restart
+format to `fort.14` in the working directory. Pass that file to UrQMD as
+`ftn10` in place of the file normally produced by `osc2u`. The option takes
+priority over OSCAR, gzip, and binary event output and works with
+`MC_sampling = 1` through `4`. It holds sampled events in memory while
+writing and omits empty samples.
+
+Use `afterburner_type = 1` to select the UrQMD particle table. The writer
+reports an error if a sampled PDG ID has no UrQMD mapping. Update the
+third line of `iSS_tables/OSCAR_header.txt` for the projectile, target,
+reference frame, and lab kinetic energy per nucleon. The shipped header
+describes Au+Au at 100 GeV per nucleon in the equal-speed frame. As in
+`osc2u`, the impact parameter is zero and the frame setting describes the
+sampled momenta. The writer back-propagates the hadrons to time zero and
+records their original hadronization times for UrQMD.

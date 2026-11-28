@@ -17,6 +17,7 @@ set (SOURCES
     FermionMomentumSampler.cpp
     MomentumSamplerBase.cpp
     FSSW.cpp
+    urqmd_output.cpp
     spin_polarization.cpp
     Histogram.cpp
     Spectators.cpp

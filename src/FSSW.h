@@ -47,6 +47,7 @@ class FSSW {
     int local_charge_conservation;
 
     ParameterReader *paraRdr; // used to pass-in parameters
+    bool use_urqmd_format_;
     int USE_OSCAR_FORMAT;
     int USE_OSCAR2013;
     int USE_GZIP_FORMAT;

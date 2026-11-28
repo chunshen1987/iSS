@@ -18,6 +18,7 @@
 #include <algorithm>
 
 #include "sample_output.h"
+#include "urqmd_output.h"
 #include "data_struct.h"
 #include "readindata.h"
 #include "FSSW.h"
@@ -78,6 +79,7 @@ FSSW::FSSW(std::shared_ptr<RandomUtil::Random> ran_gen,
 
     hydro_mode = paraRdr->getVal("hydro_mode");
 
+    use_urqmd_format_ = paraRdr->getVal("use_UrQMD_format", 0) != 0;
     USE_OSCAR_FORMAT = paraRdr->getVal("use_OSCAR_format");
     USE_OSCAR2013 = paraRdr->getVal("use_OSCAR2013", 0);
     USE_GZIP_FORMAT = paraRdr->getVal("use_gzip_format");
@@ -460,7 +462,9 @@ void FSSW::shell() {
 
     computeAvgTotalEnergyMomentum();
 
-    if (USE_OSCAR_FORMAT) {
+    if (use_urqmd_format_) {
+        iSS_data::write_urqmd_samples("fort.14", OSCAR_header_filename_, *Hadron_list);
+    } else if (USE_OSCAR_FORMAT) {
         if (USE_OSCAR2013 == 1) {
             combine_samples_to_OSCAR2013();
         } else {
