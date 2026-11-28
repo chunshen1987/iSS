@@ -46,8 +46,11 @@ In-memory UrQMD transport
 ------------------------
 
 Build the optional UrQMD 3.4 interface with GNU Fortran and `patch`.
-The build uses `urqmd_code/urqmd/src` by default. Set `ISS_URQMD_SOURCE_DIR`
-at configure time to use another copy of those sources.
+CMake looks for local sources in `urqmd_code/urqmd/src` by default.
+Set `ISS_URQMD_SOURCE_DIR` at configure time to use a different local copy.
+If the sources are missing, CMake uses Git to clone
+`Chunshen1987/urqmd_afterburner` from Bitbucket into
+`build/_deps/urqmd_afterburner` and reuses that checkout on later runs.
 
 ```sh
 cmake -S . -B build -DISS_ENABLE_URQMD=ON -DCMAKE_BUILD_TYPE=Release

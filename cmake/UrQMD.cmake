@@ -1,9 +1,6 @@
-# Build the bundled UrQMD as a library and keep its source checkout untouched.
+# Build UrQMD as a library and keep its source checkout untouched.
 set(ISS_URQMD_SOURCE_DIR "${PROJECT_SOURCE_DIR}/urqmd_code/urqmd/src"
     CACHE PATH "Directory containing the UrQMD 3.4 Fortran sources")
-if(NOT EXISTS "${ISS_URQMD_SOURCE_DIR}/urqmd.f")
-    message(FATAL_ERROR "UrQMD sources not found in ISS_URQMD_SOURCE_DIR")
-endif()
 enable_language(Fortran)
 find_package(Threads REQUIRED)
 if(NOT CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
@@ -12,6 +9,34 @@ endif()
 find_program(ISS_PATCH_EXECUTABLE patch)
 if(NOT ISS_PATCH_EXECUTABLE)
     message(FATAL_ERROR "The optional UrQMD build requires the patch command")
+endif()
+
+if(NOT EXISTS "${ISS_URQMD_SOURCE_DIR}/urqmd.f")
+    set(urqmd_checkout "${CMAKE_CURRENT_BINARY_DIR}/_deps/urqmd_afterburner")
+    set(urqmd_fetched_source_dir "${urqmd_checkout}/urqmd/src")
+    if(NOT EXISTS "${urqmd_fetched_source_dir}/urqmd.f"
+       AND NOT EXISTS "${urqmd_checkout}/.git")
+        find_package(Git REQUIRED)
+        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/_deps")
+        message(STATUS "UrQMD sources not found in ${ISS_URQMD_SOURCE_DIR}. Cloning from Bitbucket.")
+        execute_process(
+            COMMAND "${GIT_EXECUTABLE}" clone --depth 1
+                    "https://Chunshen1987@bitbucket.org/Chunshen1987/urqmd_afterburner.git"
+                    "${urqmd_checkout}"
+            RESULT_VARIABLE urqmd_clone_result
+            ERROR_VARIABLE urqmd_clone_error)
+        if(NOT urqmd_clone_result STREQUAL "0")
+            message(FATAL_ERROR
+                "Could not clone UrQMD into ${urqmd_checkout}\n${urqmd_clone_error}\n"
+                "Set ISS_URQMD_SOURCE_DIR to an existing UrQMD 3.4 source directory to build offline.")
+        endif()
+    endif()
+    if(NOT EXISTS "${urqmd_fetched_source_dir}/urqmd.f")
+        message(FATAL_ERROR
+            "Expected UrQMD sources at ${urqmd_fetched_source_dir}. "
+            "Use a fresh build directory or set ISS_URQMD_SOURCE_DIR to a valid local checkout.")
+    endif()
+    set(ISS_URQMD_SOURCE_DIR "${urqmd_fetched_source_dir}")
 endif()
 
 set(urqmd_generated_dir "${CMAKE_CURRENT_BINARY_DIR}/urqmd")
