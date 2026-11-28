@@ -60,14 +60,16 @@ ctest --test-dir build --output-on-failure
 
 Set `run_urqmd_in_memory = 1` and `afterburner_type = 1` in
 `iSS_parameters.dat`. This works with `MC_sampling = 1` through `4`.
-iSS hands each sampled event to the linked cascade and replaces it with the
-transported particles. The iSS event getters return the final momenta
-and positions at the end of transport. Enabled sampler checks run before
-transport.
+iSS samples one event, runs UrQMD on it, and writes the final particles
+before sampling the next event. The run uses `number_of_repeated_sampling`
+or the existing adaptive event count in sampling modes 2 and 4. Enabled
+sampler checks accumulate statistics from each sample before transport.
 
-The mode skips OSCAR, file 14, and per-species sample files. If enabled,
-`use_gzip_format` or `use_binary_format` writes the final event list in the
-usual iSS format. Set both to `0` for memory-only events. UrQMD can still
+The mode skips OSCAR, file 14, and per-species sample files. The selected
+`use_gzip_format` or `use_binary_format` output contains one record per event,
+including empty events. After a disk-output run, the iSS event getters expose
+only the last transported event at index 0. Set both format switches to
+`0` to retain all transported events in memory instead. UrQMD can still
 read or create its initialization table cache (`tables.dat`).
 
 `urqmd_duration` and `urqmd_max_step` are in fm/c and default to `8000`.

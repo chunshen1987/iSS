@@ -452,13 +452,41 @@ bool FSSW::particles_are_the_same(int idx1, int idx2) {
 
 
 //***************************************************************************
-void FSSW::shell() {
-    sample_using_dN_dxtdy_4all_particles_conventional();
+struct FSSW::EventTotals {
+    std::array<double, 7> sum = {};
+    std::array<double, 7> sum_squared = {};
+    int count = 0;
+    long unknown = 0;
+};
+
+void FSSW::finish_sampled_events() {
     if (flag_perform_decays_ && afterburner_type_ != AfterburnerType::SMASH) {
         perform_resonance_feed_down(Hadron_list);
     }
-    if (flag_spectators_)
-        addSpectatorsToHadronList();
+    if (flag_spectators_) addSpectatorsToHadronList();
+}
+
+void FSSW::shell(const SampleEventSink &consume) {
+    if (consume) {
+        const int count = sampling_event_count();
+        EventTotals totals;
+        for (auto *event : *Hadron_list) delete event;
+        Hadron_list->clear();
+        if (count > 0) Hadron_list->push_back(new vector<iSS_Hadron>);
+        for (int iev = 0; iev < count; ++iev) {
+            auto &event = *Hadron_list->front();
+            event.clear();
+            sample_events(1, true);
+            finish_sampled_events();
+            accumulate_event_totals(event, totals);
+            consume(event, iev, count);
+        }
+        print_event_totals(totals);
+        return;
+    }
+
+    sample_using_dN_dxtdy_4all_particles_conventional();
+    finish_sampled_events();
 
     computeAvgTotalEnergyMomentum();
 
@@ -1020,27 +1048,36 @@ int FSSW::compute_number_of_sampling_needed(double number_of_particles_needed) {
 
 
 //***************************************************************************
+int FSSW::sampling_event_count() {
+    if (paraRdr->getVal("sample_upto_desired_particle_number") == 1) {
+        return compute_number_of_sampling_needed(
+            paraRdr->getVal("number_of_particles_needed"));
+    }
+    return number_of_repeated_sampling;
+}
+
 void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
+    number_of_repeated_sampling = sampling_event_count();
+    sample_events(number_of_repeated_sampling, false);
+}
+
+void FSSW::sample_events(int event_count, bool single_event) {
 /*
  Sample using the already calculated dN_dxtdy_4all array.
  Different model can be used in the sampling.
 */
     Stopwatch sw_total;
     sw_total.tic();
-    messager_.info(" Function sample_using_dN_dxtdy_4all_particles started...");
+    const bool verbose = !single_event || AMOUNT_OF_OUTPUT > 7;
+    if (verbose) {
+        messager_.info(" Function sample_using_dN_dxtdy_4all_particles started...");
+    }
+    if (single_event)
+        messager_.info("Generating particle samples for a single event...");
 
     // control variables
     int sampling_model    = paraRdr->getVal("dN_dy_sampling_model");
     double sampling_para1 = paraRdr->getVal("dN_dy_sampling_para1");
-
-    int flag_sample_upto_desired_particle_number = paraRdr->getVal(
-                                    "sample_upto_desired_particle_number");
-    if (flag_sample_upto_desired_particle_number == 1) {
-        const double number_of_particles_needed = paraRdr->getVal(
-                                                "number_of_particles_needed");
-        number_of_repeated_sampling = compute_number_of_sampling_needed(
-                                                number_of_particles_needed);
-    }
 
     if (sampling_model > 100) {
         cout << "FSSW::"
@@ -1049,8 +1086,8 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
         exit(-1);
     }
 
-    if (flag_store_samples_in_memory == 1) {
-        for (int isample = 0; isample < number_of_repeated_sampling;
+    if (flag_store_samples_in_memory == 1 && !single_event) {
+        for (int isample = 0; isample < event_count;
                 isample++) {
             Hadron_list->push_back(new vector<iSS_Hadron> );
         }
@@ -1062,16 +1099,16 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
     const std::uint32_t stream_key_hi = ran_gen_ptr->rand_uint32();
     const std::uint32_t stream_key_lo = ran_gen_ptr->rand_uint32();
     std::vector<std::unique_ptr<RandomUtil::Random>> event_ran;
-    event_ran.reserve(number_of_repeated_sampling);
-    for (int iev = 0; iev < number_of_repeated_sampling; iev++) {
+    event_ran.reserve(event_count);
+    for (int iev = 0; iev < event_count; iev++) {
         event_ran.emplace_back(new RandomUtil::Random(
                                     stream_key_hi, stream_key_lo, iev));
     }
-    std::vector<long> number_to_sample(number_of_repeated_sampling, 0);
+    std::vector<long> number_to_sample(event_count, 0);
 
     // The momentum samplers cache the last (m - mu)/T, so each thread
     // needs its own.
-    const std::size_t number_of_threads = std::max(1, omp_get_max_threads());
+    const std::size_t number_of_threads = single_event ? 1 : std::max(1, omp_get_max_threads());
     while (momentum_samplers_.size() < number_of_threads) {
         momentum_samplers_.emplace_back(new MomentumSamplerShell(ran_gen_ptr));
     }
@@ -1080,11 +1117,13 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
     // reusable variables
     // dN_dxtdy for 1 particle
     //vector<double> dN_dxtdy_single_particle(FO_length, 0);
-    messager_ << "Sampling using dN/dy with "
-             << "sample_using_dN_dxtdy_4all_particles function.";
-    messager_.flush("info");
-    messager_<< "number of repeated sampling = " << number_of_repeated_sampling;
-    messager_.flush("info");
+    if (verbose) {
+        messager_ << "Sampling using dN/dy with "
+                  << "sample_using_dN_dxtdy_4all_particles function.";
+        messager_.flush("info");
+        messager_ << "number of repeated sampling = " << event_count;
+        messager_.flush("info");
+    }
     for (int n = 0; n < number_of_chosen_particles; n++) {
         int real_particle_idx = chosen_particles_sampling_table[n];
         const particle_info *particle = &particles[real_particle_idx];
@@ -1096,16 +1135,18 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
         const int conjugate_idx = (flag_PCE_ == 1 && local_charge_conservation == 1
                                    && charge > 0)
             ? getParticleInfo(-particle->monval) : -1;
-        messager_ << "Index: " << n << ", Name: " << particle->name
-                 << ", Monte-carlo index: " << particle->monval;
-        messager_.flush("info");
-        if (local_charge_conservation == 1) {
-            if (particle->charge < 0) {
+        if (verbose) {
+            messager_ << "Index: " << n << ", Name: " << particle->name
+                      << ", Monte-carlo index: " << particle->monval;
+            messager_.flush("info");
+        }
+        if (local_charge_conservation == 1 && particle->charge < 0) {
+            if (verbose) {
                 cout << "local charge conservation is turn on~ "
                      << "Skip the negative charge particles."
                      << endl;
-                continue;
             }
+            continue;
         }
 
         calculate_dN_dxtdy_for_one_particle_species(real_particle_idx);
@@ -1127,9 +1168,11 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
             // for (3+1)-d case, dN_dy is total N (summing over all etas)
             dN = dN_dy;
         }
-        messager_ << " -- Sampling using dN_dy=" << dN_dy << ", "
-                  << "dN=" << dN << "...";
-        messager_.flush("info");
+        if (verbose) {
+            messager_ << " -- Sampling using dN_dy=" << dN_dy << ", "
+                      << "dN=" << dN << "...";
+            messager_.flush("info");
+        }
 
         Stopwatch sw;
         sw.tic();
@@ -1139,7 +1182,7 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
         }
 
         // The counts come from the serial generators, in event order.
-        for (int iev = 0; iev < number_of_repeated_sampling; iev++) {
+        for (int iev = 0; iev < event_count; iev++) {
             number_to_sample[iev] = determine_number_to_sample(
                 dN, sampling_model, sampling_para1);
         }
@@ -1147,12 +1190,12 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
         // Events are independent: each one only writes its own hadron list
         // and draws from its own stream, so the samples do not depend on
         // the number of threads.
-        #pragma omp parallel
+        #pragma omp parallel if(!single_event)
         {
         MomentumSamplerShell &sampler = *momentum_samplers_[
                                                     omp_get_thread_num()];
         #pragma omp for schedule(dynamic)
-        for (int iev = 0; iev < number_of_repeated_sampling; iev++) {
+        for (int iev = 0; iev < event_count; iev++) {
             RandomUtil::Random &ran = *event_ran[iev];
             const long repeated_sampling_idx = iev + 1;
             long sample_idx = 1;
@@ -1214,7 +1257,7 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
         if (AMOUNT_OF_OUTPUT > 7) print_progressbar(1);
 
         sw.toc();
-        if (AMOUNT_OF_OUTPUT > 2) {
+        if (verbose && AMOUNT_OF_OUTPUT > 2) {
             cout << endl << "Sampling finished in " 
                  << sw.takeTime() << " seconds." << endl;
         }
@@ -1222,9 +1265,10 @@ void FSSW::sample_using_dN_dxtdy_4all_particles_conventional() {
     }   // n; particle loop
 
     sw_total.toc();
-    cout << endl 
-         << "sample_using_dN_dxtdy_4all_particles finished in " 
-         << sw_total.takeTime() << " seconds." << endl;
+    if (verbose) {
+        cout << endl << "sample_using_dN_dxtdy_4all_particles finished in "
+             << sw_total.takeTime() << " seconds." << endl;
+    }
 }
 
 
@@ -2300,72 +2344,59 @@ double FSSW::bilinearInterp(std::vector<std::vector<double>>&mat,
 }
 
 
-void FSSW::computeAvgTotalEnergyMomentum() {
-    std::vector<std::vector<double>> PmuList;
-    std::vector<std::vector<double>> ChargesList;
-    long n_unknown = 0;
-    for (auto const &ev_i: (*Hadron_list)) {
-        std::vector<double> totalPmu(4, 0.);
-        std::vector<double> totalCharges(3, 0.);
-        for (auto &part_i: (*ev_i)) {
-            totalPmu[0] += part_i.E;
-            totalPmu[1] += part_i.px;
-            totalPmu[2] += part_i.py;
-            totalPmu[3] += part_i.pz;
-            int idx = getParticleInfo(part_i.pid);
-            if (idx < 0) {
-                n_unknown++;
-                continue;
-            }
-            totalCharges[0] += particles[idx].baryon;
-            totalCharges[1] += particles[idx].charge;
-            totalCharges[2] += particles[idx].strange;
+void FSSW::accumulate_event_totals(const std::vector<iSS_Hadron> &event,
+                                   EventTotals &totals) const {
+    // Four-momentum followed by baryon number, charge and strangeness.
+    std::array<double, 7> sums = {};
+    for (const auto &particle : event) {
+        sums[0] += particle.E;
+        sums[1] += particle.px;
+        sums[2] += particle.py;
+        sums[3] += particle.pz;
+        const int idx = getParticleInfo(particle.pid);
+        if (idx < 0) {
+            ++totals.unknown;
+            continue;
         }
-        PmuList.push_back(totalPmu);
-        ChargesList.push_back(totalCharges);
+        sums[4] += particles[idx].baryon;
+        sums[5] += particles[idx].charge;
+        sums[6] += particles[idx].strange;
     }
-    if (n_unknown > 0) {
-        messager_ << n_unknown << " sampled particles are not in the particle "
+    for (std::size_t i = 0; i < sums.size(); ++i) {
+        totals.sum[i] += sums[i];
+        totals.sum_squared[i] += sums[i]*sums[i];
+    }
+    ++totals.count;
+}
+
+void FSSW::print_event_totals(const EventTotals &totals) {
+    if (totals.unknown > 0) {
+        messager_ << totals.unknown << " sampled particles are not in the particle "
                   << "table and were left out of the net charges";
         messager_.flush("warning");
     }
-    if (PmuList.empty()) return;
-    int nev = 0;
-    std::vector<double> Pmu_avg(4, 0);
-    std::vector<double> Pmu_err(4, 0);
-    std::vector<double> nQ_avg(3, 0);
-    std::vector<double> nQ_err(3, 0);
-    for (auto const &Pmu_i : PmuList) {
-        for (int j = 0; j < 4; j++) {
-            Pmu_avg[j] += Pmu_i[j];
-            Pmu_err[j] += Pmu_i[j]*Pmu_i[j];
+    if (totals.count == 0) return;
+    const auto print = [&](std::size_t start, std::size_t end,
+                           const char *name, const char *unit) {
+        for (std::size_t i = start; i < end; ++i) {
+            const double mean = totals.sum[i]/totals.count;
+            const double variance = totals.sum_squared[i]/totals.count - mean*mean;
+            const double error = sqrt(std::max(0., variance)/totals.count);
+            messager_ << "<" << name << "[" << (i - start) << "]> = "
+                      << mean << " +/- " << error << unit;
+            messager_.flush("info");
         }
-        nev++;
-    }
-    for (auto const &nQ_i : ChargesList) {
-        for (int j = 0; j < 3; j++) {
-            nQ_avg[j] += nQ_i[j];
-            nQ_err[j] += nQ_i[j]*nQ_i[j];
-        }
-    }
+    };
     messager_.info("Averaged total energy and momentum:");
-    for (int i = 0; i < 4; i++) {
-        Pmu_avg[i] = Pmu_avg[i]/nev;
-        // rounding can make the variance slightly negative
-        Pmu_err[i] = sqrt(std::max(0., Pmu_err[i]/nev - Pmu_avg[i]*Pmu_avg[i])/nev);
-        messager_ << "<P[" << i << "]> = " << Pmu_avg[i] << " +/- "
-                  << Pmu_err[i] << " GeV.";
-        messager_.flush("info");
-    }
+    print(0, 4, "P", " GeV.");
     messager_.info("Averaged total conserved charges:");
-    for (int i = 0; i < 3; i++) {
-        nQ_avg[i] = nQ_avg[i]/nev;
-        // rounding can make the variance slightly negative
-        nQ_err[i] = sqrt(std::max(0., nQ_err[i]/nev - nQ_avg[i]*nQ_avg[i])/nev);
-        messager_ << "<nQ[" << i << "]> = " << nQ_avg[i] << " +/- "
-                  << nQ_err[i] << ".";
-        messager_.flush("info");
-    }
+    print(4, 7, "nQ", ".");
+}
+
+void FSSW::computeAvgTotalEnergyMomentum() {
+    EventTotals totals;
+    for (const auto *event : *Hadron_list) accumulate_event_totals(*event, totals);
+    print_event_totals(totals);
 }
 
 

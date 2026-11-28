@@ -16,13 +16,13 @@ EXE = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "iSS.e").resolve()
 RECORD = struct.Struct("=i9f")
 
 
-def run(args, work):
+def run(args, work, count=3):
     result = subprocess.run(
         args, cwd=work, capture_output=True, text=True, timeout=90,
         env=dict(os.environ, OMP_NUM_THREADS="2", URQMD_TAB="tables.dat"),
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "UrQMD processed 3 samples" in result.stdout, result.stdout
+    assert f"UrQMD processed {count} samples" in result.stdout, result.stdout
     seeds = re.search(r"iSS random seed = (\d+), UrQMD transport seed = (\d+)",
                       result.stdout)
     assert seeds, result.stdout
@@ -90,9 +90,20 @@ with TemporaryDirectory() as workdir:
         if mode == 2:
             final = work / "particle_samples.gz"
             check_gzip_events(final, 3)
+            lines = gzip.decompress(final.read_bytes()).splitlines(keepends=True)
+            first_event = b"".join(lines[:1 + int(lines[0])])
         else:
             final = work / "particle_samples.bin"
-            check_binary_events(final.read_bytes(), 3)
+            data = final.read_bytes()
+            check_binary_events(data, 3)
+            count, = struct.unpack_from("=i", data)
+            first_event = data[:4 + count*RECORD.size]
+        # The first event must be independent of how many events follow it.
+        assert run([*args, "number_of_repeated_sampling=1"], work, count=1) == (1, 1)
+        actual = final.read_bytes()
+        if mode == 2:
+            actual = gzip.decompress(actual)
+        assert actual == first_event
         final.unlink()
 
     assert run([*args, "use_binary_format=0", "use_gzip_format=0"], work) == (1, 1)
@@ -112,4 +123,20 @@ with TemporaryDirectory() as workdir:
     assert run([*args, f"randomSeed={iss_seed}"], work) == (iss_seed, iss_seed)
     assert output.read_bytes() == clock_seeded_events
 
-print("UrQMD transport and shared seed checks passed.")
+    assert run([*args, "perform_checks=1"], work) == (1, 1)
+    assert (work / "checkReconstructedTmunu.dat").is_file()
+    assert (work / "check_211_spectra.dat").is_file()
+
+    # Empty events still occupy one record each. The adaptive count in FSSW
+    # falls back to one event when the surface has zero thermal yield.
+    surface[4] = "0"
+    (work / "surface.dat").write_text(" ".join(surface) + "\n")
+    assert run(args, work) == (1, 1)
+    assert output.read_bytes() == struct.pack("=3i", 0, 0, 0)
+    assert run([*args, "sample_upto_desired_particle_number=1"], work, count=1) == (1, 1)
+    assert output.read_bytes() == struct.pack("=i", 0)
+    assert run([*args, "MC_sampling=2", "sample_upto_desired_particle_number=1"],
+               work, count=1) == (1, 1)
+    assert output.read_bytes() == struct.pack("=i", 0)
+
+print("UrQMD event streaming and shared seed checks passed.")

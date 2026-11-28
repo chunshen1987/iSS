@@ -16,6 +16,49 @@
 
 using iSS_data::Vec4;
 
+struct iSS::SampleChecks {
+    double momentum_flux[4][4] = {};
+    std::array<double, 3> charge = {};
+    Histogram pion{0., 5., 100};
+    Histogram proton{0., 5., 100};
+    int event_count = 0;
+    int last_pid = 0;
+    std::array<int, 3> particle_charge = {};
+
+    void add(iSS &sampler, const std::vector<iSS_Hadron> &event, bool spectra) {
+        for (const auto &particle : event) {
+            if (particle.pid != last_pid) {
+                sampler.getParticleQuantumNumbers(particle.pid, particle_charge);
+                last_pid = particle.pid;
+            }
+            // The surface uses the charge order (B, Q, S).
+            charge[0] += particle_charge[0];
+            charge[1] += particle_charge[2];
+            charge[2] += particle_charge[1];
+            const double p[4] = {particle.E, particle.px, particle.py, particle.pz};
+            for (int i = 0; i < 4; ++i)
+                for (int j = 0; j < 4; ++j)
+                    momentum_flux[i][j] += p[i]*p[j]/p[0];
+
+            if (spectra && particle.pid == 211) {
+                pion.fill(sqrt(particle.px*particle.px + particle.py*particle.py), 1.);
+            } else if (spectra && particle.pid == 2212) {
+                proton.fill(sqrt(particle.px*particle.px + particle.py*particle.py), 1.);
+            }
+        }
+        ++event_count;
+        if (spectra) {
+            pion.add_an_event();
+            proton.add_an_event();
+        }
+    }
+
+    void write_spectra() {
+        pion.output_histogram("check_211_spectra.dat");
+        proton.output_histogram("check_2212_spectra.dat");
+    }
+};
+
 iSS::iSS(std::string path, std::string table_path,
          std::string particle_table_path, std::string inputfile,
          std::string surface_filename) :
@@ -39,6 +82,7 @@ void iSS::clear() {
     polarizor.reset();
     efa_.reset();
     spectra_sampler_.reset();
+    transported_events_.clear();
     FOsurf_array_.clear();
     FOsurf_LRF_array_.clear();
     FOsurf_Tmunu_.clear();
@@ -127,28 +171,13 @@ bool iSS::has_samples_for_checks() {
 void iSS::perform_checks() {
     if (!has_samples_for_checks()) return;
     messager.info("Performing checks for the samples ...");
-    construct_Tmunu_from_particle_samples();
-    Histogram hist_pion(0., 5., 100);
-    Histogram hist_proton(0., 5., 100);
-    int nev = get_number_of_sampled_events();
-    for (int iev = 0; iev < nev; iev++) {
-        int npart = get_number_of_particles(iev);
-        for (int ipart = 0; ipart < npart; ipart++) {
-            iSS_Hadron part_i = get_hadron(iev, ipart);
-            //double p[4] = {part_i.E, part_i.px, part_i.py, part_i.pz};
-            if (part_i.pid == 211) {
-                double pT = sqrt(part_i.px*part_i.px + part_i.py*part_i.py);
-                hist_pion.fill(pT, 1.);
-            } else if (part_i.pid == 2212) {
-                double pT = sqrt(part_i.px*part_i.px + part_i.py*part_i.py);
-                hist_proton.fill(pT, 1.);
-            }
-        }
-        hist_pion.add_an_event();
-        hist_proton.add_an_event();
+    SampleChecks checks;
+    const int count = get_number_of_sampled_events();
+    for (int iev = 0; iev < count; ++iev) {
+        checks.add(*this, *get_hadron_list_iev(iev), true);
     }
-    hist_pion.output_histogram("check_211_spectra.dat");
-    hist_proton.output_histogram("check_2212_spectra.dat");
+    write_sample_reconstruction(checks);
+    checks.write_spectra();
 }
 
 
@@ -200,6 +229,7 @@ void iSS::set_random_seed(int randomSeed_in) {
 
 
 int iSS::generate_samples() {
+    transported_events_.clear();
     std::unique_ptr<UrqmdTransport> transport;
     if (paraRdr_ptr->getVal("run_urqmd_in_memory", 0) != 0) {
         const double sampling_mode = paraRdr_ptr->getVal("MC_sampling");
@@ -247,59 +277,86 @@ int iSS::generate_samples() {
     }
 
     messager.info("Start computation and generating samples ...");
-    if (paraRdr_ptr->getVal("MC_sampling") == 4) {
-        spectra_sampler_ = std::unique_ptr<FSSW> (new FSSW(
-                    ran_gen_ptr_, &chosen_particles,
-                    particle_, FOsurf_LRF_array_, flag_PCE_, paraRdr_ptr,
-                    path_, table_path_, afterburner_type_));
-        spectra_sampler_->shell();
+    const bool fast_sampler = paraRdr_ptr->getVal("MC_sampling") == 4;
+    Table pT_tab, phi_tab, eta_tab;
+    if (fast_sampler) {
+        spectra_sampler_.reset(new FSSW(
+            ran_gen_ptr_, &chosen_particles, particle_, FOsurf_LRF_array_,
+            flag_PCE_, paraRdr_ptr, path_, table_path_, afterburner_type_));
     } else {
-        Table pT_tab(table_path_ + "/bin_tables/pT_gauss_table.dat");
-        Table phi_tab(table_path_ + "/bin_tables/phi_gauss_table.dat");
-        // eta uniform dist table
-        Table eta_tab(table_path_ + "/bin_tables/eta_uni_table.dat");
-        //Table eta_tab("tables/eta_gauss_table_30_full.dat");
-        efa_ = std::unique_ptr<EmissionFunctionArray> (
-            new EmissionFunctionArray(
-                ran_gen_ptr_, &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
-                particle_, FOsurf_array_, flag_PCE_, paraRdr_ptr,
-                path_, table_path_, afterburner_type_));
-        efa_->shell();
+        pT_tab.loadTableFromFile(table_path_ + "/bin_tables/pT_gauss_table.dat");
+        phi_tab.loadTableFromFile(table_path_ + "/bin_tables/phi_gauss_table.dat");
+        eta_tab.loadTableFromFile(table_path_ + "/bin_tables/eta_uni_table.dat");
+        efa_.reset(new EmissionFunctionArray(
+            ran_gen_ptr_, &chosen_particles, &pT_tab, &phi_tab, &eta_tab,
+            particle_, FOsurf_array_, flag_PCE_, paraRdr_ptr,
+            path_, table_path_, afterburner_type_));
     }
+
     if (transport) {
-        if (paraRdr_ptr->getVal("perform_checks", 0) == 1) perform_checks();
         try {
-            evolve_urqmd_events(*transport);
+            stream_urqmd_events(*transport);
         } catch (const std::exception &error) {
             messager.error(error.what());
             return 1;
         }
+    } else if (fast_sampler) {
+        spectra_sampler_->shell();
+    } else {
+        efa_->shell();
     }
     return 0;
 }
 
-void iSS::evolve_urqmd_events(UrqmdTransport &transport) {
+void iSS::stream_urqmd_events(UrqmdTransport &transport) {
     messager.info("Running UrQMD transport in memory ...");
-    std::vector<std::vector<iSS_Hadron>*> events;
-    const int count = get_number_of_sampled_events();
-    events.reserve(count);
-    long long collisions = 0;
-    for (int iev = 0; iev < count; ++iev) {
-        auto *event = get_hadron_list_iev(iev);
-        auto final = transport.evolve(*event);
-        collisions += final.collision_attempts;
-        *event = std::move(final.particles);
-        events.push_back(event);
+    std::unique_ptr<iSS_data::GzipSampleWriter> gzip;
+    std::unique_ptr<iSS_data::BinarySampleWriter> binary;
+    if (paraRdr_ptr->getVal("use_gzip_format") != 0) {
+        gzip.reset(new iSS_data::GzipSampleWriter("particle_samples.gz"));
+    } else if (paraRdr_ptr->getVal("use_binary_format") != 0) {
+        binary.reset(new iSS_data::BinarySampleWriter("particle_samples.bin"));
     }
-    messager << "UrQMD processed " << count << " samples with "
+
+    const bool check_samples = paraRdr_ptr->getVal("perform_checks", 0) == 1
+                               && paraRdr_ptr->getVal("MC_sampling") == 4;
+    SampleChecks checks;
+    long long collisions = 0;
+    int processed = 0;
+    const auto consume = [&](std::vector<iSS_Hadron> &event, int iev, int count) {
+        if (check_samples) checks.add(*this, event, true);
+        messager << "UrQMD processes event: " << iev << "/" << count;
+        messager.flush("info");
+        auto final = transport.evolve(event);
+        collisions += final.collision_attempts;
+        if (gzip) {
+            gzip->write(final.particles);
+            gzip->flush();
+        } else if (binary) {
+            binary->write(final.particles);
+            binary->flush();
+        }
+        if (gzip || binary) {
+            event = std::move(final.particles);
+        } else {
+            transported_events_.push_back(std::move(final.particles));
+        }
+        ++processed;
+    };
+    if (paraRdr_ptr->getVal("MC_sampling") == 4) {
+        spectra_sampler_->shell(consume);
+    } else {
+        efa_->shell(consume);
+    }
+    if (gzip) gzip->close();
+    if (binary) binary->close();
+    if (check_samples && checks.event_count != 0) {
+        write_sample_reconstruction(checks);
+        checks.write_spectra();
+    }
+    messager << "UrQMD processed " << processed << " samples with "
              << collisions << " collision attempts.";
     messager.flush("info");
-
-    if (paraRdr_ptr->getVal("use_gzip_format") != 0) {
-        iSS_data::write_gzip_samples("particle_samples.gz", events);
-    } else if (paraRdr_ptr->getVal("use_binary_format") != 0) {
-        iSS_data::write_binary_samples("particle_samples.bin", events);
-    }
 }
 
 
@@ -442,46 +499,22 @@ void iSS::compute_spin_polarization() {
 
 void iSS::construct_Tmunu_from_particle_samples() {
     if (!has_samples_for_checks()) return;
+    SampleChecks checks;
+    const int count = get_number_of_sampled_events();
+    for (int iev = 0; iev < count; ++iev) {
+        checks.add(*this, *get_hadron_list_iev(iev), false);
+    }
+    write_sample_reconstruction(checks);
+}
+
+void iSS::write_sample_reconstruction(const SampleChecks &checks) {
     messager.info("Constructing the fluid cell T^{mu nu} from samples ...");
     const double volume = FOsurf_volume_;
     if (!std::isfinite(volume) || volume <= 0.) {
         messager.error("Sample reconstruction requires a finite, positive surface volume");
         exit(1);
     }
-    int monval_cached = 0;
-    std::array<int, 3> Qparticle = {0, 0, 0};
-    double T[4][4];
-    for (int i = 0; i < 4; i++)
-        for (int j = 0; j < 4; j++)
-            T[i][j] = 0.;
-    double netChargeArr[3] = {0., 0., 0.};
-    int nev = get_number_of_sampled_events();
-    for (int iev = 0; iev < nev; iev++) {
-        int npart = get_number_of_particles(iev);
-        for (int ipart = 0; ipart < npart; ipart++) {
-            iSS_Hadron part_i = get_hadron(iev, ipart);
-            if (part_i.pid != monval_cached) {
-                getParticleQuantumNumbers(part_i.pid, Qparticle);
-                monval_cached = part_i.pid;
-            }
-            // same order as FOsurf_Q_: (B, Q, S)
-            netChargeArr[0] += Qparticle[0];        // net baryon
-            netChargeArr[1] += Qparticle[2];        // net electric charge
-            netChargeArr[2] += Qparticle[1];        // net strangeness
-            double p[4] = {part_i.E, part_i.px, part_i.py, part_i.pz};
-            for (int ii = 0; ii < 4; ii++)
-                for (int jj = 0; jj < 4; jj++)
-                    T[ii][jj] += p[ii]*p[jj]/p[0];
-        }
-    }
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            T[i][j] /= (nev*volume);
-        }
-    }
-    for (int i = 0; i < 3; i++) {
-        netChargeArr[i] /= nev;
-    }
+    const int nev = checks.event_count;
 
     std::ofstream output("checkReconstructedTmunu.dat");
     if (!output) {
@@ -491,28 +524,30 @@ void iSS::construct_Tmunu_from_particle_samples() {
            << std::endl;
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
+            const double reconstructed = checks.momentum_flux[i][j]/(nev*volume);
             output << std::scientific << std::setprecision(8)
                    << FOsurf_Tmunu_[4*i+j] << "  "
-                   << T[i][j] << "  "
-                   << (FOsurf_Tmunu_[4*i+j] - T[i][j])
+                   << reconstructed << "  "
+                   << (FOsurf_Tmunu_[4*i+j] - reconstructed)
                    << std::endl;
             messager << "check: T[" << i << "][" << j << "] = "
                      << FOsurf_Tmunu_[4*i+j] << " GeV/fm^3,  "
-                     << T[i][j] << " GeV/fm^3, diff = "
-                     << (FOsurf_Tmunu_[4*i+j] - T[i][j])
+                     << reconstructed << " GeV/fm^3, diff = "
+                     << (FOsurf_Tmunu_[4*i+j] - reconstructed)
                      << " GeV/fm^3";
             messager.flush("info");
         }
     }
     for (int i = 0; i < 3; i++) {
-        float Err = std::abs((FOsurf_Q_[i] - netChargeArr[i])/volume);
+        const double charge = checks.charge[i]/nev;
+        float Err = std::abs((FOsurf_Q_[i] - charge)/volume);
         if (i == 0) {       // only check net baryon density for now
             output << std::scientific << std::setprecision(8)
-                   << FOsurf_Q_[i] << "  " << netChargeArr[i] << "  "
+                   << FOsurf_Q_[i] << "  " << charge << "  "
                    << Err << std::endl;
         }
         messager << "check: nQ[" << i << "] = " << FOsurf_Q_[i]
-                 << "," << netChargeArr[i] << ", diff = " << Err;
+                 << "," << charge << ", diff = " << Err;
         messager.flush("info");
     }
     output.close();

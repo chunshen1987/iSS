@@ -39,13 +39,16 @@ class iSS {
 
     std::unique_ptr<EmissionFunctionArray> efa_;
     std::unique_ptr<FSSW> spectra_sampler_;
+    std::vector<std::vector<iSS_Hadron>> transported_events_;
 
     std::unique_ptr<SpinPolarization> polarizor;
 
     pretty_ostream messager;
 
     bool has_samples_for_checks();
-    void evolve_urqmd_events(UrqmdTransport &transport);
+    void stream_urqmd_events(UrqmdTransport &transport);
+    struct SampleChecks;
+    void write_sample_reconstruction(const SampleChecks &checks);
 
  public:
     iSS(std::string path, std::string table_path="iSS_tables",
@@ -68,35 +71,27 @@ class iSS {
     void compute_spin_polarization();
 
     int get_number_of_sampled_events() {
+        if (!transported_events_.empty()) return transported_events_.size();
         if (paraRdr_ptr->getVal("MC_sampling") == 4) {
-            return(spectra_sampler_->get_number_of_sampled_events());
-        } else {
-            return(efa_->get_number_of_sampled_events());
+            return spectra_sampler_->get_number_of_sampled_events();
         }
-    };
+        return efa_->get_number_of_sampled_events();
+    }
 
     int get_number_of_particles(int iev) {
-        if (paraRdr_ptr->getVal("MC_sampling") == 4) {
-            return(spectra_sampler_->get_number_of_particles(iev));
-        } else {
-            return(efa_->get_number_of_particles(iev));
-        }
-    };
+        return get_hadron_list_iev(iev)->size();
+    }
 
     iSS_Hadron get_hadron(int iev, int ipart) {
-        if (paraRdr_ptr->getVal("MC_sampling") == 4) {
-            return(spectra_sampler_->get_hadron(iev, ipart));
-        } else {
-            return(efa_->get_hadron(iev, ipart));
-        }
-    };
+        return (*get_hadron_list_iev(iev))[ipart];
+    }
 
-    std::vector<iSS_Hadron>* get_hadron_list_iev(const int iev) {
+    std::vector<iSS_Hadron>* get_hadron_list_iev(int iev) {
+        if (!transported_events_.empty()) return &transported_events_.at(iev);
         if (paraRdr_ptr->getVal("MC_sampling") == 4) {
-            return(spectra_sampler_->get_hadron_list_iev(iev));
-        } else {
-            return(efa_->get_hadron_list_iev(iev));
+            return spectra_sampler_->get_hadron_list_iev(iev);
         }
+        return efa_->get_hadron_list_iev(iev);
     }
 
     void clear();

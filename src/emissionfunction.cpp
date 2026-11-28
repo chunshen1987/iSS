@@ -1229,7 +1229,7 @@ void EmissionFunctionArray::calculate_dN_pTdpTdphidy_and_flows_4all(
 
 
 //***************************************************************************
-void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
+void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi(bool single_event) {
 // This version give smooth distribution in pT and phi.
 // Sample according to the dN_dxtdetady and dN_dxtdetady_pT_max array. These
 // arrays are asssumed to be already cacluated.
@@ -1245,13 +1245,14 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
 // example, if one line of it reads as "foo=1" means that the variable
 // "foo" is the recorded in the 1st column.
 // Parameters:
-// -- number_of_repeated_sampling: number of successive sampling; 
+// -- event_count: number of successive samples;
 //    in each sampling the number of particles is determined
 //    by dN_dy and the model parameter.
 // -- pT_to: sample up to what pT
 // -- model parameter:
 //    1): The fractional part of dN_dy is used as a probability to determine
 //       whether we have 0 or 1 more particle.
+    const int event_count = single_event ? 1 : number_of_repeated_sampling;
     Stopwatch sw;
     sw.tic();
 
@@ -1348,7 +1349,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
     long sample_writing_signal = 0;
     long control_writing_signal = 0;
     long maximum_impatience = 5000; // used in pt-phi sampling
-    for (long sampling_idx=1; sampling_idx<=number_of_repeated_sampling; 
+    for (long sampling_idx=1; sampling_idx<=event_count;
          sampling_idx++) {
         long number_to_sample = determine_number_to_sample(
                                         dN, sampling_model, sampling_para1);
@@ -1579,7 +1580,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
         }
         if (AMOUNT_OF_OUTPUT>0)
             print_progressbar(static_cast<double>(sampling_idx)
-                                      /number_of_repeated_sampling);
+                                      /event_count);
     }
     // flushing buffers
     if (control_writing_signal!=0)
@@ -1652,7 +1653,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdetady_smooth_pT_phi() {
 
 
 //***************************************************************************
-void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
+void EmissionFunctionArray::sample_using_dN_pTdpTdphidy(bool single_event) {
 // Sample according to the dN_pTdpTdphidy and dN_pTdpTdphidy_max array. These
 // arrays are asssumed to be already cacluated.
 // The particle index is assumed to be already stored in the
@@ -1667,13 +1668,14 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
 // example, if one line of it reads as "foo=1" means that the variable
 // "foo" is the recorded in the 1st column.
 // Parameters:
-// -- number_of_repeated_sampling: number of successive sampling; in each 
+// -- event_count: number of successive samples; in each
 //    sampling the number of particles is determined by dN_dy and the 
 //    model parameter.
 // -- pT_to: sample up to what pT
 // -- model parameter:
 //    1): The fractional part of dN_dy is used as a probability to determine
 //       whether we have 0 or 1 more particle.
+    const int event_count = single_event ? 1 : number_of_repeated_sampling;
     Stopwatch sw;
     sw.tic();
 
@@ -1807,7 +1809,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     long total_tries = 0, total_violation = 0;
     //double largest_violation = -1.0;
 
-    for (long sampling_idx=1; sampling_idx<=number_of_repeated_sampling; 
+    for (long sampling_idx=1; sampling_idx<=event_count;
          sampling_idx++) {
         long number_to_sample = determine_number_to_sample(
                                     dN, sampling_model, sampling_para1);
@@ -2106,7 +2108,7 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
         }
         if (AMOUNT_OF_OUTPUT > 0) {
             print_progressbar(static_cast<double>(sampling_idx)
-                                      /number_of_repeated_sampling);
+                                      /event_count);
         }
     }
 
@@ -2128,9 +2130,9 @@ void EmissionFunctionArray::sample_using_dN_pTdpTdphidy() {
     }
 
     cout << endl << "Average number of tries: " 
-         << total_tries/number_of_repeated_sampling/dN << endl;
+         << total_tries/event_count/dN << endl;
     cout << endl << "Average number of violations: " 
-         << float(total_violation)/number_of_repeated_sampling/dN << endl;
+         << float(total_violation)/event_count/dN << endl;
 
     if (!run_urqmd_in_memory_) {
         ofstream of_sample_format(samples_format_filename.c_str());
@@ -2255,7 +2257,8 @@ inline long EmissionFunctionArray::determine_number_to_sample(
 
 
 //***************************************************************************
-void EmissionFunctionArray::calculate_dN_dxtdetady_and_sample_4all()
+void EmissionFunctionArray::calculate_dN_dxtdetady_and_sample_4all(
+        bool single_event, bool write_diagnostics)
 // Calculate dN_dxtdetady then sample.
 {
 
@@ -2293,10 +2296,10 @@ void EmissionFunctionArray::calculate_dN_dxtdetady_and_sample_4all()
         {
             cout << " -- Calculating dN_dxdetady... " << endl;
             calculate_dN_dxtdetady(particle_idx);
-            write_dN_dxtdetady_toFile();
+            if (write_diagnostics) write_dN_dxtdetady_toFile();
         }
 
-        if (calculate_dN_dtau)
+        if (write_diagnostics && calculate_dN_dtau)
         {
             double tau0 = paraRdr->getVal("bin_tau0");
             double dtau = paraRdr->getVal("bin_dtau");
@@ -2304,7 +2307,7 @@ void EmissionFunctionArray::calculate_dN_dxtdetady_and_sample_4all()
             calculate_dN_dtau_using_dN_dxtdetady(tau0, dtau, tau_max);
         }
 
-        if (calculate_dN_dx)
+        if (write_diagnostics && calculate_dN_dx)
         {
             double x_min = paraRdr->getVal("bin_x_min");
             double dx = paraRdr->getVal("bin_dx");
@@ -2312,18 +2315,18 @@ void EmissionFunctionArray::calculate_dN_dxtdetady_and_sample_4all()
             calculate_dN_dx_using_dN_dxtdetady(x_min, x_max, dx);
         }
 
-        if (calculate_dN_deta)
+        if (write_diagnostics && calculate_dN_deta)
         {
             calculate_dN_deta_using_dN_dxtdetady();
         }
 
-        if (calculate_dN_dxt)
+        if (write_diagnostics && calculate_dN_dxt)
         {
             calculate_dN_dxt_using_dN_dxtdetady();
         }
 
         cout << " -- Sampling using dN_dxtdetady: ";
-        sample_using_dN_dxtdetady_smooth_pT_phi();
+        sample_using_dN_dxtdetady_smooth_pT_phi(single_event);
 
     }
 
@@ -2574,12 +2577,12 @@ bool EmissionFunctionArray::particles_are_the_same(int idx1, int idx2)
 
 
 //***************************************************************************
-void EmissionFunctionArray::shell() {
+void EmissionFunctionArray::shell(const SampleEventSink &consume) {
     // read in parameters
     int calculate_vn = paraRdr->getVal("calculate_vn");
     int historic_format = paraRdr->getVal("use_historic_flow_output_format");
 
-    if ((use_urqmd_format_ || run_urqmd_in_memory_)
+    if (!consume && (use_urqmd_format_ || run_urqmd_in_memory_)
         && (MC_sampling == 1 || MC_sampling == 3)) {
         for (long i = 0; i < number_of_repeated_sampling; ++i) {
             Hadron_list->push_back(new vector<iSS_Hadron>);
@@ -2592,7 +2595,7 @@ void EmissionFunctionArray::shell() {
             exit(1);
         }
         calculate_vn = 1;
-        perform_sampling_during_calculation = 1;
+        perform_sampling_during_calculation = !consume;
     }
 
     const auto *full_surface = FOsurf_ptr;
@@ -2627,6 +2630,42 @@ void EmissionFunctionArray::shell() {
         dN_dxtdy_for_one_particle_species.resize(FO_length);
     }
 
+    const auto restore_surface = [&] {
+        if (filter_sampling_surface) {
+            FOsurf_ptr = full_surface;
+            FO_length = full_surface->size();
+            dN_dxtdy_for_one_particle_species.resize(FO_length);
+        }
+    };
+
+    if (consume) {
+        const int count = MC_sampling == 2 ? sampling_event_count()
+                                           : number_of_repeated_sampling;
+        for (auto *event : *Hadron_list) delete event;
+        Hadron_list->clear();
+        if (count > 0) Hadron_list->push_back(new vector<iSS_Hadron>);
+        try {
+            for (int iev = 0; iev < count; ++iev) {
+                auto &event = *Hadron_list->front();
+                event.clear();
+                if (MC_sampling == 1) {
+                    calculate_dN_dxtdetady_and_sample_4all(true, iev == 0);
+                } else if (MC_sampling == 2) {
+                    sample_conventional_events(1, true);
+                    if (flag_perform_decays == 1) perform_resonance_feed_down(Hadron_list);
+                } else {
+                    sample_spectra(true);
+                }
+                consume(event, iev, count);
+            }
+        } catch (...) {
+            restore_surface();
+            throw;
+        }
+        restore_surface();
+        return;
+    }
+
     if (MC_sampling == 1) {
         calculate_dN_dxtdetady_and_sample_4all();
         if (!use_urqmd_format_ && USE_OSCAR_FORMAT) {
@@ -2653,14 +2692,9 @@ void EmissionFunctionArray::shell() {
             }
         }
     } else if (MC_sampling == 3) {
-        if (filter_sampling_surface) {
-            // The signed spectrum has already been written. Sample from the
-            // separate, nonnegative-flux surface.
-            for (int particle_idx : chosen_particles_sampling_table) {
-                calculate_dN_pTdpTdphidy(particle_idx);
-                sample_using_dN_pTdpTdphidy();
-            }
-        }
+        // If the signed spectrum was written separately, sample the
+        // nonnegative-flux surface here.
+        if (filter_sampling_surface) sample_spectra(false);
         if (!use_urqmd_format_ && USE_OSCAR_FORMAT) {
             combine_samples_to_OSCAR();
         }
@@ -2669,10 +2703,14 @@ void EmissionFunctionArray::shell() {
         iSS_data::write_urqmd_samples("fort.14", OSCAR_header_filename,
                                      *Hadron_list, MC_sampling == 2 ? 0 : 1);
     }
-    if (filter_sampling_surface) {
-        FOsurf_ptr = full_surface;
-        FO_length = full_surface->size();
-        dN_dxtdy_for_one_particle_species.resize(FO_length);
+    restore_surface();
+}
+
+
+void EmissionFunctionArray::sample_spectra(bool single_event) {
+    for (int particle_idx : chosen_particles_sampling_table) {
+        calculate_dN_pTdpTdphidy(particle_idx);
+        sample_using_dN_pTdpTdphidy(single_event);
     }
 }
 
@@ -3307,22 +3345,31 @@ int EmissionFunctionArray::compute_number_of_sampling_needed(
         dNdy_thermal_pion += (
                     std::max(0.0, dN_dxtdy_for_one_particle_species[l]));
     }
-    // particle_info *particle = &particles[1];
-    // cout << "check  Name: " << particle->name
-    //      << ", Monte-carlo index: " << particle->monval
-    //      << ", dN/dy = " << dNdy_thermal_pion << endl;
-    int nev_needed = static_cast<int>(number_of_particles_needed
-                                      /(6.*dNdy_thermal_pion));
+    if (!std::isfinite(dNdy_thermal_pion) || dNdy_thermal_pion <= 0.) return 1;
+
+    double nev_needed = std::trunc(number_of_particles_needed/(6.*dNdy_thermal_pion));
     if (!boost_invariant_) {
         nev_needed *= 10;
     }
-    nev_needed = std::max(1, std::min(10000, nev_needed));
-    return(nev_needed);
+    return static_cast<int>(std::max(1., std::min(10000., nev_needed)));
 }
 
 
 //***************************************************************************
+int EmissionFunctionArray::sampling_event_count() {
+    if (paraRdr->getVal("sample_upto_desired_particle_number") == 1) {
+        return compute_number_of_sampling_needed(
+            paraRdr->getVal("number_of_particles_needed"));
+    }
+    return number_of_repeated_sampling;
+}
+
 void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() {
+    number_of_repeated_sampling = sampling_event_count();
+    sample_conventional_events(number_of_repeated_sampling, false);
+}
+
+void EmissionFunctionArray::sample_conventional_events(int event_count, bool single_event) {
 /*
  Sample using the already calculated dN_dxtdy_4all array.
  Different model can be used in the sampling.
@@ -3342,15 +3389,6 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     int sampling_model    = paraRdr->getVal("dN_dy_sampling_model");
     double sampling_para1 = paraRdr->getVal("dN_dy_sampling_para1");
 
-    int flag_sample_upto_desired_particle_number = paraRdr->getVal(
-                                    "sample_upto_desired_particle_number");
-    if (flag_sample_upto_desired_particle_number == 1) {
-        long number_of_particles_needed = paraRdr->getVal(
-                                                "number_of_particles_needed");
-        number_of_repeated_sampling = compute_number_of_sampling_needed(
-                                                number_of_particles_needed);
-    }
-
     double pT_to = paraRdr->getVal("sample_pT_up_to");
     if (pT_to < 0) {
         pT_to = pT_tab->getLast(1); // use table to determine pT range
@@ -3364,8 +3402,8 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         exit(-1);
     }
 
-    if (flag_store_samples_in_memory == 1) {
-        for (int isample = 0; isample < number_of_repeated_sampling;
+    if (flag_store_samples_in_memory == 1 && !single_event) {
+        for (int isample = 0; isample < event_count;
                 isample++) {
             Hadron_list->push_back(new vector<iSS_Hadron> );
         }
@@ -3378,7 +3416,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
     messager << "Sampling using dN/dy with "
              << "sample_using_dN_dxtdy_4all_particles function.";
     messager.flush("info");
-    messager<< "number of repeated sampling = " << number_of_repeated_sampling;
+    messager<< "number of repeated sampling = " << event_count;
     messager.flush("info");
     for (int n = 0; n < number_of_chosen_particles; n++) {
         int real_particle_idx = chosen_particles_sampling_table[n];
@@ -3486,7 +3524,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
         }
 
         for (long repeated_sampling_idx = 1; 
-             repeated_sampling_idx <= number_of_repeated_sampling;
+             repeated_sampling_idx <= event_count;
              repeated_sampling_idx++) {
             long number_to_sample = determine_number_to_sample(
                 dN, sampling_model, sampling_para1);
@@ -3593,7 +3631,7 @@ void EmissionFunctionArray::sample_using_dN_dxtdy_4all_particles_conventional() 
             if (AMOUNT_OF_OUTPUT>0) {
                 print_progressbar(
                         static_cast<double>(repeated_sampling_idx)
-                                            /number_of_repeated_sampling);
+                                            /event_count);
             }
         }
         // flushing buffers

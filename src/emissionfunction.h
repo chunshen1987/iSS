@@ -19,6 +19,7 @@
 #include "ParameterReader.h"
 #include "particle_decay.h"
 #include "data_struct.h"
+#include "sample_event_sink.h"
 #include "Random.h"
 #include "pretty_ostream.h"
 
@@ -184,9 +185,14 @@ class EmissionFunctionArray {
     void calculate_dN_pTdpTdphidy_and_flows_4all_old_output(
                                                     int perform_sampling = 0);
     void calculate_dN_pTdpTdphidy_and_flows_4all(int perform_sampling = 0);
-    void calculate_dN_dxtdetady_and_sample_4all();
+    void calculate_dN_dxtdetady_and_sample_4all(bool single_event = false,
+                                               bool write_diagnostics = true);
 
-    void shell();  // it all starts here...
+    void shell(const SampleEventSink &consume = {});  // it all starts here...
+
+    int sampling_event_count();
+    void sample_conventional_events(int event_count, bool single_event);
+    void sample_spectra(bool single_event);
 
     void store_sample(long event_index, int pid, float mass, float energy,
                       float px, float py, float pz, float t, float x, float y, float z);
@@ -202,7 +208,7 @@ class EmissionFunctionArray {
     std::string samples_format_filename;
 
     // First sampling method
-    void sample_using_dN_dxtdetady_smooth_pT_phi();
+    void sample_using_dN_dxtdetady_smooth_pT_phi(bool single_event = false);
     void calculate_dN_dtau_using_dN_dxtdetady(
                     double tau0 = 0, double dtau = 0.5, double tau_max = 17);
     void calculate_dN_dphi_using_dN_pTdpTdphidy();
@@ -227,7 +233,7 @@ class EmissionFunctionArray {
     void sample_using_dN_dxtdy_4all_particles_conventional();
 
     // Third sampling method
-    void sample_using_dN_pTdpTdphidy();
+    void sample_using_dN_pTdpTdphidy(bool single_event = false);
     Table pT_tab4Sampling, phi_tab4Sampling;
     int pT_tab4Sampling_length, phi_tab4Sampling_length;
     double** trig_phi_tab4Sampling;

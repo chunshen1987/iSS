@@ -19,6 +19,7 @@
 #include "particle_decay.h"
 #include "Spectators.h"
 #include "data_struct.h"
+#include "sample_event_sink.h"
 #include "Random.h"
 #include "pretty_ostream.h"
 #include "MomentumSamplerShell.h"
@@ -96,6 +97,15 @@ class FSSW {
     };
     std::vector<YieldCell> yieldCells_;
 
+    struct EventTotals;
+    void accumulate_event_totals(const std::vector<iSS_Hadron> &event,
+                                 EventTotals &totals) const;
+    void print_event_totals(const EventTotals &totals);
+
+    int sampling_event_count();
+    void sample_events(int event_count, bool single_event);
+    void finish_sampled_events();
+
     inline long determine_number_to_sample(
                     double dN, int model=1, double para1=0);
 
@@ -172,7 +182,7 @@ class FSSW {
     double get_special_function_K3(double arg);
     void get_special_function_En(double arg, std::vector<double> &results);
 
-    void shell();  // it all starts here...
+    void shell(const SampleEventSink &consume = {});  // it all starts here...
 
     void combine_samples_to_OSCAR();
     void combine_samples_to_OSCAR2013();
