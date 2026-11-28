@@ -4,6 +4,7 @@ import gzip
 import math
 import os
 from pathlib import Path
+import re
 import struct
 import subprocess
 import sys
@@ -13,6 +14,19 @@ from tempfile import TemporaryDirectory
 ROOT = Path(__file__).resolve().parents[1]
 EXE = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "iSS.e").resolve()
 RECORD = struct.Struct("=i9f")
+
+
+def run(args, work):
+    result = subprocess.run(
+        args, cwd=work, capture_output=True, text=True, timeout=90,
+        env=dict(os.environ, OMP_NUM_THREADS="2", URQMD_TAB="tables.dat"),
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "UrQMD processed 3 samples" in result.stdout, result.stdout
+    seeds = re.search(r"iSS random seed = (\d+), UrQMD transport seed = (\d+)",
+                      result.stdout)
+    assert seeds, result.stdout
+    return tuple(map(int, seeds.groups()))
 
 
 def check_binary_events(data, expected_events):
@@ -69,12 +83,7 @@ with TemporaryDirectory() as workdir:
             "use_UrQMD_format=1", "use_OSCAR_format=1", "use_binary_format=1",
             f"use_gzip_format={int(mode == 2)}",
         ]
-        result = subprocess.run(
-            args, cwd=work, capture_output=True, text=True, timeout=90,
-            env=dict(os.environ, OMP_NUM_THREADS="2", URQMD_TAB="tables.dat"),
-        )
-        assert result.returncode == 0, result.stdout + result.stderr
-        assert "UrQMD processed 3 samples" in result.stdout, result.stdout
+        assert run(args, work) == (1, 1)
         assert not list(work.glob("fort.*"))
         assert not list(work.glob("samples_*.dat"))
         assert not (work / "OSCAR.DAT").exists()
@@ -86,13 +95,21 @@ with TemporaryDirectory() as workdir:
             check_binary_events(final.read_bytes(), 3)
         final.unlink()
 
-    result = subprocess.run(
-        [*args, "use_binary_format=0", "use_gzip_format=0"], cwd=work,
-        capture_output=True, text=True, timeout=90,
-        env=dict(os.environ, OMP_NUM_THREADS="2", URQMD_TAB="tables.dat"),
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
-    assert "UrQMD processed 3 samples" in result.stdout
+    assert run([*args, "use_binary_format=0", "use_gzip_format=0"], work) == (1, 1)
     assert not list(work.glob("particle_samples.*"))
 
-print("UrQMD transport completed in memory for all sampling modes.")
+    # Parameter files older than this setting still inherit the iSS seed
+    # when they omit it. An explicit positive seed overrides inheritance.
+    parameters = Path(args[1]).read_text().splitlines()
+    (work / "parameters.dat").write_text(
+        "\n".join(line for line in parameters if not line.startswith("urqmd_seed")) + "\n")
+    args[1] = "parameters.dat"
+    assert run([*args, "urqmd_seed=17"], work) == (1, 17)
+    iss_seed, urqmd_seed = run([*args, "randomSeed=-1"], work)
+    assert iss_seed == urqmd_seed and 1 <= iss_seed <= (1 << 30)
+    output = work / "particle_samples.bin"
+    clock_seeded_events = output.read_bytes()
+    assert run([*args, f"randomSeed={iss_seed}"], work) == (iss_seed, iss_seed)
+    assert output.read_bytes() == clock_seeded_events
+
+print("UrQMD transport and shared seed checks passed.")

@@ -25,7 +25,7 @@ ctest --test-dir build --output-on-failure
 
 Set `run_urqmd_in_memory = 1` and `afterburner_type = 1` in `iSS_parameters.dat`. This takes precedence over restart-file and OSCAR output. iSS holds the sampled events in memory, transports them one at a time, and replaces each event with its final particles. Enabled sampler checks run before transport.
 
-The linked cascade uses UrQMD's default physics options with `ctp 22 1.0` from the supplied burner file. The `urqmd_duration` and `urqmd_max_step` settings are in fm/c and both default to `8000`. The first transport seed, `urqmd_seed`, defaults to `123987`.
+The linked cascade uses UrQMD's default physics options with `ctp 22 1.0` from the supplied burner file. The `urqmd_duration` and `urqmd_max_step` settings are in fm/c and both default to `8000`. By default, the first transport event uses iSS's resolved `randomSeed`. With `randomSeed = -1`, both modules share one seed from the local system clock. A positive `urqmd_seed` overrides the transport seed.
 
 The event handoff skips OSCAR, `fort.14`, and per-species sample files. The existing gzip and binary options can save final particles. Set both to `0` to keep final events in memory. UrQMD may still read or create its initialization cache, `tables.dat`.
 

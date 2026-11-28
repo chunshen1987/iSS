@@ -38,7 +38,7 @@ use_UrQMD_format = 0         # write UrQMD input to fort.14 (takes priority over
 run_urqmd_in_memory = 0      # pass events to the linked UrQMD cascade (ISS_ENABLE_URQMD build)
 urqmd_duration = 8000        # cascade duration in fm/c
 urqmd_max_step = 8000        # maximum cascade timestep in fm/c
-urqmd_seed = 123987          # first UrQMD transport seed
+urqmd_seed = -1              # inherit the resolved iSS seed, or set a positive override
 use_OSCAR_format = 0         # output results in OSCAR format
 use_OSCAR2013 = 0            # output results in OSCAR 2013 format (need use_OSCAR_format == 1)
 use_gzip_format = 0          # output results in gzip format (only works with
@@ -205,4 +205,4 @@ calculate_dN_dxt = 1       # Output dN_dxt table. Only applicable
 output_dN_dxtdy_4all = 0   # Output dN_dxtdy table. Only applicable
                            # if MC_sampling parameter is set to 2.
 
-randomSeed = -1            # If <0, use system clock.
+randomSeed = -1            # Use -1 to take the seed from the local system clock.

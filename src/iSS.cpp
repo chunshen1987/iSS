@@ -203,7 +203,9 @@ int iSS::generate_samples() {
     std::unique_ptr<UrqmdTransport> transport;
     if (paraRdr_ptr->getVal("run_urqmd_in_memory", 0) != 0) {
         const double sampling_mode = paraRdr_ptr->getVal("MC_sampling");
-        const double seed = paraRdr_ptr->getVal("urqmd_seed", 123987);
+        const double seed_override = paraRdr_ptr->exist("urqmd_seed")
+            ? paraRdr_ptr->getVal("urqmd_seed") : -1;
+        const double seed = seed_override == -1 ? ran_gen_ptr_->get_seed() : seed_override;
         try {
             if (!(sampling_mode >= 1 && sampling_mode <= 4)
                 || sampling_mode != std::floor(sampling_mode)) {
@@ -214,12 +216,17 @@ int iSS::generate_samples() {
             }
             if (!(seed >= 1 && seed <= std::numeric_limits<int>::max())
                 || seed != std::floor(seed)) {
-                throw std::invalid_argument("urqmd_seed must be a positive integer");
+                throw std::invalid_argument(
+                    "UrQMD requires a positive integer seed from randomSeed or urqmd_seed");
             }
+            const int transport_seed = static_cast<int>(seed);
             transport.reset(new UrqmdTransport(
                 paraRdr_ptr->getVal("urqmd_duration", 8000.),
                 paraRdr_ptr->getVal("urqmd_max_step", 8000.),
-                static_cast<int>(seed)));
+                transport_seed));
+            messager << "iSS random seed = " << ran_gen_ptr_->get_seed()
+                     << ", UrQMD transport seed = " << transport_seed;
+            messager.flush("info");
         } catch (const std::exception &error) {
             messager.error(error.what());
             return 1;

@@ -2,14 +2,18 @@
 
 #include "Random.h"
 
+#include <chrono>
+
 namespace RandomUtil {
 
 Random::Random(long seed_in, double min, double max) :
     rand_uniform_dist(min, max) {
     seed = seed_in;
     if (seed == -1) {
-        std::random_device ran_dev;
-        seed = ran_dev();
+        const auto ticks = std::chrono::system_clock::now().time_since_epoch();
+        const auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(ticks).count();
+        // Keep clock seeds positive and within the range accepted by UrQMD.
+        seed = 1 + static_cast<std::uint64_t>(nanos) % (1ULL << 30);
     }
     ran_generator = std::unique_ptr<std::mt19937>(new std::mt19937(seed));
 }

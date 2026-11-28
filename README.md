@@ -71,10 +71,13 @@ usual iSS format. Set both to `0` for memory-only events. UrQMD can still
 read or create its initialization table cache (`tables.dat`).
 
 `urqmd_duration` and `urqmd_max_step` are in fm/c and default to `8000`.
-`urqmd_seed` sets the first event's seed and defaults to `123987`. The
-linked cascade uses UrQMD's default physics options and the supplied
-burner file's `ctp 22 1.0` setting. It evolves particles in the frame of
-the input samples.
+`urqmd_seed = -1` (the default) uses iSS's resolved `randomSeed` for the
+first transport event. When `randomSeed = -1`, both modules use the same
+seed taken from the local system clock. Set a positive `urqmd_seed` to
+override the transport seed. UrQMD transport accepts seeds from 1 through
+2,147,483,398. The linked cascade uses UrQMD's default physics options and
+the supplied burner file's `ctp 22 1.0` setting. It evolves particles in the
+frame of the input samples.
 
 C++ callers can link the UrQMD-enabled `libiSS` and include the event wrapper
 from `src`. The wrapper serializes access to UrQMD's shared Fortran state.
